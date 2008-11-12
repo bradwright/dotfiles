@@ -40,4 +40,4 @@ if [ -x /ports/bin ]; then
 fi
 
 # Python-specific paths for user
-[ -x "~/Library/Python/2.5/site-packages" ] && export PYTHONPATH="~/Library/Python/2.5/site-packages:${PYTHONPATH}"
+[ -x "${HOME}/Library/Python/2.5/site-packages" ] && export PYTHONPATH="~/Library/Python/2.5/site-packages:${PYTHONPATH}"
