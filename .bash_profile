@@ -6,4 +6,10 @@
 source ~/etc/bash/run
 
 echo ''
-fortune startrek
+
+#httpload() {
+#    STAMP=`date +"%s"`;
+#    echo "http://$1" > /tmp/$STAMP.http_load_temp_file
+#    http_load -parallel $2 -seconds $3 /tmp/$STAMP.http_load_temp_file
+#    rm -f /tmp/$STAMP.http_load_temp_file
+#}

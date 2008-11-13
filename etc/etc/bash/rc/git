@@ -1,0 +1,6 @@
+# ~/etc/bash/rc/git
+#
+# configuration for Git
+
+# put Git into man path
+export MANPATH="/usr/local/git/man:$MANPATH"

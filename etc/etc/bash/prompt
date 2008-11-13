@@ -1,0 +1,25 @@
+# ~/etc/bash/prompt
+# 
+# set the prompt (should be done as late as possible)
+
+# most basic prompt
+PS1="${green}\u${reset} ${yellow}\w${reset}"
+
+# if we can edit the title of the terminal, do so
+case $TERM in
+    xterm*|rxvt*)
+        # local TITLEBAR='\[\033]0;\u@\h\007\]'
+        titlebar="${opentitle}\u@${hostname}${closetitle}"
+        ;;
+    *)
+        titlebar=""
+        ;;
+esac
+PS1="${titlebar}${PS1}"
+
+# optional prefixes to the basic prompt
+# [ $HOST != 'brad-macbook' ]     && PS1="${red}\u${reset}@${PS1}"
+[ -n "$prompt_prefix" ]     && PS1="${prompt_prefix} ${PS1}"
+[ -n "$WINDOW" ]            && PS1="${blue}scr-${WINDOW}${reset} ${PS1}"
+
+PS1="$PS1 \$ "
