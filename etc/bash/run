@@ -7,7 +7,7 @@
 
 
 # useful flags
-hosttype=`uname`
+hostos=`uname`
 hostname=`hostname -s`
 
 
@@ -20,8 +20,8 @@ done
 
 
 # type-specific settings
-if [ -f ~/etc/bash/arch/${hosttype} ]; then
-    source ~/etc/bash/arch/${hosttype}
+if [ -f ~/etc/bash/os/${hostos} ]; then
+    source ~/etc/bash/os/${hostos}
 fi
 
 
@@ -31,7 +31,10 @@ if [ -f ~/etc/bash/host/${hostname} ]; then
 fi
 
 
+export HOSTOS="${hostos}"
+export HOST="${hostname}"
 export PATH
+
 
 source ~/etc/bash/prompt
 export PS1
