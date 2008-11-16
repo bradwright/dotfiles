@@ -4,19 +4,18 @@
 
 host="${1}"
 
+# base files
+SKELETON="${HOME}/Projects/homedir"
+
+# make sure the skeleton is up-to-date
+cd ${SKELETON} 
+git pull
+
 if [ -n "${host}" ]; then
-    
-    # base files
-    SKELETON="${HOME}/Projects/homedir"
-    
-    # make sure the skeleton is up-to-date
-    cd ${SKELETON} 
-    git pull
-    
     # copy everything else
     rsync -aHvP --exclude .git/ --exclude README.markdown --exclude homedir.tmproj . ${host}:.
 
 else
-    echo "Usage: home <host>"
-    exit 1
+    # just sync to my home directory
+    rsync -aHvP --exclude .git/ --exclude README.markdown --exclude homedir.tmproj . ~/.
 fi
