@@ -1,2 +1,6 @@
 # syncs my homedir to another box
-scp -r ~/.bashrc ~/.bash_profile ~/etc ~/bin "$@":
+if [ -n "$1" ]; then
+    scp -r ~/.bashrc ~/.bash_profile ~/etc ~/bin "$@":
+else
+    echo "Usage: synchome [[user@]server]"
+fi
