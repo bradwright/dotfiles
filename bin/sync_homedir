@@ -7,9 +7,8 @@ host="${1}"
 # base files
 SKELETON="${HOME}/Projects/homedir"
 
-# make sure the skeleton is up-to-date
+# My Mac is the source of truth - don't worry about updating from the repo for now
 cd ${SKELETON} 
-git pull
 
 if [ -n "${host}" ]; then
     # copy everything else
