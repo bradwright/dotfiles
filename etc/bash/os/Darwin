@@ -16,3 +16,7 @@ hostname=`scutil --get LocalHostName`
 
 # pretty colours in BSD style
 export LSCOLORS=dxfxcxdxbxegedabagacad
+
+
+# MySQL path on OS X
+[ -x /usr/local/mysql/bin ]         && PATH="/usr/local/mysql/bin:${PATH}"
