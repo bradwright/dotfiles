@@ -1,0 +1,2 @@
+# syncs my homedir to another box
+scp -r ~/.bashrc ~/.bash_profile ~/etc ~/bin "$@":
