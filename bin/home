@@ -14,7 +14,7 @@ if [ -n "${host}" ]; then
     git pull
     
     # copy everything else
-    rsync -aHvP --exclude .git/ . ${host}:.
+    rsync -aHvP --exclude .git/ --exclude README.markdown --exclude homedir.tmproj . ${host}:.
 
 else
     echo "Usage: home <host>"
