@@ -8,7 +8,7 @@
 
 # useful flags
 hostos=`uname`
-hostname=`hostname -s`
+hostname=`hostname`
 
 
 # most common bash settings kept in separate rc files
