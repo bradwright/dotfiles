@@ -4,7 +4,7 @@
 
 
 # Python-specific paths for user
-[ -x "${HOME}/lib/python2.5/site-packages" ] && export PYTHONPATH="~/lib/python2.5/site-packages:${PYTHONPATH}"
+[ -x "${HOME}/lib/python2.5/site-packages" ] && export PYTHONPATH="${HOME}/lib/python2.5/site-packages:${PYTHONPATH}"
 
 
 # pretty colours in GNU style
