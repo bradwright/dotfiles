@@ -3,7 +3,10 @@
 # set the prompt (should be done as late as possible)
 
 # most basic prompt
-PS1="${green}${HOST}${reset} ${yellow}\w${reset}"
+PS1="${green}${HOST}${reset}"
+# fork for live server
+[ $HOST = 'intranation' ]   && PS1="${bgred}${HOST}${reset}"
+PS1="${PS1} ${yellow}\w${reset}"
 # if not my regular user, show username
 [ $USER != 'bradleyw' ]     && PS1="${red}\u${reset}@${PS1}"
 
