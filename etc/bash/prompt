@@ -3,9 +3,9 @@
 # set the prompt (should be done as late as possible)
 
 # most basic prompt
-PS1="${green}\u${reset} ${yellow}\w${reset}"
-# if not on home machine, show hostname
-[ $HOST != 'brad-macbook' ]     && PS1="${green}\u${reset}@${red}${HOST}${reset} ${yellow}\w${reset}"
+PS1="${green}${HOST}${reset} ${yellow}\w${reset}"
+# if not my regular user, show username
+[ $USER != 'bradleyw' ]     && PS1="${red}\u${reset}@${PS1}"
 
 # if we can edit the title of the terminal, do so
 case $TERM in
