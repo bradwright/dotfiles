@@ -3,7 +3,9 @@
 # set the prompt (should be done as late as possible)
 
 # most basic prompt
-PS1="${green}${HOST}${reset}"
+PS1="${cyan}${HOST}${reset}"
+# fork when not at home
+[ $HOST = 'brad-macbook' ] && PS1="${green}${HOST}${reset}"
 # fork for live server
 [ $HOST = 'intranation' ]   && PS1="${bgred}${HOST}${reset}"
 PS1="${PS1} ${yellow}\w${reset}"
