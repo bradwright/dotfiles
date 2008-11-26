@@ -5,7 +5,9 @@ set tabstop=4
 set shiftwidth=4
 set expandtab
 set softtabstop=4
-set mouse=a
+if has('mouse')
+    set mouse=a
+endif
 set nomodeline
 set showmatch
 set title
