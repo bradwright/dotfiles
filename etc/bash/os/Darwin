@@ -22,7 +22,6 @@ export LSCOLORS=dxfxcxdxbxegedabagacad
 [ -x /usr/local/mysql/bin ]         && PATH="/usr/local/mysql/bin:${PATH}"
 
 
-# if MacPorts exists, add it to path
-[ -x /opt/local/bin ]               && PATH="/opt/local/bin:${PATH}"
+# MacPorts stuff - currently compiled to /usr/local
 # manpath is currently only edited here, so just export it
-[ -x /opt/local/man ]               && export MANPATH="/opt/local/man:${MANPATH}"
+[ -x /usr/local/share/man ]         && export MANPATH="/usr/local/share/man:${MANPATH}"
