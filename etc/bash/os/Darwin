@@ -20,3 +20,7 @@ export LSCOLORS=dxfxcxdxbxegedabagacad
 
 # MySQL path on OS X
 [ -x /usr/local/mysql/bin ]         && PATH="/usr/local/mysql/bin:${PATH}"
+
+
+# if MacPorts exists, add it to path
+[ -x /opt/local/bin ]               && PATH="/opt/local/bin:${PATH}"
