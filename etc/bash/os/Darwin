@@ -23,5 +23,6 @@ export LSCOLORS=dxfxcxdxbxegedabagacad
 
 
 # MacPorts stuff - currently compiled to /usr/local
+[ -x /usr/local/bin ]               &&  PATH="/usr/local/bin:${PATH}"
 # manpath is currently only edited here, so just export it
 [ -x /usr/local/share/man ]         && export MANPATH="/usr/local/share/man:${MANPATH}"
