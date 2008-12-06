@@ -1,4 +1,4 @@
-# ~/etc/bash/host/brad-macbook
+# ~/etc/bash/host/coopers
 
 [ -x ${HOME}/bin/textmate ]     && export VISUAL="${HOME}/bin/textmate"
 
