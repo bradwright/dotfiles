@@ -5,8 +5,6 @@
 
 source ~/etc/bash/run
 
-echo ''
-
 #httpload() {
 #    STAMP=`date +"%s"`;
 #    echo "http://$1" > /tmp/$STAMP.http_load_temp_file
