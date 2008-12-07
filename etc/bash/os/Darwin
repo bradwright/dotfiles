@@ -11,7 +11,7 @@ hostname=`scutil --get LocalHostName`
 
 
 # Python-specific paths for user
-[ -x "${HOME}/Library/Python/2.5/site-packages" ] && export PYTHONPATH="${HOME}/Library/Python/2.5/site-packages:${PYTHONPATH}"
+[ -x "${HOME}/Library/Python/2.5/site-packages" ] && export PYTHONPATH="${HOME}/Library/Python/2.5/site-packages"
 
 
 # pretty colours in BSD style
