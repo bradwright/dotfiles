@@ -15,10 +15,9 @@ set title
 " i18n friendly
 set fileencoding=utf-8
 
-if has('syntax') && (&t_Co > 2 || has('win32'))
+if has('syntax')
     syntax on
-    colorscheme elflord
-    set background=dark
+    colorscheme desert
 endif
 
 if has('cmdline_info')
