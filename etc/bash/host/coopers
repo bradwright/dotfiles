@@ -2,3 +2,4 @@
 
 [ -x ${HOME}/bin/textmate ]     && export VISUAL="${HOME}/bin/textmate"
 
+export TM_PYCHECKER=pylint
