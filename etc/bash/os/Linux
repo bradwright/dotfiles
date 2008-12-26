@@ -3,8 +3,8 @@
 # bash startup commands specifically for Linux boxes
 
 
-# Python-specific paths for user
-[ -x "${HOME}/lib/python2.5/site-packages" ] && export PYTHONPATH="${HOME}/lib/python2.5/site-packages:${PYTHONPATH}"
+# Load personal Python libraries specific to version available
+[ -x "${HOME}/lib/python${PYTHON_VERSION}/site-packages" ] && export PYTHONPATH="${HOME}/lib/python${PYTHON_VERSION}/site-packages"
 
 
 # pretty colours in GNU style
