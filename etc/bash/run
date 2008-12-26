@@ -11,9 +11,8 @@ hostos=`uname`
 hostname=`hostname`
 
 
-# most common bash settings kept in separate rc files
-files=$( echo ~/etc/bash/rc/* )
-for rc_file in $files
+# initialise bash
+for rc_file in $( echo ~/etc/bash/init/* )
 do
     source $rc_file
 done
@@ -29,6 +28,13 @@ fi
 if [ -f ~/etc/bash/host/${hostname} ]; then
     source ~/etc/bash/host/${hostname}
 fi
+
+
+# most common bash settings kept in separate rc files
+for rc_file in $( echo ~/etc/bash/rc/* )
+do
+    source $rc_file
+done
 
 
 export HOSTOS="${hostos}"
