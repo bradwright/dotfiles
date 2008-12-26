@@ -39,8 +39,8 @@ done
 
 export HOSTOS="${hostos}"
 export HOST="${hostname}"
-export PATH
 
 
 source ~/etc/bash/prompt
 export PS1
+export PATH
