@@ -14,4 +14,4 @@ export LS_COLORS='di=93:fi=0:ln=36:pi=5:so=95:bd=5:cd=5:or=31:mi=31:ex=32:tw=36:
 
 
 # Instead of -G use --color
-alias      ls='ls -FG --color'
+alias      ls='ls -F --color'

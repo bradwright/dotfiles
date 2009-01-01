@@ -22,19 +22,19 @@ do
 done
 
 
+# most common bash settings kept in separate rc files
+for rc_file in $( echo ~/etc/bash/rc/* )
+do
+    source $rc_file
+done
+
+
 # type-specific settings
 source_if_exists ~/etc/bash/os/${hostos}
 
 
 # host-specific settings
 source_if_exists ~/etc/bash/host/${hostname}
-
-
-# most common bash settings kept in separate rc files
-for rc_file in $( echo ~/etc/bash/rc/* )
-do
-    source $rc_file
-done
 
 
 export HOSTOS="${hostos}"
