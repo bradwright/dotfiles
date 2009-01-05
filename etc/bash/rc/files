@@ -9,7 +9,6 @@ alias     fgr='find . | grep -i'
 alias     fgx='find . -print0 | xargs -0 grep -i'
 
 alias      ll='ls -la'
-alias      ls='ls -FG'
 
 alias   mkdir='mkdir -p'
 
