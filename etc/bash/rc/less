@@ -1,0 +1,7 @@
+# ~/etc/bash/rc/less
+#
+# Use most instead of less
+
+need most <<end
+    export  LESS=most
+end
