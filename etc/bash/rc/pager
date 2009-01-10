@@ -1,7 +1,0 @@
-# ~/etc/bash/rc/pager
-#
-# Use most as my pager
-
-need most <<end
-    export  PAGER=most
-end
