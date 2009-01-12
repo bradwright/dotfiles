@@ -22,7 +22,7 @@ case $TERM in
         titlebar=""
         ;;
 esac
-PS1="${ptitlebar}${PS1}"
+PS1="${titlebar}${PS1}"
 
 # optional prefixes to the basic prompt
 [ -n "$prompt_prefix" ]     && PS1="${prompt_prefix} ${PS1}"
