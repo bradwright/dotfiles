@@ -3,6 +3,10 @@
 # Shortcut to VMWare tools for starting and stopping headless VMs
 # (I got tired of opening the VMWare Fusion application every time)
 
+# TODO:
+# * Show running VMs and enable stopping
+# * Check VMWare exists and exit if it doesn't (cross-platform)
+
 VM_DIR="${HOME}/Documents/Virtual Machines.localized"
 START_VM="/Library/Application Support/VMware Fusion/vmrun"
 VMS=`find "${VM_DIR}" -name "*.vmwarevm" | grep -v 'Win'`
