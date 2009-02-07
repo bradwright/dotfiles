@@ -12,6 +12,7 @@ set nomodeline
 set showmatch
 set title
 set noautoindent
+set smartindent
 
 " i18n friendly
 set fileencoding=utf-8
