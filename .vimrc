@@ -12,7 +12,7 @@ set nomodeline
 set showmatch
 set title
 set noautoindent
-set smartindent
+set nosmartindent
 
 " i18n friendly
 set fileencoding=utf-8
@@ -32,4 +32,3 @@ filetype on
 
 set whichwrap=h,l,~,[,]
 set backspace=eol,start,indent
-
