@@ -19,6 +19,7 @@ set fileencoding=utf-8
 
 if has('syntax')
     syntax on
+    set background=dark
     colorscheme desert
 endif
 
