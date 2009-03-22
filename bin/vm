@@ -9,7 +9,7 @@
 
 VM_DIR="${HOME}/Documents/Virtual Machines.localized"
 START_VM="/Library/Application Support/VMware Fusion/vmrun"
-VMS=`find "${VM_DIR}" -name "*.vmwarevm" | grep -v 'Win'`
+VMS=`find "${VM_DIR}" -name "*.vmwarevm" | grep -v 'Win' | grep -v 'XP'`
 
 # path separators so I can use spaces in filenames
 OLD_IFS=${IFS}; IFS="
