@@ -39,7 +39,8 @@ if has('gui_running')
     set guioptions-=T
     set guioptions-=m
     set guifont=Panic\ Sans\ 8
-    set showtabline=1
+    set showtabline=2
+    set guitablabel=%t
 else
     set background=dark
     colorscheme desert
