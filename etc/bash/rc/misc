@@ -11,3 +11,9 @@ export  EDITOR=vim
 # Check the window size after each command and,
 # if necessary, update the values of LINES and COLUMNS
 shopt -s checkwinsize
+
+
+# auto complete hosts
+complete -W "$(echo $(cat ~/.ssh/known_hosts | \
+    cut -f 1 -d ' ' | sed -e s/,.*//g | \
+    sort -u | grep -v "\["))" ssh
