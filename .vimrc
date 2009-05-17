@@ -38,8 +38,7 @@ if has('gui_running')
     colorscheme ir_black
     set guioptions-=T
     set guioptions-=m
-    set guifont=Panic\ Sans\ 8
-    set showtabline=2
+    set guifont=Inconsolata:h14
     set guitablabel=%t
 else
     set background=dark
