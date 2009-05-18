@@ -75,5 +75,7 @@ if has('cmdline_info')
 endif
 
 " wrap around when crossing left and right edge of editors
-set whichwrap=h,l,~,[,]
+" < and > are left and right in normal mode
+" [ and ] are left and right when in inser mode
+set whichwrap=<,>,h,l,~,[,]
 set backspace=eol,start,indent
