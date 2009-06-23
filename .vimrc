@@ -20,11 +20,22 @@ set scrolloff=3
 " syntax highlighting
 if has('syntax')
     syntax on
+endif
+
+" conditional filetype matching
+if has('filetype')
     filetype on
     filetype plugin on
     filetype indent on
-    set background=dark
-    colorscheme desert
+endif
+
+" Highlight lines over 77 columns - from muffinresearch
+if has('matchadd')
+    :au BufWinEnter * let w:m1=matchadd('Search', '\%<81v.\%>77v', -1)
+    :au BufWinEnter * let w:m2=matchadd('ErrorMsg', '\%>80v.\+', -1)
+else
+    :au BufRead,BufNewFile * syntax match Search /\%<81v.\%>77v/
+    :au BufRead,BufNewFile * syntax match ErrorMsg /\%>80v.\+/
 endif
 
 " don't annoy me
@@ -57,16 +68,17 @@ set shiftwidth=4
 set expandtab
 set softtabstop=4
 
-autocmd Filetype c,cpp,h,python,html,css,js,xml set tabstop=4 softtabstop=4 shiftwidth=4 expandtab
+autocmd Filetype c,cpp,h,python,html,css,js,xml,php,conf set tabstop=4 softtabstop=4 shiftwidth=4 expandtab
 
 if has('mouse')
     set mouse=a
 endif
+
 set nomodeline
 set showmatch
 
+" UTF-8 please
 set fileencoding=utf-8
-
 
 if has('cmdline_info')
     set ruler
@@ -79,3 +91,9 @@ endif
 " [ and ] are left and right when in inser mode
 set whichwrap=<,>,h,l,~,[,]
 set backspace=eol,start,indent
+
+" minibufexplorer config
+let g:miniBufExplMapWindowNavVim = 1 
+let g:miniBufExplMapWindowNavArrows = 1 
+let g:miniBufExplMapCTabSwitchBufs = 1 
+let g:miniBufExplModSelTarget = 1 
