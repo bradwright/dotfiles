@@ -2,6 +2,6 @@
 #
 # common updates to the default path
 
-[ -x /usr/local/bin ]       && PATH="${PATH}:/usr/local/bin"
-[ -x /usr/local/sbin ]      && PATH="${PATH}:/usr/local/sbin"
-[ -x ${HOME}/bin/ ]         && PATH="${HOME}/bin:${PATH}"
+[ -d /usr/local/bin ]       && PATH="${PATH}:/usr/local/bin"
+[ -d /usr/local/sbin ]      && PATH="${PATH}:/usr/local/sbin"
+[ -d ${HOME}/bin/ ]         && PATH="${HOME}/bin:${PATH}"
