@@ -12,6 +12,10 @@ case $HOST in
         # live hostname
         PS1="${pbgred}${HOST}${preset}"
         ;;
+    smarkets*|vm*)
+        # Work stuff
+        PS1="${bgmagenta}${HOST}${preset}"
+        ;;
     *)
         # basic prompt
         PS1="${pcyan}${HOST}${preset}"
