@@ -4,7 +4,7 @@
 
 
 case $HOST in
-    coopers*|boags*)
+    coopers*)
         # fork when not at home
         PS1="${pgreen}${HOST}${preset}"
         ;;
