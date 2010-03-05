@@ -15,17 +15,15 @@ PYTHON_VERSION=`python -c "import sys; print sys.version" | sed -E 's/^([0-9]\.[
 [ -x "${HOME}/Library/Python/${PYTHON_VERSION}/site-packages" ] && export PYTHONPATH="${HOME}/Library/Python/${PYTHON_VERSION}/site-packages"
 
 
+# homebrew customisation
+export PYTHONPATH="$HOME/Projects/homebrew/lib/python2.6/site-packages:$PYTHONPATH"
+[ -d "$HOME/Projects/homebrew/bin" ] && PATH="$HOME/Projects/homebrew/bin:$PATH"
+
+
 # pretty colours in BSD style
 export LSCOLORS=dxfxcxdxbxegedabagacad
-
 alias      ls='ls -FG'
 
 
 # MySQL path on OS X
 [ -x /usr/local/mysql/bin ]         && PATH="/usr/local/mysql/bin:${PATH}"
-
-
-# MacPorts stuff - currently compiled to /usr/local/ports
-[ -x /usr/local/ports/bin ]               &&  PATH="/usr/local/ports/bin:${PATH}"
-# manpath is currently only edited here, so just export it
-[ -x /usr/local/ports/share/man ]         && export MANPATH="/usr/local/ports/share/man:${MANPATH}"
