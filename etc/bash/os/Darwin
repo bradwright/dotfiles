@@ -25,9 +25,8 @@ export LSCOLORS=dxfxcxdxbxegedabagacad
 alias      ls='ls -FG'
 
 
-# MySQL path on OS X
-[ -x /usr/local/mysql/bin ]         && PATH="/usr/local/mysql/bin:${PATH}"
-
-alias emacs="$HOME/Applications/Emacs.app/Contents/MacOS/Emacs -t"
+# Emacs as my main editor
+alias emacs="$HOME/Applications/Emacs.app/Contents/MacOS/bin/emacsclient -t"
+alias vemacs="$HOME/Applications/Emacs.app/Contents/MacOS/bin/emacsclient -c -n"
 export VISUAL="$HOME/Applications/Emacs.app/Contents/MacOS/bin/emacsclient -c -n"
 export EDITOR="$HOME/Applications/Emacs.app/Contents/MacOS/bin/emacsclient -t"
