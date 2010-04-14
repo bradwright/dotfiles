@@ -1,6 +1,3 @@
 # ~/etc/rc/emacs
 
 # Any Emacs environment config I require
-
-# I need this for Grail (see emacs.d)
-export USER_ELISP=$HOME/.emacs-d/
