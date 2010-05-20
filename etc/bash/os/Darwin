@@ -26,7 +26,7 @@ alias      ls='ls -FG'
 
 
 # Emacs as my main editor
-alias emacs="$HOME/Applications/Emacs.app/Contents/MacOS/bin/emacsclient -t"
-alias vemacs="$HOME/Applications/Emacs.app/Contents/MacOS/bin/emacsclient -c -n"
-export VISUAL="$HOME/Applications/Emacs.app/Contents/MacOS/bin/emacsclient -c"
-export EDITOR="$HOME/Applications/Emacs.app/Contents/MacOS/bin/emacsclient -t"
+alias emacs="$HOME/Applications/Emacs.app/Contents/MacOS/bin/emacsclient -t -a ''"
+alias vemacs="$HOME/Applications/Emacs.app/Contents/MacOS/bin/emacsclient -c -n -a ''"
+export VISUAL="vemacs"
+export EDITOR="$HOME/Applications/Emacs.app/Contents/MacOS/bin/emacsclient -t -a ''"
