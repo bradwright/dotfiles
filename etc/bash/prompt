@@ -10,7 +10,7 @@ case $HOST in
         ;;
     smarkets-dev*)
         # Work prompt
-        PS1="${bpgcyan}${HOST}${preset}"
+        PS1="${pbgcyan}${HOST}${preset}"
         ;;
     intranation*)
         # live hostname
