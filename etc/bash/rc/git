@@ -4,3 +4,5 @@
 
 # put Git into man path
 export MANPATH="/usr/local/git/man:$MANPATH"
+
+source_if_exists ~/etc/bash/vendor/git-completion.bash
