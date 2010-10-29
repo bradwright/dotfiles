@@ -1,0 +1,12 @@
+[color]
+        status = auto
+        diff = auto
+        branch = auto
+        showbranch = auto
+[user]
+        name = Bradley Wright
+        email = brad@intranation.com
+[alias]
+        co = checkout
+        st = status
+        l = log --decorate --name-status
