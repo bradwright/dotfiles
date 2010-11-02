@@ -10,6 +10,7 @@
         co = checkout
         st = status
         l = log --decorate --name-status
+        graph = log --oneline --graph
 [branch]
         autosetuprebase = always
 [push]
