@@ -10,3 +10,7 @@
         co = checkout
         st = status
         l = log --decorate --name-status
+[branch]
+        autosetuprebase = always
+[push]
+        default = tracking
