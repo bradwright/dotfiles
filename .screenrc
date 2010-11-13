@@ -1,0 +1,32 @@
+### Maintain path
+shell -/bin/bash
+
+### New Messages
+
+activity    "%c activity in %n (%t) [%w:%s]~"
+bell        "%c bell -> %n%f %t^G"
+vbell_msg   " *beep* "
+
+term xterm-color
+defbce "on"                 # Erase background with current bg color
+
+### Generic Config
+
+vbell               on      # No annoying audible bell, using "visual bell"
+autodetach          on      # Automatically detach screens on hangup
+startup_message     off     # You know what screen is, right?
+defutf8             on      # Default to UTF-8
+nonblock            on      # Don't let hung windows bring down the whole session
+
+defscrollback       5000    # Biiiiig buffer.
+
+shell -$SHELL
+pow_detach_msg "Screen session of \$LOGNAME \$:cr:\$:nl:ended."
+
+hardstatus alwayslastline
+hardstatus string "%{gk}[ %{G}%H %{g}][%= %{wk}%?%-Lw%?%{r}(%{W}%n*%f %t%?(%u)%?%{r})%{w}%?%+Lw%?%?%= %{g}][%{B} %m/%d %{W}%c %{g}]"
+
+bindkey -k F5 next
+bindkey -k F3 prev
+
+screen -t bash        bash
