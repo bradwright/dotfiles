@@ -1,3 +1,5 @@
+# this is mostly from here: https://github.com/mikewest/homedir/blob/master/.screenrc
+
 ### Maintain path
 shell -/bin/bash
 
