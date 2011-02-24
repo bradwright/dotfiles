@@ -10,7 +10,6 @@ bell        "%c bell -> %n%f %t^G"
 vbell_msg   " *beep* "
 
 term xterm-color
-defbce "on"                 # Erase background with current bg color
 
 ### Generic Config
 
