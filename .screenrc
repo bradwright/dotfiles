@@ -31,3 +31,6 @@ bindkey -k F5 next
 bindkey -k F3 prev
 
 screen -t bash        bash
+
+# try and local local screenrc
+source $HOME/.localscreenrc
