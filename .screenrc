@@ -1,7 +1,7 @@
 # this is mostly from here: https://github.com/mikewest/homedir/blob/master/.screenrc
 
-### Maintain path
-shell -/bin/bash
+### use local shell by default, and make it a login shell
+shell -$SHELL
 
 ### New Messages
 
@@ -21,7 +21,6 @@ nonblock            on      # Don't let hung windows bring down the whole sessio
 
 defscrollback       5000    # Biiiiig buffer.
 
-shell -$SHELL
 pow_detach_msg "Screen session of \$LOGNAME \$:cr:\$:nl:ended."
 
 hardstatus alwayslastline
@@ -29,8 +28,6 @@ hardstatus string "%{gk}[ %{G}%H %{g}][%= %{wk}%?%-Lw%?%{r}(%{W}%n*%f %t%?(%u)%?
 
 bindkey -k F5 next
 bindkey -k F3 prev
-
-screen -t bash        bash
 
 # try and local local screenrc
 source $HOME/.localscreenrc
