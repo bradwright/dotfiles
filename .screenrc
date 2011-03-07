@@ -29,5 +29,8 @@ hardstatus string "%{gk}[ %{G}%H %{g}][%= %{wk}%?%-Lw%?%{r}(%{W}%n*%f %t%?(%u)%?
 bindkey -k F5 next
 bindkey -k F3 prev
 
+# I never background processes, so unblock ^A
+escape ^zZ
+
 # try and local local screenrc
 source $HOME/.localscreenrc
