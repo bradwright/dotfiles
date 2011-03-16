@@ -9,6 +9,7 @@ activity    "%c activity in %n (%t) [%w:%s]~"
 bell        "%c bell -> %n%f %t^G"
 vbell_msg   " *beep* "
 
+### we're xterm-color
 term xterm-color
 
 ### Generic Config
@@ -26,11 +27,12 @@ pow_detach_msg "Screen session of \$LOGNAME \$:cr:\$:nl:ended."
 hardstatus alwayslastline
 hardstatus string "%{gk}[ %{G}%H %{g}][%= %{wk}%?%-Lw%?%{r}(%{W}%n*%f %t%?(%u)%?%{r})%{w}%?%+Lw%?%?%= %{g}][%{B} %m/%d %{W}%c %{g}]"
 
+### shortcuts
 bindkey -k F5 next
 bindkey -k F3 prev
 
-# I never background processes, so unblock ^A
+### I never background processes, so unblock ^A
 escape ^zZ
 
-# try and local local screenrc
+### try and local local .screenrc for local mods
 source $HOME/.localscreenrc
