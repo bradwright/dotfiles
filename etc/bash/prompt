@@ -1,5 +1,5 @@
 # ~/etc/bash/prompt
-# 
+#
 # set the prompt (should be done as late as possible)
 
 
@@ -36,7 +36,9 @@ PS1="${PS1} ${pyellow}\w${preset}"
 case $TERM in
     xterm*|rxvt*)
         # local TITLEBAR='\[\033]0;\u@\h\007\]'
-        titlebar="${popentitle}\u@${HOST}${pclosetitle}"
+        local TITLE_USER=""
+        [ $USER != 'bradleyw' ] && $TITLE_USER = "${USER}@"
+        titlebar="${popentitle}${TITLE_USER}${HOST}${pclosetitle}"
         ;;
     *)
         titlebar=""
