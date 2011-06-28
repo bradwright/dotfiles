@@ -17,7 +17,7 @@ PYTHON_VERSION=`python -c "import sys; print sys.version" | sed -E 's/^([0-9]\.[
 
 # homebrew customisation
 export PYTHONPATH="$HOME/Projects/homebrew/lib/python2.6/site-packages:$PYTHONPATH"
-[ -d "$HOME/Projects/homebrew/bin" ] && PATH="$HOME/Projects/homebrew/bin:$PATH"
+[ -d "$HOME/Projects/homebrew/bin" ] && PATH="$HOME/Projects/homebrew/bin:$HOME/Projects/homebrew/sbin:$PATH"
 
 
 # pretty colours in BSD style
