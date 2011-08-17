@@ -50,7 +50,7 @@ PS1="${titlebar}${PS1}"
 
 # optional prefixes to the basic prompt
 [ -n "$prompt_prefix" ]     && PS1="${prompt_prefix} ${PS1}"
-[ -n "$WINDOW" ]            && PS1="${pblue}scr-${WINDOW}${preset} ${PS1}"
+[ -n "$WINDOW" ]            && PS1="${pblue}scr-${WINDOW} ${preset} ${PS1}"
 
 
 # append dollar sign
