@@ -1,5 +1,7 @@
+# -*- mode: sh -*-
+
 # ~/etc/bash/rc/misc
-# 
+#
 # miscellaneous settings
 
 export  EXINIT="set sh=/bin/sh sw=4 ai redraw report=2"

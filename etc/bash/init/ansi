@@ -1,5 +1,7 @@
+# -*- mode: sh -*-
+
 # ~/etc/bash/ansi
-# 
+#
 # ANSI terminal codes, for use when adjusting stdout
 
      reset="\e[0m"

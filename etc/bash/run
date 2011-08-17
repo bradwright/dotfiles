@@ -1,5 +1,7 @@
+# -*- mode: sh -*-
+
 # ~/etc/bash/run
-# 
+#
 # anything in this file gets applied to every bash shell, login or otherwise
 
 # exit if not interactive

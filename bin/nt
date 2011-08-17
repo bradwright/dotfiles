@@ -1,5 +1,7 @@
+# -*- mode: sh -*-
+
 # ~/bin/nt
-# A simple script to open a new tab in Terminal in the current directory with an 
+# A simple script to open a new tab in Terminal in the current directory with an
 # optional command
 #
 # Stolen from: http://gist.github.com/35556 and modified
