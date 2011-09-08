@@ -5,33 +5,11 @@
 # set the prompt (should be done as late as possible)
 
 
-case $HOST in
-    coopers*)
-        # fork when not at home
-        PS1="${pgreen}${HOST}${preset}"
-        ;;
-    smarkets-dev*)
-        # Work prompt
-        PS1="${pbgcyan}${HOST}${preset}"
-        ;;
-    intranation*)
-        # live hostname
-        PS1="${pbgred}${HOST}${preset}"
-        ;;
-    *smarkets.com|vm*)
-        # Work stuff
-        PS1="${bgmagenta}${HOST}${preset}"
-        ;;
-    *)
-        # basic prompt
-        PS1="${pcyan}${HOST}${preset}"
-        ;;
-esac
-PS1="${PS1} ${pyellow}\w${preset}"
+PS1="${HOST} \w"
 
 
 # if not my regular user, show username
-[ $USER != 'bradleyw' ]     && PS1="${pred}\u${preset}@${PS1}"
+[ $USER != 'bradleyw' ]     && PS1="\u@${PS1}"
 
 
 # if we can edit the title of the terminal, do so
@@ -45,12 +23,12 @@ case $TERM in
         titlebar=""
         ;;
 esac
-PS1="${titlebar}${PS1}"
+# PS1="${titlebar}${PS1}"
 
 
 # optional prefixes to the basic prompt
 [ -n "$prompt_prefix" ]     && PS1="${prompt_prefix} ${PS1}"
-[ -n "$WINDOW" ]            && PS1="${pblue}scr-${WINDOW} ${preset} ${PS1}"
+[ -n "$WINDOW" ]            && PS1="scr[${WINDOW}] ${PS1}"
 
 
 # append dollar sign
