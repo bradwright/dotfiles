@@ -10,7 +10,7 @@
         co = checkout
         st = status
         l = log --decorate --name-status
-        graph = log --oneline --graph
+        graph = !git log --all --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative $(git stash list --format=%h)log --oneline --graph
 [branch]
         autosetuprebase = always
 [push]
