@@ -10,6 +10,9 @@ bell        "%c bell -> %n%f %t^G"
 vbell_msg   " *beep* "
 
 ### we're xterm-color
+termcapinfo xterm "Co#256:AB=\E[48;5;%dm:AF=\E[38;5;%dm"
+termcapinfo xterm-color "Co#256:AB=\E[48;5;%dm:AF=\E[38;5;%dm"
+termcapinfo xterm-256color "Co#256:AB=\E[48;5;%dm:AF=\E[38;5;%dm"
 term xterm-color
 
 ### Generic Config
