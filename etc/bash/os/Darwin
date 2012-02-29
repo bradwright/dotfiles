@@ -24,7 +24,8 @@ alias      ls='ls -FG'
 
 # Emacs as my main editor
 alias emacs="$HOME/Applications/Emacs.app/Contents/MacOS/Emacs"
-alias emacsclient="$HOME/Applications/Emacs.app/Contents/MacOS/bin/emacsclient"
-export VISUAL="emacsclient -n"
-export EDITOR="emacsclient -n"
+export EMACSCLIENT="$HOME/Applications/Emacs.app/Contents/MacOS/bin/emacsclient"
+alias emacsclient="$EMACSCLIENT"
+export VISUAL="$EMACSCLIENT"
+export EDITOR="$EMACSCLIENT -n"
 export ALTERNATE_EDITOR="emacs"
