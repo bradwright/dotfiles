@@ -1,9 +1,0 @@
-# -*- mode: sh -*-
-
-# ~/etc/bash/rc/path
-#
-# common updates to the default path
-
-[ -d /usr/local/bin ]       && PATH="${PATH}:/usr/local/bin"
-[ -d /usr/local/sbin ]      && PATH="${PATH}:/usr/local/sbin"
-[ -d ${HOME}/bin/ ]         && PATH="${HOME}/bin:${PATH}"

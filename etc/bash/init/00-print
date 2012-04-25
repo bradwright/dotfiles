@@ -1,7 +1,0 @@
-# -*- mode: sh -*-
-
-# ~/etc/bash/init/00-print
-#
-# echo output, allowing raw characters (ansi colour codes)
-
-alias   print='echo -e'

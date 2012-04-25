@@ -1,4 +1,0 @@
-# -*- mode: sh -*-
-
-# pass files from visual to textmate
-mate -w "$@"
