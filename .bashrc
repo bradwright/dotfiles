@@ -3,16 +3,26 @@
 # We just want Emacs really
 
 if [ `uname` = 'Darwin' ]; then
-    emacsen=`find ~/Applications/ -name Emacs | head -n 1`
-    brew=`which brew`
+    # check all 3 places we might have Emacs set up
+    dir="$HOME/Applications"
+    emacsen=$(find "$dir" -name Emacs | head -n 1)
+
+    if [ -z "$emacsen" ]; then
+        dir="/Applications"
+        emacsen=$(find "$dir" -name Emacs | head -n 1)
+    fi
+
+    if [ -z "$emacsen" ]; then
+        dir="/usr/local/Cellar"
+        emacsen=$(find "$dir" -name Emacs | head -n 1)
+    fi
+
     if [ -n "$emacsen" ]; then
         alias emacs="$emacsen"
-        emacsclient=`find ~/Applications -name emacsclient | head -n 1`
+        emacsclient=$(find "$dir" -name emacsclient | head -n 1)
         alias emacsclient="'$emacsclient'"
         alias vemacs="'$emacsclient' -c -n"
         export EDITOR="'$emacsclient' -t"
         export VISUAL="'$emacsclient' -c"
-    elif [ -n "$brew" ]; then
-
     fi
 fi
