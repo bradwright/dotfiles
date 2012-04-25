@@ -12,8 +12,8 @@ if [ `uname` = 'Darwin' ]; then
         emacsen=$(find "$dir" -name Emacs | head -n 1)
     fi
 
-    if [ -z "$emacsen" ]; then
-        dir="/usr/local/Cellar"
+    if [ -d /usr/local/Cellar/emacs && -z "$emacsen" ]; then
+        dir="/usr/local/Cellar/emacs"
         emacsen=$(find "$dir" -name Emacs | head -n 1)
     fi
 
