@@ -23,9 +23,6 @@ alias      ls='ls -FG'
 
 # stick homebrew in front of everything else
 has_brew=`which brew`
-if [ -n "$has_brew" ]; then
-    export PATH="/usr/local/bin:$PATH"
-fi
 
 emacsen=`find ~/Applications/ -name Emacs | head -n 1`
 if [ -n "$emacsen" ]; then
