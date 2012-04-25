@@ -21,11 +21,18 @@ PYTHON_VERSION=`python -c "import sys; print sys.version" | sed -E 's/^([0-9]\.[
 export LSCOLORS=dxfxcxdxbxegedabagacad
 alias      ls='ls -FG'
 
+# stick homebrew in front of everything else
+has_brew=`which brew`
+if [ -n "$has_brew" ]; then
+    export PATH="/usr/local/bin:$PATH"
+fi
 
-# Emacs as my main editor
-alias emacs="$HOME/Applications/Emacs.app/Contents/MacOS/Emacs"
-export EMACSCLIENT="$HOME/Applications/Emacs.app/Contents/MacOS/bin/emacsclient"
-alias emacsclient="$EMACSCLIENT"
-export VISUAL="$EMACSCLIENT"
-export EDITOR="$EMACSCLIENT -n"
-export ALTERNATE_EDITOR="emacs"
+emacsen=`find ~/Applications/ -name Emacs | head -n 1`
+if [ -n "$emacsen" ]; then
+    alias emacs="$emacsen"
+    emacsclient=`find ~/Applications -name emacsclient | head -n 1`
+    alias emacsclient="'$emacsclient'"
+    alias vemacs="'$emacsclient' -c -n"
+    export EDITOR="'$emacsclient' -t"
+    export VISUAL="'$emacsclient' -c"
+fi
