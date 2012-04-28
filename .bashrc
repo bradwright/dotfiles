@@ -25,4 +25,18 @@ if [ `uname` = 'Darwin' ]; then
         export EDITOR="'$emacsclient' -t"
         export VISUAL="'$emacsclient' -c"
     fi
+
+    # some homebrew path mangling
+
+    # it's recommended *not* to put /usr/local/bin before /usr/bin
+    # because there might be system dependencies - however if I don't
+    # do something, XCode's Git ends up before my custom one in the
+    # path.
+    if [ -e /usr/local/bin/git ]; then
+        # we have a homebrew Git, link that in to the $PATH
+        git=$(readlink /usr/local/bin/git)
+        gitdir=$(dirname $git)
+        # TODO: this path is messy, it's full of ../stuff
+        PATH="/usr/local/bin/$gitdir:$PATH"
+    fi
 fi
