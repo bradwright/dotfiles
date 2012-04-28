@@ -12,11 +12,10 @@ if [ `uname` = 'Darwin' ]; then
         emacsen=$(find "$dir" -name Emacs | head -n 1)
     fi
 
-    # FIXME: this causes a missing `]` error
-    # if [ -d /usr/local/Cellar/emacs && -z "$emacsen" ]; then
-    #     dir="/usr/local/Cellar/emacs"
-    #     emacsen=$(find "$dir" -name Emacs | head -n 1)
-    # fi
+    if [ -z "$emacsen" ] && [ -d /usr/local/Cellar/emacs ]; then
+        dir="/usr/local/Cellar/emacs"
+        emacsen=$(find "$dir" -name Emacs | head -n 1)
+    fi
 
     if [ -n "$emacsen" ]; then
         alias emacs="$emacsen"
