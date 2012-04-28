@@ -43,3 +43,10 @@ if [ `uname` = 'Darwin' ]; then
 
     export PATH
 fi
+
+# RVM
+
+if [ -s "$HOME/.rvm/scripts/rvm" ]; then
+    source "$HOME/.rvm/scripts/rvm"
+    . "$HOME/.rvm/scripts/rvm"
+fi
