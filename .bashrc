@@ -21,10 +21,11 @@ if [ `uname` = 'Darwin' ]; then
     if [ -n "$emacsen" ]; then
         alias emacs="$emacsen"
         emacsclient=$(find "$dir" -name emacsclient | head -n 1)
-        alias emacsclient="'$emacsclient'"
-        alias vemacs="'$emacsclient' -c -n"
-        export EDITOR="'$emacsclient' -t"
-        export VISUAL="'$emacsclient' -c"
+        emacsdir=$(dirname $emacsclient)
+        PATH="$emacsdir:$PATH"
+        alias vemacs="emacsclient -c -n"
+        export EDITOR="emacsclient -t"
+        export VISUAL="emacsclient -c"
     fi
 
     # some homebrew path mangling
