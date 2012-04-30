@@ -41,4 +41,6 @@ if [ `uname` = 'Darwin' ]; then
         # TODO: this path is messy, it's full of ../stuff
         PATH="/usr/local/bin/$gitdir:$PATH"
     fi
+
+    export PATH
 fi
