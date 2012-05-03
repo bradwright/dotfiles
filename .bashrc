@@ -22,9 +22,8 @@ if [ `uname` = 'Darwin' ]; then
         emacsclient=$(find "$dir" -name emacsclient | head -n 1)
         emacsdir=$(dirname $emacsclient)
         PATH="$emacsdir:$PATH"
-        alias vemacs="emacsclient -c -n"
-        export EDITOR="emacsclient -t"
-        export VISUAL="emacsclient -c"
+        export EDITOR="emacsclient"
+        export VISUAL="emacsclient"
     fi
 
     # some homebrew path mangling
