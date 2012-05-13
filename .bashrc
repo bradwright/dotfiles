@@ -40,7 +40,10 @@ if [ `uname` = 'Darwin' ]; then
         PATH="/usr/local/bin/$gitdir:$PATH"
     fi
 
-    export PATH
+fi
+
+if [ -d "$HOME/bin" ]; then
+    PATH="$HOME/bin:$PATH"
 fi
 
 # RVM
@@ -49,3 +52,5 @@ if [ -s "$HOME/.rvm/scripts/rvm" ]; then
     source "$HOME/.rvm/scripts/rvm"
     . "$HOME/.rvm/scripts/rvm"
 fi
+
+export PATH
