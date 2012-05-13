@@ -1,0 +1,8 @@
+# -*- mode: sh -*-
+
+if [ `uname` = 'Darwin' ]; then
+    # TODO: make this respect my installed Emacs
+    ~/Applications/Emacs.app/Contents/MacOS/Emacs "$@"
+else
+    emacs "$@"
+fi
