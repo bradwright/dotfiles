@@ -40,8 +40,15 @@ if [ `uname` = 'Darwin' ]; then
         PATH="/usr/local/bin/$gitdir:$PATH"
     fi
 
+    # If Homebrew exists, make sure we put the binaries it installs on
+    # the PATH
+    if [ -e /usr/local/bin/brew ]; then
+        PATH="$PATH:/usr/local/bin"
+    fi
+
 fi
 
+# put our own bin into the PATH
 if [ -d "$HOME/bin" ]; then
     PATH="$HOME/bin:$PATH"
 fi
