@@ -44,6 +44,9 @@ if [ `uname` = 'Darwin' ]; then
     # the PATH
     if [ -e /usr/local/bin/brew ]; then
         PATH="$PATH:/usr/local/bin"
+        if [ -f `brew --prefix`/etc/bash_completion ]; then
+            . `brew --prefix`/etc/bash_completion
+        fi
     fi
 
 fi
