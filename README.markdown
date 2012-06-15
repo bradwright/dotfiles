@@ -1,25 +1,20 @@
-home directory
+Home directory
 ==============
 
-All of this code I've basically cribbed from
-[Norm](http://marknormanfrancis.com/)'s
-[home directory](http://github.com/norm/homedir) project, except for
-the Emacs and Python bits.
+This basically exists to set up my OS X command line environment to
+something sensible, which means:
 
-This is Norm's original README:
+* Set up Emacs
+  * Set `EDITOR` and `VISUAL` to the right `emacsclient`
+  * Make sure that `emacs -nw` etc. launches the correct Emacs (OS X
+    ships with version 22 - the current version is 24.1)
+* Set up some [Homebrew](https://github.com/mxcl/homebrew) paths
+  * Install `bash-completion`
+* Do the right thing for RVM
+* Add some sensible Git defaults (such as `autorebase`)
 
-> Files from my home directory (work, laptop and shared hosting) which
-> are open to anyone to investigate and learn from.
->
->
-> Philosophy
-> ----------
-> There have been countless times in my life that I've learned something
-> new (whether it is a programming technique, time saving shortcut, or just
-> a random useful tip) from seeing people's "secret software". I figured I'd
-> share mine too.
->
-> See also
-> --------
-> * http://www.jwz.org/hacks/marginal.html
-> * http://simon-cozens.org/programmer/secret-software.html
+It also deals with the OS X `bashrc` vs `bash_profile` issue (it's the
+reverse of how they're executed on Linux).
+
+Also included are `tmux` and `screen` configuration for when I need to
+set up a remote machine.
