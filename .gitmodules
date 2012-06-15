@@ -1,6 +1,0 @@
-[submodule ".emacs.d"]
-	path = .emacs.d
-	url = git@github.com:bradleywright/emacs-d.git
-[submodule ".emacs-d"]
-	path = .emacs-d
-	url = git@github.com:bradleywright/emacs-d.git
