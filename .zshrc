@@ -16,9 +16,27 @@ HISTFILE=~/.zsh_history
 export EDITOR="emacsclient"
 export VISUAL="$EDITOR"
 
-# Default prompt colours
-prompt_fg=black
-prompt_bg=green
+find_emacs() {
+    # finds my Emacs install
+    if [ -d /usr/local/Cellar/emacs ]; then
+        dir="/usr/local/Cellar/emacs"
+        emacsen=$(find "$dir" -name Emacs -type f | head -n 1)
+    fi
+
+    if [ -n "$emacsen" ]; then
+        emacsbin=$(find "$dir" -name emacs -type f | head -n 1)
+
+        if [ ! -e "$emacsbin" ]; then
+            alias emacs="$emacsen"
+        fi
+
+        emacsclient=$(find "$dir" -name emacsclient -type f | head -n 1)
+        emacsdir=$(dirname $emacsclient)
+        PATH="$emacsdir:$PATH"
+    fi
+}
+
+export PATH="$PATH"
 
 # Show stuff in prompt
 precmd() {
@@ -45,3 +63,5 @@ precmd() {
 PS2="%F{$prompt_fg}%K{$prompt_bg}${PS2}%f%k"
 PS3="%F{$prompt_fg}%K{$prompt_bg}${PS3}%f%k"
 PS4="%F{$prompt_fg}%K{$prompt_bg}${PS4}%f%k"
+
+find_emacs
