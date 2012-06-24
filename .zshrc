@@ -24,26 +24,21 @@ prompt_bg=green
 precmd() {
     exit_status=$?
 
-    if [ $HISTFILE ]; then
-        fg=$prompt_fg
-        bg=$prompt_bg
-    else
-        fg=$prompt_bg
-        bg=$prompt_fg
-    fi
+    # Clear all colours
+    clr="%b%f%k"
 
-    PS1="%F{$fg}%F{magenta}%m %F{$bg}%~ %#%b%f%k "
+    PS1="%F{magenta}%m %F{green}%~ %#${clr} "
 
     if git branch >& /dev/null; then
-        PS1="%F{black}%K{yellow} $(git branch --no-color | grep '^*' | cut -d ' ' -f 2-) %K{black} ${PS1}"
+        PS1="%F{black}%K{yellow} $(git branch --no-color | grep '^*' | cut -d ' ' -f 2-) ${clr} ${PS1}"
     fi
 
     if [ $RUBY_VERSION ]; then
-        PS1="%F{black}%K{white} ${RUBY_VERSION} %K{black} ${PS1}"
+        PS1="%F{black}%K{white} ${RUBY_VERSION} ${clr} ${PS1}"
     fi
 
     if test $exit_status -ne 0; then
-        PS1="%F{white}%K{red} ${exit_status} %K{black} ${PS1}"
+        PS1="%F{white}%K{red} ${exit_status} ${clr} ${PS1}"
     fi
 }
 
