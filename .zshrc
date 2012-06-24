@@ -32,18 +32,18 @@ precmd() {
         bg=$prompt_fg
     fi
 
-    PS1="%F{$fg}%F{magenta}%n@%m %F{$bg}%~ %#%b%f%k "
+    PS1="%F{$fg}%F{magenta}%m %F{$bg}%~ %#%b%f%k "
 
     if git branch >& /dev/null; then
-        PS1="%F{black}%K{yellow} $(git branch --no-color | grep '^*' | cut -d ' ' -f 2-) %K{$fg} ${PS1}"
+        PS1="%F{black}%K{yellow} $(git branch --no-color | grep '^*' | cut -d ' ' -f 2-) %K{black} ${PS1}"
     fi
 
     if [ $RUBY_VERSION ]; then
-        PS1="%F{black}%K{white} ${RUBY_VERSION} ${PS1}"
+        PS1="%F{black}%K{white} ${RUBY_VERSION} %K{black} ${PS1}"
     fi
 
     if test $exit_status -ne 0; then
-        PS1="%F{white}%K{red} ${exit_status} ${PS1}"
+        PS1="%F{white}%K{red} ${exit_status} %K{black} ${PS1}"
     fi
 }
 
