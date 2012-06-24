@@ -9,8 +9,7 @@
         email = brad@intranation.com
 [alias]
         co = checkout
-        st = status
-        sb = status -sb
+        st = status -sb
         l = log --decorate --name-status
         graph = !git log --all --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative $(git stash list --format=%h)log --oneline --graph
 [branch]
