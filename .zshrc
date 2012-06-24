@@ -18,21 +18,23 @@ export VISUAL="$EDITOR"
 
 find_emacs() {
     # finds my Emacs install
-    if [ -d /usr/local/Cellar/emacs ]; then
-        dir="/usr/local/Cellar/emacs"
-        emacsen=$(find "$dir" -name Emacs -type f | head -n 1)
-    fi
-
-    if [ -n "$emacsen" ]; then
-        emacsbin=$(find "$dir" -name emacs -type f | head -n 1)
-
-        if [ ! -e "$emacsbin" ]; then
-            alias emacs="$emacsen"
+    if [ `uname` = "Darwin" ]; then
+        if [ -d /usr/local/Cellar/emacs ]; then
+            dir="/usr/local/Cellar/emacs"
+            emacsen=$(find "$dir" -name Emacs -type f | head -n 1)
         fi
 
-        emacsclient=$(find "$dir" -name emacsclient -type f | head -n 1)
-        emacsdir=$(dirname $emacsclient)
-        PATH="$emacsdir:$PATH"
+        if [ -n "$emacsen" ]; then
+            emacsbin=$(find "$dir" -name emacs -type f | head -n 1)
+
+            if [ ! -e "$emacsbin" ]; then
+                alias emacs="$emacsen"
+            fi
+
+            emacsclient=$(find "$dir" -name emacsclient -type f | head -n 1)
+            emacsdir=$(dirname $emacsclient)
+            PATH="$emacsdir:$PATH"
+        fi
     fi
 }
 
