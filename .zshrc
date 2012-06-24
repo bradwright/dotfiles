@@ -34,7 +34,7 @@ precmd() {
     fi
 
     if [ $RUBY_VERSION ]; then
-        PS1="%F{black}%K{white} ${RUBY_VERSION} ${clr} ${PS1}"
+        PS1="%F{black}%K{red} ${RUBY_VERSION} ${clr} ${PS1}"
     fi
 
     if test $exit_status -ne 0; then
