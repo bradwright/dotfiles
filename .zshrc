@@ -38,7 +38,28 @@ find_emacs() {
     fi
 }
 
-export PATH="$PATH"
+find_git() {
+    # it's recommended *not* to put /usr/local/bin before /usr/bin
+    # because there might be system dependencies - however if I don't
+    # do something, XCode's Git ends up before my custom one in the
+    # path.
+    if [ -e /usr/local/bin/git ]; then
+        git=$(readlink /usr/local/bin/git)
+        gitdir=$(dirname $git)
+        # TODO: fix path properly
+        PATH="/usr/local/bin/$gitdir:$PATH"
+    fi
+}
+
+find_brew() {
+    # explicitly put homebrew bin in PATH, as other shells might not
+    # find it
+    if [ `uname` = "Darwin" ]; then
+        brewpath=$(command -v brew)
+        brewdir=$(dirname $brewpath)
+        PATH="$PATH:$brewdir"
+    fi
+}
 
 # Show stuff in prompt
 precmd() {
@@ -67,3 +88,6 @@ PS3="%F{$prompt_fg}%K{$prompt_bg}${PS3}%f%k"
 PS4="%F{$prompt_fg}%K{$prompt_bg}${PS4}%f%k"
 
 find_emacs
+find_git
+find_brew
+export PATH="$PATH"
