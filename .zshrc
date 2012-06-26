@@ -16,6 +16,23 @@ HISTFILE=~/.zsh_history
 export EDITOR="emacsclient"
 export VISUAL="$EDITOR"
 
+# Add directory to PATH if it exists and is not already there.
+
+# TODO: abstract "in path" out to a function
+prepend_path() {
+    to_add=$1
+    if [ -d $to_add ] && ( ! echo ":$PATH:" | grep -qF ":$to_add:" ); then
+        export PATH=$to_add:$PATH
+    fi
+}
+
+append_path() {
+    to_add=$1
+    if [ -d $to_add ] && ( ! echo ":$PATH:" | grep -qF ":$to_add:" ); then
+        export PATH=$PATH:$to_add
+    fi
+}
+
 find_emacs() {
     # finds my Emacs install
     if [ `uname` = "Darwin" ]; then
@@ -33,7 +50,7 @@ find_emacs() {
 
             emacsclient=$(find "$dir" -name emacsclient -type f | head -n 1)
             emacsdir=$(dirname $emacsclient)
-            PATH="$emacsdir:$PATH"
+            prepend_path $emacsdir
         fi
     fi
 }
@@ -47,7 +64,7 @@ find_git() {
         git=$(readlink /usr/local/bin/git)
         gitdir=$(dirname $git)
         # TODO: fix path properly
-        PATH="/usr/local/bin/$gitdir:$PATH"
+        prepend_path "/usr/local/bin/$gitdir"
     fi
 }
 
@@ -57,7 +74,7 @@ find_brew() {
     if [ `uname` = "Darwin" ]; then
         brewpath=$(command -v brew)
         brewdir=$(dirname $brewpath)
-        PATH="$PATH:$brewdir"
+        append_path $brewdir
     fi
 }
 
@@ -90,4 +107,3 @@ PS4="%F{$prompt_fg}%K{$prompt_bg}${PS4}%f%k"
 find_emacs
 find_git
 find_brew
-export PATH="$PATH"
