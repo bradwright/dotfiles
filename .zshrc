@@ -84,7 +84,15 @@ precmd() {
     # Clear all colours
     clr="%b%f%k"
 
-    PS1="%F{magenta}%m %F{green}%~ %#${clr} "
+    # my Tmux config has the host already, so we can hide it from the
+    # prompt.
+    if [ ! $TMUX_PANE ]; then
+        PS1="%F{magenta}%m "
+    else
+        PS1=""
+    fi
+
+    PS1="${PS1}%F{green}%~ %#${clr} "
 
     if git branch >& /dev/null; then
         PS1="%F{black}%K{yellow} $(git branch --no-color | grep '^*' | cut -d ' ' -f 2-) ${clr} ${PS1}"
