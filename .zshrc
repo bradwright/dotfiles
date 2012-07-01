@@ -13,7 +13,7 @@ HISTSIZE=1000
 SAVEHIST=1000
 HISTFILE=~/.zsh_history
 
-export EDITOR="emacsclient"
+export EDITOR="emacsclient -nw"
 export VISUAL="$EDITOR"
 
 # Add directory to PATH if it exists and is not already there.
