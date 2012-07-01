@@ -21,14 +21,14 @@ export VISUAL="$EDITOR"
 # TODO: abstract "in path" out to a function
 prepend_path() {
     to_add=$1
-    if [ -d $to_add ] && ( ! echo ":$PATH:" | grep -qF ":$to_add:" ); then
+    if [ -d $to_add ]; then
         export PATH=$to_add:$PATH
     fi
 }
 
 append_path() {
     to_add=$1
-    if [ -d $to_add ] && ( ! echo ":$PATH:" | grep -qF ":$to_add:" ); then
+    if [ -d $to_add ]; then
         export PATH=$PATH:$to_add
     fi
 }
