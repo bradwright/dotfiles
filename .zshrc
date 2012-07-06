@@ -106,8 +106,8 @@ precmd() {
         PS1="%F{black}%K{red} ${RUBY_VERSION} ${clr} ${PS1}"
     fi
 
-    if test $exit_status -ne 0; then
-        PS1="%F{white}%K{red} ${exit_status} ${clr} ${PS1}"
+    if test $exit_status = 1; then
+        PS1="%F{white}%K{red} ${clr} ${PS1}"
     fi
 }
 
