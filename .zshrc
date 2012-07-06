@@ -88,10 +88,12 @@ precmd() {
     # prompt.
     if [ $TMUX_PANE ]; then
         PS1=""
-    elif [ $SSH_CONNECTION ]; then
-        PS1="%F{red}%m "
     else
-        PS1="%F{magenta}%m "
+        if [ $SSH_CONNECTION ]; then
+            PS1="%F{red}%m "
+        else
+            PS1="%F{magenta}%m "
+        fi
     fi
 
     PS1="${PS1}%F{green}%~ %#${clr} "
