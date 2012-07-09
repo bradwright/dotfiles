@@ -87,7 +87,7 @@ precmd() {
     # my Tmux config has the host already, so we can hide it from the
     # prompt.
     if [ $TMUX_PANE ]; then
-        PS1=""
+        PS1=" "
     else
         if [ $SSH_CONNECTION ]; then
             PS1="%F{red}%m "
