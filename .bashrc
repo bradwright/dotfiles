@@ -102,10 +102,6 @@ find_brew() {
 
 # Show stuff in prompt
 precmd() {
-    exit_status=$?
-
-    # Clear all colours
-    clr="%b%f%k"
 
     # my Tmux config has the host already, so we can hide it from the
     # prompt.
