@@ -110,7 +110,7 @@ precmd() {
     # my Tmux config has the host already, so we can hide it from the
     # prompt.
     if [ $TMUX_PANE ]; then
-        PS1="${txtrst}${txtcyn}${TMUX_PANE}${txtrst} "
+        PS1=""
     elif [ $SSH_CONNECTION ]; then
         PS1="${txtrst}${txtred}\h${txtrst} "
     else
@@ -130,7 +130,7 @@ precmd() {
 
 precmd
 
-export PROMPT_COMMAND="precmd"
+PROMPT_COMMAND=precmd
 
 PS2="%F{$prompt_fg}%K{$prompt_bg}${PS2}%f%k"
 PS3="%F{$prompt_fg}%K{$prompt_bg}${PS3}%f%k"
@@ -139,5 +139,4 @@ PS4="%F{$prompt_fg}%K{$prompt_bg}${PS4}%f%k"
 find_emacs
 find_git
 find_brew
-export PS1
 export PATH
