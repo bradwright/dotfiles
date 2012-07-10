@@ -97,6 +97,9 @@ find_brew() {
         brewpath=$(command -v brew)
         brewdir=$(dirname $brewpath)
         append_path $brewdir
+        if [ -f `brew --prefix`/etc/bash_completion ]; then
+            . `brew --prefix`/etc/bash_completion
+        fi
     fi
 }
 
