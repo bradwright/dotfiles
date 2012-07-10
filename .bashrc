@@ -127,8 +127,6 @@ precmd() {
     fi
 }
 
-precmd
-
 PROMPT_COMMAND=precmd
 
 PS2="%F{$prompt_fg}%K{$prompt_bg}${PS2}%f%k"
@@ -138,4 +136,5 @@ PS4="%F{$prompt_fg}%K{$prompt_bg}${PS4}%f%k"
 find_emacs
 find_git
 find_brew
+
 export PATH
