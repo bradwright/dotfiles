@@ -163,4 +163,9 @@ find_git
 find_brew
 find_completion
 
+# local changes
+if [ -f ~/.local_bashrc ]; then
+    . ~/.local_bashrc
+fi
+
 export PATH
