@@ -132,6 +132,17 @@ find_completion() {
     fi
 }
 
+find_ruby() {
+    # Ruby libraries
+    # check for rbenv first
+    if command -v rbenv > /dev/null; then
+        eval "$(rbenv init -)";
+    elif [ -d $HOME/.rvm/bin ]; then
+        append_path $HOME/.rvm/bin
+        [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm"
+    fi
+}
+
 # Show stuff in prompt
 precmd() {
 
@@ -162,6 +173,7 @@ find_emacs
 find_git
 find_brew
 find_completion
+find_ruby
 
 # local changes
 if [ -f ~/.local_bashrc ]; then
