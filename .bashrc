@@ -168,6 +168,9 @@ precmd() {
     if [ $RUBY_VERSION ]; then
         PS1="${txtrst}${txtwht}${bakred} ${RUBY_VERSION} ${txtrst} ${PS1}"
     fi
+    if [ $RBENV_VERSION ]; then
+        PS1="${txtrst}${txtwht}${bakred} ${RBENV_VERSION} ${txtrst} ${PS1}"
+    fi
 }
 
 PROMPT_COMMAND=precmd
