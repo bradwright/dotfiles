@@ -141,6 +141,9 @@ find_ruby() {
         append_path $HOME/.rvm/bin
         [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm"
     fi
+    # shortcut for making local bundles
+    alias bl="bundle install --path vendor/bundle"
+    alias bi="bundle install"
 }
 
 # Show stuff in prompt
