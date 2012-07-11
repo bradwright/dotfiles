@@ -104,6 +104,17 @@ find_brew() {
         brewpath=$(command -v brew)
         brewdir=$(dirname $brewpath)
         append_path $brewdir
+    fi
+}
+
+find_completion() {
+    # enable programmable completion features (you don't need to enable
+    # this, if it's already enabled in /etc/bash.bashrc and /etc/profile
+    # sources /etc/bash.bashrc).
+    if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+        . /etc/bash_completion
+    fi
+    if [ `uname` = "Darwin" ]; then
         if [ -f `brew --prefix`/etc/bash_completion ]; then
             . `brew --prefix`/etc/bash_completion
         fi
@@ -143,5 +154,6 @@ PS4="%F{$prompt_fg}%K{$prompt_bg}${PS4}%f%k"
 find_emacs
 find_git
 find_brew
+find_completion
 
 export PATH
