@@ -139,7 +139,7 @@ precmd() {
     # prompt.
     if [ $TMUX_PANE ]; then
         PS1=""
-    elif [ $SSH_CONNECTION ]; then
+    elif [ "$SSH_CONNECTION" ]; then
         PS1="${txtrst}${txtred}\h${txtrst} "
     else
         PS1="${txtrst}${txtpur}\h${txtrst} "
