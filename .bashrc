@@ -148,7 +148,7 @@ precmd() {
     PS1="${PS1}${txtrst}${txtgrn}\w \$${txtrst} "
 
     if git branch >& /dev/null; then
-        PS1="${txtrst}${bakylw}${bldblk} $(git branch --no-color | grep '^*' | cut -d ' ' -f 2-) ${txtrst} ${PS1}"
+        PS1="${txtrst}${txtblk}${bakylw} $(git branch --no-color | grep '^*' | cut -d ' ' -f 2-) ${txtrst} ${PS1}"
     fi
 
     if [ $RUBY_VERSION ]; then
