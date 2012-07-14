@@ -101,9 +101,6 @@ find_ruby() {
     # Ruby libraries
     # check for rbenv first
     if command -v rbenv > /dev/null; then
-        if [ -d $HOME/.rbenv/shims ]; then
-            append_path $HOME/.rbenv/shims
-        fi
         if [ -d $HOME/.rbenv/bin ]; then
             prepend_path $HOME/.rbenv/bin
         fi
