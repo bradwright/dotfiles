@@ -68,5 +68,5 @@ precmd() {
 
 PROMPT_COMMAND=precmd
 
-
+# mangle PATH etc.
 source ~/.bashrc
