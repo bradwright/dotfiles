@@ -154,7 +154,7 @@ find_ruby() {
 
 # Show stuff in prompt
 precmd() {
-
+    [ $TERM = "dumb" ] && return
     # my Tmux config has the host already, so we can hide it from the
     # prompt.
     if [ $TMUX_PANE ]; then
