@@ -40,6 +40,16 @@ bakwht='\[\033[47m\]'   # White
 txtrst='\[\033[0m\]'    # Text Reset
 
 # Show stuff in prompt
+rbenv_prompt() {
+    local rbenv_version
+    if rbenv version-name >& /dev/null; then
+        rbenv_version=$(rbenv version-name)
+    fi
+    if [ $rbenv_version != "system" ]; then
+        echo $rbenv_version
+    fi
+}
+
 precmd() {
     # my Tmux config has the host already, so we can hide it from the
     # prompt.
@@ -60,8 +70,12 @@ precmd() {
     if [ $RUBY_VERSION ]; then
         PS1="${txtrst}${txtwht}${bakred} ${RUBY_VERSION} ${txtrst} ${PS1}"
     fi
-    if [ $RBENV_VERSION ]; then
-        PS1="${txtrst}${txtwht}${bakred} ${RBENV_VERSION} ${txtrst} ${PS1}"
+
+    local rbenv_version
+    #rbenv_version=$(rbenv_prompt)
+
+    if [ ! -z $rbenv_version ]; then
+        PS1="${txtrst}${txtwht}${bakred} ${rbenv_version} ${txtrst} ${PS1}"
     fi
 }
 
