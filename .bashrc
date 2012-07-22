@@ -68,8 +68,10 @@ find_git() {
     # path.
     if [ -e /usr/local/bin/git ]; then
         git=$(readlink /usr/local/bin/git)
-        gitdir=$(dirname $git)
-        prepend_path "/usr/local/bin/$gitdir"
+        if [ -n "$git" ]; then
+            gitdir=$(dirname $git)
+            prepend_path "/usr/local/bin/$gitdir"
+        fi
     fi
 }
 
