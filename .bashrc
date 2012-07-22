@@ -114,6 +114,7 @@ find_ruby() {
     # shortcut for making local bundles
     alias bl="bundle install --path vendor/bundle"
     alias bi="bundle install"
+    alias be="bundle execute"
 }
 
 find_emacs
