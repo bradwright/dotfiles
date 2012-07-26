@@ -77,6 +77,12 @@ precmd() {
     if [ ! -z $rbenv_version ]; then
         PS1="${txtrst}${txtwht}${bakred} ${rbenv_version} ${txtrst} ${PS1}"
     fi
+
+    case $TERM in
+        xterm*|rxvt*)
+            PS1="\[\033]0;\h:\w\007\]${PS1}"
+            ;;
+    esac
 }
 
 PROMPT_COMMAND=precmd
