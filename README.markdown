@@ -10,7 +10,7 @@ something sensible, which means:
     ships with version 22 - the current version is 24.1)
 * Set up some [Homebrew](https://github.com/mxcl/homebrew) paths
   * Install `bash-completion`
-* Do the right thing for RVM
+* Do the right thing for [rbenv](https://github.com/sstephenson/rbenv)
 * Add some sensible Git defaults (such as `autorebase`)
 
 It also deals with the OS X `bashrc` vs `bash_profile` issue (it's the
