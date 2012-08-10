@@ -22,6 +22,8 @@ shopt -s checkwinsize
 export EDITOR="emacsclient -nw"
 export VISUAL="$EDITOR"
 
+export SHOW_GIT_PROMPT=true
+
 # Add directory to PATH if it exists and is not already there.
 # TODO: abstract "in path" out to a function
 prepend_path() {
