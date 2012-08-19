@@ -90,8 +90,12 @@ find_completion() {
     # enable programmable completion features (you don't need to enable
     # this, if it's already enabled in /etc/bash.bashrc and /etc/profile
     # sources /etc/bash.bashrc).
-    if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-        . /etc/bash_completion
+    if [ `uname` = "Linux" ] && ! shopt -oq posix; then
+        if [ -f /etc/bash_completion ]; then
+            source /etc/bash_completion
+        elif [ -d /etc/bash_completion.d ]; then
+            echo "Run 'sudo apt-get install bash-completion' to install completion"
+        fi
     fi
     if [ `uname` = "Darwin" ]; then
         if [ -f `brew --prefix`/etc/bash_completion ]; then
