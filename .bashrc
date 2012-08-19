@@ -186,9 +186,9 @@ rbenv_prompt() {
 precmd() {
     # my Tmux config has the host already, so we can hide it from the
     # prompt.
-    if [ $TMUX_PANE ]; then
+    if [ "$TMUX_PANE" ]; then
         PS1=""
-    elif [ $SSH_CONNECTION ]; then
+    elif [ "$SSH_CONNECTION" ]; then
         PS1="${txtrst}${txtred}@\h${txtrst} "
     else
         PS1="${txtrst}${txtpur}\h${txtrst} "
