@@ -1,6 +1,10 @@
+SOURCE	:= $(shell pwd)
+TARGET	:= ~
+FILES	:= .bashrc .bash_profile .tmux.conf .gitconfig .ackrc .zshrc .screenrc
+
 all: install
 
 install:
-	@ln -s `pwd`/.bashrc ~/
-	@ln -s `pwd`/.bash_profile ~/
-	@ln -s `pwd`/bin ~/
+	@for f in $(FILES); do \
+		ln -sf $(SOURCE)/$$f $(TARGET)/$$f; \
+	done
