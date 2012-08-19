@@ -2,7 +2,7 @@ SOURCE	:= $(shell pwd)
 TARGET	:= ~
 FILES	:= .bashrc .bash_profile .tmux.conf .gitconfig .ackrc .zshrc .screenrc
 
-all: install
+all: clean install
 
 install:
 	@for f in $(FILES); do \
@@ -11,3 +11,8 @@ install:
 	@mkdir -p ~/.ssh/
 	@chmod 700 ~/.ssh/
 	@ln -sf $(SOURCE)/.sshrc ~/.ssh/rc
+
+clean:
+	@for f in $(FILES); do \
+		rm -f $(TARGET)/$$f; \
+	done
