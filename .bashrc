@@ -24,6 +24,9 @@ export VISUAL="$EDITOR"
 
 export SHOW_GIT_PROMPT=true
 
+# which platform?
+UNAME=`uname`
+
 # Add directory to PATH if it exists and is not already there.
 # TODO: abstract "in path" out to a function
 prepend_path() {
@@ -42,7 +45,7 @@ append_path() {
 
 find_emacs() {
     # finds my Emacs install
-    if [ `uname` = "Darwin" ]; then
+    if [ $UNAME = "Darwin" ]; then
         if [ -d /usr/local/Cellar/emacs ]; then
             dir="/usr/local/Cellar/emacs"
             emacsen=$(find "$dir" -name Emacs -type f | head -n 1)
@@ -79,7 +82,7 @@ find_git() {
 find_brew() {
     # explicitly put homebrew bin in PATH, as other shells might not
     # find it
-    if [ `uname` = "Darwin" ]; then
+    if [ $UNAME = "Darwin" ]; then
         brewpath=$(command -v brew)
         brewdir=$(dirname $brewpath)
         append_path $brewdir
@@ -90,14 +93,14 @@ find_completion() {
     # enable programmable completion features (you don't need to enable
     # this, if it's already enabled in /etc/bash.bashrc and /etc/profile
     # sources /etc/bash.bashrc).
-    if [ `uname` = "Linux" ] && ! shopt -oq posix; then
+    if [ $UNAME = "Linux" ] && ! shopt -oq posix; then
         if [ -f /etc/bash_completion ]; then
             source /etc/bash_completion
         elif [ -d /etc/bash_completion.d ]; then
             echo "Run 'sudo apt-get install bash-completion' to install completion"
         fi
     fi
-    if [ `uname` = "Darwin" ]; then
+    if [ $UNAME = "Darwin" ]; then
         if [ -f `brew --prefix`/etc/bash_completion ]; then
             . `brew --prefix`/etc/bash_completion
         fi
