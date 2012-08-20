@@ -197,9 +197,11 @@ precmd() {
     PS1="${PS1}${txtrst}${txtgrn}\w \$${txtrst} "
 
     if ${SHOW_GIT_PROMPT:=true} ; then
-        if type __git_ps1 >/dev/null 2>&1; then
-            GIT_PS1_SHOWDIRTYSTATE=true
-            PS1="${txtrst}${txtblk}${bakylw} $(__git_ps1 '%s') ${txtrst} ${PS1}"
+        if git branch >& /dev/null; then
+            if type __git_ps1 >/dev/null 2>&1; then
+                GIT_PS1_SHOWDIRTYSTATE=true
+                PS1="${txtrst}${txtblk}${bakylw} $(__git_ps1 '%s') ${txtrst} ${PS1}"
+            fi
         fi
     fi
 
