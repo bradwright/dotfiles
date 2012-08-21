@@ -118,12 +118,12 @@ find_ruby() {
     local FOUND_RBENV=false
     if [ -d $HOME/.rbenv/bin ]; then
         prepend_path $HOME/.rbenv/bin
-        $FOUND_RBENV=true
+        FOUND_RBENV=true
     elif [ -d /usr/local/Library/LinkedKegs/rbenv/bin ]; then
         prepend_path /usr/local/Library/LinkedKegs/rbenv/bin
-        $FOUND_RBENV=true
+        FOUND_RBENV=true
     fi
-    if [ $FOUND_RBENV ]; then
+    if $FOUND_RBENV ; then
         if command -v rbenv > /dev/null; then
             eval "$(rbenv init -)"
         fi
@@ -139,7 +139,9 @@ find_ruby() {
     alias bl="bundle install --path .bundle/gems"
     alias bb="bl --binstubs .bundle/bin"
 
-    prepend_path "./.bundle/bin"
+    # Because this PATH is magic, prepend_path won't add it, as it
+    # doesn't exist at runtime.
+    PATH="./.bundle/bin:$PATH"
 
     alias bi="bundle install"
     alias be="bundle exec"
