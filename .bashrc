@@ -109,11 +109,11 @@ find_completion() {
 find_ruby() {
     # Ruby libraries
     # check for rbenv first
-    if command -v rbenv > /dev/null; then
-        if [ -d $HOME/.rbenv/bin ]; then
-            prepend_path $HOME/.rbenv/bin
+    if [ -d $HOME/.rbenv/bin ]; then
+        prepend_path $HOME/.rbenv/bin
+        if command -v rbenv > /dev/null; then
+            eval "$(rbenv init -)"
         fi
-        eval "$(rbenv init -)"
     elif [ -d $HOME/.rvm/bin ]; then
         append_path $HOME/.rvm/bin
         [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm"
