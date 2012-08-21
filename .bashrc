@@ -125,7 +125,15 @@ find_ruby() {
         [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm"
     fi
     # shortcut for making local bundles
-    alias bl="bundle install --path vendor/bundle"
+
+    # From http://tomafro.net/2012/06/tip-bundler-with-binstubs
+    # I don't want to specifically overwrite bundle, as that won't fly
+    # in production etc.
+    alias bl="bundle install --path .bundle/gems"
+    alias bb="bl --binstubs .bundle/bin"
+
+    prepend_path "./.bundle/bin"
+
     alias bi="bundle install"
     alias be="bundle exec"
 }
