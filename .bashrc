@@ -127,9 +127,6 @@ find_ruby() {
         if command -v rbenv > /dev/null; then
             eval "$(rbenv init -)"
         fi
-    elif [ -d $HOME/.rvm/bin ]; then
-        append_path $HOME/.rvm/bin
-        [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm"
     fi
     # shortcut for making local bundles
 
