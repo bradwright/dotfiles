@@ -115,8 +115,15 @@ find_completion() {
 find_ruby() {
     # Ruby libraries
     # check for rbenv first
+    local FOUND_RBENV=false
     if [ -d $HOME/.rbenv/bin ]; then
         prepend_path $HOME/.rbenv/bin
+        $FOUND_RBENV=true
+    elif [ -d /usr/local/Library/LinkedKegs/rbenv/bin ]; then
+        prepend_path /usr/local/Library/LinkedKegs/rbenv/bin
+        $FOUND_RBENV=true
+    fi
+    if [ $FOUND_RBENV ]; then
         if command -v rbenv > /dev/null; then
             eval "$(rbenv init -)"
         fi
