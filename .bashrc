@@ -194,7 +194,14 @@ precmd() {
         PS1="${txtrst}${txtpur}\h${txtrst} "
     fi
 
-    PS1="${PS1}${txtrst}${txtgrn}\w \$${txtrst} "
+    PS1="${PS1}${txtrst}${txtgrn}\w "
+    local ENDPROMPT="> ${txtrst}"
+    if [ "$SSH_CONNECTION" ]; then
+        ENDPROMPT="${txtred}${ENDPROMPT}"
+    fi
+
+    PS1="${PS1}${ENDPROMPT}"
+    PS2="${ENDPROMPT}"
 
     if ${SHOW_GIT_PROMPT:=true} ; then
         if git branch >& /dev/null; then
