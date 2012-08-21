@@ -45,23 +45,15 @@ append_path() {
 
 find_emacs() {
     # finds my Emacs install
-    if [ $UNAME = Darwin ]; then
-        if [ -d /usr/local/Cellar/emacs ]; then
-            dir="/usr/local/Cellar/emacs"
-            emacsen=$(find "$dir" -name Emacs -type f | head -n 1)
-        fi
 
-        if [ -n "$emacsen" ]; then
-            emacsbin=$(find "$dir" -name emacs -type f | head -n 1)
+    # Homebrew specific finding of emacs - this is via the LinkedKegs
+    # method of installing things (which points at the latest
+    # installed version).
 
-            if [ ! -e "$emacsbin" ]; then
-                alias emacs="$emacsen"
-            fi
-
-            emacsclient=$(find "$dir" -name emacsclient -type f | head -n 1)
-            emacsdir=$(dirname $emacsclient)
-            prepend_path $emacsdir
-        fi
+    # We assume Linux has its shit together and doesn't need extra
+    # mangling.
+    if [ $UNAME = Darwin ] && [ -e /usr/local/Library/LinkedKegs/emacs/bin/emacs ]; then
+        prepend_path /usr/local/Library/LinkedKegs/emacs/bin
     fi
 }
 
