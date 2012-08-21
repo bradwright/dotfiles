@@ -135,6 +135,11 @@ if [ -f ~/.local_bashrc ]; then
     . ~/.local_bashrc
 fi
 
+# include aliases
+if [ -f ~/.bash_aliases ]; then
+    . ~/.bash_aliases
+fi
+
 
 
 # Colours
