@@ -70,7 +70,13 @@ find_git() {
     # because there might be system dependencies - however if I don't
     # do something, XCode's Git ends up before my custom one in the
     # path.
-    if [ -e /usr/local/bin/git ]; then
+
+    # This is Homebrew specific - it works around the readlink command
+    # failing across upgrades by pointing directly at the symlink
+    # Homebrew uses.
+    if [ -e /usr/local/Library/LinkedKegs/git/bin/git ]; then
+        prepend_path "/usr/local/Library/LinkedKegs/git/bin"
+    elif [ -e /usr/local/bin/git ]; then
         git=$(readlink /usr/local/bin/git)
         if [ -n "$git" ]; then
             gitdir=$(dirname $git)
