@@ -66,13 +66,12 @@ find_git() {
     # This is Homebrew specific - it works around the readlink command
     # failing across upgrades by pointing directly at the symlink
     # Homebrew uses.
-    if [ -e /usr/local/Library/LinkedKegs/git/bin/git ]; then
-        prepend_path "/usr/local/Library/LinkedKegs/git/bin"
+    if [ $UNAME = Darwin ] && [ -e /usr/local/Library/LinkedKegs/git/bin/git ]; then
+        prepend_path /usr/local/Library/LinkedKegs/git/bin
     elif [ -e /usr/local/bin/git ]; then
-        git=$(readlink /usr/local/bin/git)
+        local git=$(readlink /usr/local/bin/git)
         if [ -n "$git" ]; then
-            gitdir=$(dirname $git)
-            prepend_path "/usr/local/bin/$gitdir"
+            prepend_path /usr/local/bin/$(dirname $git)
         fi
     fi
 }
@@ -80,10 +79,8 @@ find_git() {
 find_brew() {
     # explicitly put homebrew bin in PATH, as other shells might not
     # find it
-    if [ $UNAME = Darwin ]; then
-        brewpath=$(command -v brew)
-        brewdir=$(dirname $brewpath)
-        append_path $brewdir
+    if [ $UNAME = Darwin ] && command -v brew > /dev/null; then
+        append_path `brew --prefix`/bin
     fi
 }
 
@@ -97,7 +94,7 @@ find_completion() {
         elif [ -d /etc/bash_completion.d ]; then
             echo "Run 'sudo apt-get install bash-completion' to install completion"
         fi
-    elif [ $UNAME = "Darwin" ]; then
+    elif [ $UNAME = Darwin ]; then
         if [ -f `brew --prefix`/etc/bash_completion ]; then
             . `brew --prefix`/etc/bash_completion
         fi
