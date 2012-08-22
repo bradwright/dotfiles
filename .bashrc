@@ -19,8 +19,9 @@ HISTFILESIZE=2000
 # update the values of LINES and COLUMNS.
 shopt -s checkwinsize
 
+export GIT_EDITOR="emacsclient -t"
 export EDITOR="emacsclient -nw"
-export VISUAL="$EDITOR"
+export VISUAL="emacsclient -n"
 
 export SHOW_GIT_PROMPT=true
 
