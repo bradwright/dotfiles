@@ -1,9 +1,6 @@
 # -*- mode: conf-unix -*-
 [color]
-        status = auto
-        diff = auto
-        branch = auto
-        showbranch = auto
+        ui = true
 [user]
         name = Bradley Wright
         email = brad@intranation.com
