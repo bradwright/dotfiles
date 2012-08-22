@@ -234,17 +234,6 @@ precmd() {
         fi
     fi
 
-    if [ $RUBY_VERSION ]; then
-        PS1="${txtrst}${txtwht}${bakred} ${RUBY_VERSION} ${txtrst} ${PS1}"
-    fi
-
-    local rbenv_version
-    #rbenv_version=$(rbenv_prompt)
-
-    if [ ! -z $rbenv_version ]; then
-        PS1="${txtrst}${txtwht}${bakred} ${rbenv_version} ${txtrst} ${PS1}"
-    fi
-
     case $TERM in
         xterm*|rxvt*)
             PS1="\[\033]0;\h:\w\007\]${PS1}"
