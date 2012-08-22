@@ -133,11 +133,19 @@ find_ruby() {
     alias be="bundle exec"
 }
 
+fix_path() {
+    # Add any local scripts I run into PATH
+    if [ -d $HOME/bin ]; then
+        prepend_path $HOME/bin
+    fi
+}
+
 find_emacs
 find_git
 find_brew
 find_completion
 find_ruby
+fix_path
 
 # local changes
 if [ -f ~/.local_bashrc ]; then
