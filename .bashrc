@@ -20,8 +20,7 @@ HISTFILESIZE=2000
 shopt -s checkwinsize
 
 export GIT_EDITOR="emacsclient -t"
-export EDITOR="emacsclient -nw"
-export VISUAL="emacsclient -n"
+export VISUAL="emacsclient -t"
 
 export SHOW_GIT_PROMPT=true
 
