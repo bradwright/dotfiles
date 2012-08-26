@@ -16,3 +16,4 @@ clean:
 	@for f in $(FILES); do \
 		rm -f $(TARGET)/$$f; \
 	done
+	@rm $(TARGET)/.ssh/rc
