@@ -18,3 +18,10 @@ reverse of how they're executed on Linux).
 
 Also included are `tmux` and `screen` configuration for when I need to
 set up a remote machine.
+
+## Formerly known as `homedir`
+
+This used to be called `homedir`, and was based on
+[Norm's `homedir`](https://github.com/norm/homedir), but has since
+stopped bearing enough resemblance to that to be called a fork, hence
+it's a new repository.
