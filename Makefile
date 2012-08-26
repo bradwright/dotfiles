@@ -13,7 +13,7 @@ install:
 	@ln -sf $(SOURCE)/.sshrc ~/.ssh/rc
 
 clean:
-	@for f in $(FILES); do \
+	@-for f in $(FILES); do \
 		rm -f $(TARGET)/$$f; \
 	done
-	@rm $(TARGET)/.ssh/rc
+	@-rm $(TARGET)/.ssh/rc
