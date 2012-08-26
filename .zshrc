@@ -1,5 +1,11 @@
 # Most of this borrowed from:
 # https://github.com/threedaymonk/config/blob/master/zshrc
+
+
+# initialize autocomplete here, otherwise functions won't be loaded
+autoload -U compinit
+compinit
+
 autoload -Uz colors; colors
 
 # Prefer Emacs keybindings
