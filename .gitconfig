@@ -26,8 +26,6 @@
         pushInsteadOf = "git://gist.github.com/"
 [url "git://gist.github.com/"]
         insteadOf = "gist:"
-[credential]
-        helper = osxkeychain
 # local overrides - git 1.7.10 or higher
 # http://stackoverflow.com/a/9733277
 [include]
