@@ -30,26 +30,21 @@ UNAME=`uname`
 # Add directory to PATH if it exists and is not already there.
 # TODO: abstract "in path" out to a function
 
-# FIXME: this replacement has problems with directories with "."
-# characters in them
-idempotent_path_prepend () {
-    PATH=${PATH//":$1"/} # delete any instances in the middle or at the end
-    PATH=${PATH//"$1:"/} # delete any instances at the beginning
+# This has come from: http://superuser.com/a/462852/76009
+normalise_path() {
+    PATH=${PATH//":$1"/} # deletes any instances in the middle or at the end
+    PATH=${PATH//"$1:"/} # deletes any instances at the start
+    export PATH
+}
+
+prepend_path () {
+    normalise_path $1
     export PATH="$1:$PATH" # prepend to beginning
 }
 
-idempotent_path_append () {
-    PATH=${PATH//":$1"/} # delete any instances in the middle or at the end
-    PATH=${PATH//"$1:"/} # delete any instances at the beginning
+append_path () {
+    normalise_path $1
     export PATH="$PATH:$1" # append to end
-}
-
-prepend_path() {
-    idempotent_path_prepend $1
-}
-
-append_path() {
-    idempotent_path_append $1
 }
 
 find_emacs() {
@@ -136,7 +131,7 @@ find_ruby() {
 
     # Because this PATH is magic, prepend_path won't add it, as it
     # doesn't exist at runtime.
-    PATH="./.bundle/bin:$PATH"
+    prepend_path ./.bundle/bin
 
     alias bi="bundle install"
     alias be="bundle exec"
