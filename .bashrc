@@ -250,6 +250,6 @@ precmd() {
     esac
 }
 
-PROMPT_COMMAND=precmd
+PROMPT_COMMAND="precmd;$PROMPT_COMMAND"
 
 export PATH
