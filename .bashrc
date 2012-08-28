@@ -29,18 +29,27 @@ UNAME=`uname`
 
 # Add directory to PATH if it exists and is not already there.
 # TODO: abstract "in path" out to a function
+
+# FIXME: this replacement has problems with directories with "."
+# characters in them
+idempotent_path_prepend () {
+    PATH=${PATH//":$1"/} # delete any instances in the middle or at the end
+    PATH=${PATH//"$1:"/} # delete any instances at the beginning
+    export PATH="$1:$PATH" # prepend to beginning
+}
+
+idempotent_path_append () {
+    PATH=${PATH//":$1"/} # delete any instances in the middle or at the end
+    PATH=${PATH//"$1:"/} # delete any instances at the beginning
+    export PATH="$PATH:$1" # append to end
+}
+
 prepend_path() {
-    to_add=$1
-    if [ -d $to_add ]; then
-        export PATH=$to_add:$PATH
-    fi
+    idempotent_path_prepend $1
 }
 
 append_path() {
-    to_add=$1
-    if [ -d $to_add ]; then
-        export PATH=$PATH:$to_add
-    fi
+    idempotent_path_append $1
 }
 
 find_emacs() {
