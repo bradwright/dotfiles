@@ -60,6 +60,13 @@ find_emacs() {
     fi
 }
 
+find_subl() {
+    # Finds Sublime Text 2 and adds the `subl` helper to the PATH
+    if [ -e "${HOME}/Applications/Sublime Text 2.app/Contents/SharedSupport/bin/subl" ]; then
+        prepend_path ~/Applications/Sublime\ Text\ 2.app/Contents/SharedSupport/bin
+    fi
+}
+
 find_git() {
     # it's recommended *not* to put /usr/local/bin before /usr/bin
     # because there might be system dependencies - however if I don't
@@ -148,6 +155,7 @@ find_git
 find_brew
 find_completion
 find_ruby
+find_subl
 fix_path
 
 # local changes
