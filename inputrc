@@ -26,10 +26,3 @@ set          prefer-visible-bell on
 "\C-w":      unix-filename-rubout
 "":          unix-filename-rubout
 "\C-x*":     glob-expand-word
-
-# this is a bugfix for certain terminals so that all Emacs bindings
-# work, especially C-s
-if [ -t 0 ]; then
-    stty stop undef
-    stty werase undef
-fi
