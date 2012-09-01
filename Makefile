@@ -1,6 +1,6 @@
 SOURCE	:= $(CURDIR)
 TARGET	:= $(HOME)
-FILES	:= bashrc bash_profile tmux.conf gitconfig gitignore ackrc zshrc screenrc inputrc
+FILES	:= bashrc bash_profile tmux.conf gitconfig gitignore ackrc zshrc screenrc inputrc irbrc
 
 .PHONY: git_submodule install_emacs clean_emacs install clean
 
