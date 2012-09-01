@@ -2,6 +2,8 @@ SOURCE	:= $(CURDIR)
 TARGET	:= $(HOME)
 FILES	:= bashrc bash_profile tmux.conf gitconfig gitignore ackrc zshrc screenrc inputrc
 
+.PHONY: git_submodule install_emacs clean_emacs install clean
+
 all: clean install
 
 git_submodule:
@@ -13,7 +15,7 @@ install_emacs: git_submodule
 clean_emacs:
 	$(MAKE) -C emacs.d clean
 
-install: git_submodule
+install: git_submodule install_emacs
 	@for f in $(FILES); do \
 		ln -sf $(SOURCE)/$$f $(TARGET)/.$$f; \
 	done
