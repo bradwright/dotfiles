@@ -1,3 +1,5 @@
+# -*- mode: sh -*-
+
 # Most of this borrowed from:
 # https://github.com/threedaymonk/config/blob/master/zshrc
 

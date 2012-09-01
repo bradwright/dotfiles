@@ -1,3 +1,5 @@
+# -*- mode: conf-space -*-
+
 # this is mostly from here: https://github.com/mikewest/homedir/blob/master/.screenrc
 
 ### use local shell by default, and make it a login shell
