@@ -1,12 +1,12 @@
 SOURCE	:= $(shell pwd)
 TARGET	:= ~
-FILES	:= .bashrc .bash_profile .tmux.conf .gitconfig .gitignore .ackrc .zshrc .screenrc .inputrc
+FILES	:= bashrc bash_profile tmux.conf gitconfig gitignore ackrc zshrc screenrc inputrc
 
 all: clean install
 
 install:
 	@for f in $(FILES); do \
-		ln -sf $(SOURCE)/$$f $(TARGET)/$$f; \
+		ln -sf $(SOURCE)/$$f $(TARGET)/.$$f; \
 	done
 	@mkdir -p ~/.ssh/
 	@chmod 700 ~/.ssh/
