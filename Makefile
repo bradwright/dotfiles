@@ -25,6 +25,6 @@ install: git_submodule install_emacs
 
 clean: clean_emacs
 	@-for f in $(FILES); do \
-		rm -f $(TARGET)/$$f; \
+		unlink $(TARGET)/$$f; \
 	done
-	@-rm $(TARGET)/.ssh/rc
+	@-unlink $(TARGET)/.ssh/rc
