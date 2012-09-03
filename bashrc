@@ -255,3 +255,8 @@ precmd() {
 PROMPT_COMMAND="precmd;$PROMPT_COMMAND"
 
 export PATH
+
+# Work around tmux asynchronous `if-shell` behaviour
+if [ "$TMUX" ] && [ $TERM = "xterm-256color" ]; then
+    export TERM="screen-256color"
+fi
