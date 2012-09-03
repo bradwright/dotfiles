@@ -1,0 +1,12 @@
+[
+	{ "keys": ["super+g", "super+l"], "command": "git_log_all" },
+	{ "keys": ["super+g", "super+f"], "command": "git_log" },
+	{ "keys": ["super+g", "super+c"], "command": "git_commit" },
+	{ "keys": ["super+g", "super+shift+c"], "command": "git_commit_amend" },
+	{ "keys": ["super+g", "super+p"], "command": "git_pull_current_branch" },
+	{ "keys": ["super+g", "super+shift+p"], "command": "git_push_current_branch" },
+	{ "keys": ["super+g", "super+a"], "command": "git_add_choice" },
+	{ "keys": ["super+g", "super+d"], "command": "git_diff" },
+	{ "keys": ["super+g", "super+shift+d"], "command": "git_diff_all" },
+	{ "keys": ["super+g", "super+s"], "command": "git_status" }
+]

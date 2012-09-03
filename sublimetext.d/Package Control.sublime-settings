@@ -1,0 +1,14 @@
+{
+	"auto_upgrade_last_run": 1346536626,
+	"installed_packages":
+	[
+		"Git",
+		"GotoOpenFile",
+		"nginx",
+		"Package Control",
+		"RubyTest",
+		"SublimeCodeIntel",
+		"SublimeLinter",
+		"Theme - Soda"
+	]
+}

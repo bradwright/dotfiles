@@ -1,0 +1,13 @@
+{
+  "erb_exec": "~/.rbenv/shims/bundle exec erb",
+  "ruby_unit_exec": "~/.rbenv/shims/bundle exec ruby",
+  "ruby_cucumber_exec": "~/.rbenv/shims/bundle exec cucumber -f pretty",
+  "ruby_rspec_exec": "~/.rbenv/shims/bundle exec rspec",
+
+  "ruby_unit_folder": "test",
+  "ruby_cucumber_folder": "features",
+  "ruby_rspec_folder": "spec",
+
+  "ruby_use_scratch" : false,
+  "save_on_run": false
+}
