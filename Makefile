@@ -2,6 +2,7 @@ SOURCE		:= $(CURDIR)
 TARGET		:= $(HOME)
 FILES		:= bashrc bash_profile tmux.conf gitconfig gitignore ackrc zshrc screenrc inputrc irbrc
 SUBL_TARGET := "$(HOME)/Library/Application Support/Sublime Text 2/Packages/User"
+UNAME		:= $(shell uname)
 
 .PHONY: git_submodule install_emacs clean_emacs install clean
 
@@ -16,13 +17,22 @@ install_emacs: git_submodule
 clean_emacs:
 	$(MAKE) -C emacs.d clean
 
-install_subl: clean_subl
-	@ln -sf $(CURDIR)/sublimetext.d $(SUBL_TARGET)
+install_subl-Darwin:
+	$(MAKE) SUBL_TARGET="$(HOME)/Library/Application Support/Sublime Text 2/Packages/User" install_subl
+
+install_subl-Linux:
+	$(warning "No target for Linux yet")
+
+subl: install_subl-$(UNAME)
+
+install_subl:
+	$(MAKE) SUBL_TARGET="$(SUBL_TARGET)" clean_subl
+	@ln -sf $(CURDIR)/sublimetext.d "$(SUBL_TARGET)"
 
 clean_subl:
-	@rm -rf $(SUBL_TARGET)
+	@rm -rf "$(SUBL_TARGET)"
 
-install: git_submodule install_emacs install_subl
+install: git_submodule install_emacs subl
 	@for f in $(FILES); do \
 		ln -sf $(SOURCE)/$$f $(TARGET)/.$$f; \
 	done
