@@ -5,7 +5,9 @@
 
 
 # initialize autocomplete here, otherwise functions won't be loaded
-autoload -U compinit
+autoload -Uz zutil
+autoload -Uz compinit
+autoload -Uz complist
 compinit
 
 autoload -Uz colors; colors
