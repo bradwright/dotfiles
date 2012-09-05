@@ -6,6 +6,6 @@ fi
 find_emacs
 find_git
 find_brew
-find_ruby
+find_ruby zsh
 find_subl
 fix_path

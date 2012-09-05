@@ -98,11 +98,20 @@ find_ruby() {
         prepend_path /usr/local/Library/LinkedKegs/rbenv/bin
         FOUND_RBENV=true
     fi
-    if $FOUND_RBENV ; then
-        if command -v rbenv > /dev/null; then
-            eval "$(rbenv init -)"
-        fi
-    fi
+    $FOUND_RBENV || return
+    case $1 in
+        zsh*)
+            if command -v rbenv > /dev/null; then
+                eval "$(rbenv init - zsh)"
+            fi
+            ;;
+        *)
+            # bash will do all of the above for me :(
+            if command -v rbenv > /dev/null; then
+                eval "$(rbenv init -)"
+            fi
+            ;;
+    esac
     # shortcut for making local bundles
 
     # From http://tomafro.net/2012/06/tip-bundler-with-binstubs
