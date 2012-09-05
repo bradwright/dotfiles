@@ -46,8 +46,6 @@ if [ -f ~/.bash_aliases ]; then
     . ~/.bash_aliases
 fi
 
-
-
 # Colours
 txtblk='\[\033[0;30m\]' # Black - Regular
 txtred='\[\033[0;31m\]' # Red
@@ -84,16 +82,6 @@ bakwht='\[\033[47m\]'   # White
 txtrst='\[\033[0m\]'    # Text Reset
 
 # Show stuff in prompt
-rbenv_prompt() {
-    local rbenv_version
-    if rbenv version-name >& /dev/null; then
-        rbenv_version=$(rbenv version-name)
-    fi
-    if [ $rbenv_version != "system" ]; then
-        echo $rbenv_version
-    fi
-}
-
 precmd() {
     # my Tmux config has the host already, so we can hide it from the
     # prompt.
