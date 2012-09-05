@@ -135,7 +135,7 @@ fix_path() {
     fi
 }
 
-git_prompt_info () {
+git_prompt_info() {
     local BRANCH=$(git symbolic-ref HEAD 2>/dev/null) || return
     echo "${BRANCH#refs/heads/}"
 }
