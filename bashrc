@@ -21,14 +21,10 @@ shopt -s checkwinsize
 export GIT_EDITOR="emacsclient -t"
 export VISUAL="emacsclient -t"
 
-export SHOW_GIT_PROMPT=true
-
 # which platform?
 UNAME=`uname`
 
 # Add directory to PATH if it exists and is not already there.
-# TODO: abstract "in path" out to a function
-
 # This has come from: http://superuser.com/a/462852/76009
 normalise_path() {
     PATH=${PATH//":$1"/} # deletes any instances in the middle or at the end
