@@ -57,9 +57,10 @@ precmd() {
     fi
 
     PS1="${PS1}${clr}%F{green}%~ "
-    local ENDPROMPT="> ${clr}"
     if [ "$SSH_CONNECTION" ]; then
-        ENDPROMPT="%F{red}${ENDPROMPT}"
+        ENDPROMPT="%F{red}>>${clr} "
+    else
+        ENDPROMPT="%F{yellow}>>${clr} "
     fi
 
     PS1="${PS1}${ENDPROMPT}"
