@@ -73,4 +73,7 @@ precmd() {
 
 }
 
-export PATH
+# Local overrides
+[ -f $HOME/.local_zshrc ] && source $HOME/.local_zshrc
+# Aliases
+[ -f $HOME/.bash_aliases ] && source $HOME/.bash_aliases

@@ -1,3 +1,5 @@
+# -*- mode: sh -*-
+
 # Include library functionss
 if [ -f $HOME/.functions ]; then
     source $HOME/.functions
@@ -9,3 +11,5 @@ find_brew
 find_ruby zsh
 find_subl
 fix_path
+
+export PATH
