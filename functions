@@ -1,0 +1,127 @@
+# -*- mode:sh -*-
+
+# These are utility functions that are compatible with bash and zsh.
+
+UNAME=`uname`
+
+# Add directory to PATH if it exists and is not already there.
+# This has come from: http://superuser.com/a/462852/76009
+normalise_path() {
+    PATH=${PATH//":$1"/} # deletes any instances in the middle or at the end
+    PATH=${PATH//"$1:"/} # deletes any instances at the start
+    export PATH
+}
+
+prepend_path () {
+    normalise_path $1
+    export PATH="$1:$PATH" # prepend to beginning
+}
+
+append_path () {
+    normalise_path $1
+    export PATH="$PATH:$1" # append to end
+}
+
+find_emacs() {
+    # finds my Emacs install
+
+    # Homebrew specific finding of emacs - this is via the LinkedKegs
+    # method of installing things (which points at the latest
+    # installed version).
+
+    # We assume Linux has its shit together and doesn't need extra
+    # mangling.
+    if [ $UNAME = Darwin ] && [ -e /usr/local/Library/LinkedKegs/emacs/bin/emacs ]; then
+        prepend_path /usr/local/Library/LinkedKegs/emacs/bin
+    fi
+}
+
+find_subl() {
+    # Finds Sublime Text 2 and adds the `subl` helper to the PATH
+    if [ -e "${HOME}/Applications/Sublime Text 2.app/Contents/SharedSupport/bin/subl" ]; then
+        prepend_path ~/Applications/Sublime\ Text\ 2.app/Contents/SharedSupport/bin
+    fi
+}
+
+find_git() {
+    # it's recommended *not* to put /usr/local/bin before /usr/bin
+    # because there might be system dependencies - however if I don't
+    # do something, XCode's Git ends up before my custom one in the
+    # path.
+
+    # This is Homebrew specific - it works around the readlink command
+    # failing across upgrades by pointing directly at the symlink
+    # Homebrew uses.
+    if [ $UNAME = Darwin ] && [ -e /usr/local/Library/LinkedKegs/git/bin/git ]; then
+        prepend_path /usr/local/Library/LinkedKegs/git/bin
+    elif [ -e /usr/local/bin/git ]; then
+        local git=$(readlink /usr/local/bin/git)
+        if [ -n "$git" ]; then
+            prepend_path /usr/local/bin/$(dirname $git)
+        fi
+    fi
+}
+
+find_brew() {
+    # explicitly put homebrew bin in PATH, as other shells might not
+    # find it
+    if [ $UNAME = Darwin ] && command -v brew > /dev/null; then
+        append_path `brew --prefix`/bin
+    fi
+}
+
+find_completion() {
+    # enable programmable completion features (you don't need to enable
+    # this, if it's already enabled in /etc/bash.bashrc and /etc/profile
+    # sources /etc/bash.bashrc).
+    if [ $UNAME = Linux ] && ! shopt -oq posix; then
+        if [ -f /etc/bash_completion ]; then
+            source /etc/bash_completion
+        elif [ -d /etc/bash_completion.d ]; then
+            echo "Run 'sudo apt-get install bash-completion' to install completion"
+        fi
+    elif [ $UNAME = Darwin ]; then
+        if [ -f `brew --prefix`/etc/bash_completion ]; then
+            . `brew --prefix`/etc/bash_completion
+        fi
+    fi
+}
+
+find_ruby() {
+    # Ruby libraries
+    # check for rbenv first
+    local FOUND_RBENV=false
+    if [ -d $HOME/.rbenv/bin ]; then
+        prepend_path $HOME/.rbenv/bin
+        FOUND_RBENV=true
+    elif [ -d /usr/local/Library/LinkedKegs/rbenv/bin ]; then
+        prepend_path /usr/local/Library/LinkedKegs/rbenv/bin
+        FOUND_RBENV=true
+    fi
+    if $FOUND_RBENV ; then
+        if command -v rbenv > /dev/null; then
+            eval "$(rbenv init -)"
+        fi
+    fi
+    # shortcut for making local bundles
+
+    # From http://tomafro.net/2012/06/tip-bundler-with-binstubs
+    # I don't want to specifically overwrite bundle, as that won't fly
+    # in production etc.
+    alias bl="bundle install --path .bundle/gems"
+    alias bb="bl --binstubs .bundle/bin"
+
+    # Because this PATH is magic, prepend_path won't add it, as it
+    # doesn't exist at runtime.
+    prepend_path ./.bundle/bin
+
+    alias bi="bundle install"
+    alias be="bundle exec"
+}
+
+fix_path() {
+    # Add any local scripts I run into PATH
+    if [ -d $HOME/bin ]; then
+        prepend_path $HOME/bin
+    fi
+}
