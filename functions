@@ -135,6 +135,12 @@ fix_path() {
 }
 
 git_prompt_info() {
-    local BRANCH=$(git symbolic-ref HEAD 2>/dev/null) || return
-    echo "${BRANCH#refs/heads/}"
+    # Adds git information to my prompt
+    if type __git_ps1 >/dev/null 2>&1; then
+        GIT_PS1_SHOWDIRTYSTATE=true
+        echo $(__git_ps1 '%s')
+    else
+        local BRANCH=$(git symbolic-ref HEAD 2>/dev/null) || return
+        echo "${BRANCH#refs/heads/}"
+    fi
 }
