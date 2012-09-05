@@ -106,7 +106,6 @@ find_ruby() {
             fi
             ;;
         *)
-            # bash will do all of the above for me :(
             if command -v rbenv > /dev/null; then
                 eval "$(rbenv init -)"
             fi
