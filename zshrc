@@ -67,10 +67,7 @@ precmd() {
 
     if ${SHOW_GIT_PROMPT:=true} ; then
         if git branch >& /dev/null; then
-            if type __git_ps1 >/dev/null 2>&1; then
-                GIT_PS1_SHOWDIRTYSTATE=true
-                PS1="${clr}%F{black}%K{yellow} $(__git_ps1 '%s') ${clr} ${PS1}"
-            fi
+            PS1="${clr}%F{black}%K{yellow} $(git_prompt_info) ${clr} ${PS1}"
         fi
     fi
 
