@@ -3,12 +3,15 @@
 # Most of this borrowed from:
 # https://github.com/threedaymonk/config/blob/master/zshrc
 
-
 # initialize autocomplete here, otherwise functions won't be loaded
 autoload -Uz zutil
 autoload -Uz compinit
 autoload -Uz complist
 compinit
+
+# so backwards kill works over directories and not the whole path
+autoload -U select-word-style
+select-word-style bash
 
 autoload -Uz colors; colors
 
