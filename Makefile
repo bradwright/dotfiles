@@ -39,7 +39,7 @@ install_dotfiles:
 	done
 	@mkdir -p ~/.ssh/
 	@chmod 700 ~/.ssh/
-	@ln -sf $(SOURCE)/.sshrc ~/.ssh/rc
+	@ln -sf $(SOURCE)/sshrc ~/.ssh/rc
 
 install: git_submodule install_emacs subl install_dotfiles
 
