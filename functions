@@ -89,6 +89,22 @@ find_completion() {
 
 find_ruby() {
     # Ruby libraries
+
+    # shortcut for making local bundles
+
+    # From http://tomafro.net/2012/06/tip-bundler-with-binstubs
+    # I don't want to specifically overwrite bundle, as that won't fly
+    # in production etc.
+    alias bl="bundle install --path .bundle/gems"
+    alias bb="bl --binstubs .bundle/bin"
+
+    # Because this PATH is magic, prepend_path won't add it, as it
+    # doesn't exist at runtime.
+    prepend_path ./.bundle/bin
+
+    alias bi="bundle install"
+    alias be="bundle exec"
+
     # check for rbenv first
     local FOUND_RBENV=false
     if [ -d $HOME/.rbenv/bin ]; then
@@ -111,20 +127,6 @@ find_ruby() {
             fi
             ;;
     esac
-    # shortcut for making local bundles
-
-    # From http://tomafro.net/2012/06/tip-bundler-with-binstubs
-    # I don't want to specifically overwrite bundle, as that won't fly
-    # in production etc.
-    alias bl="bundle install --path .bundle/gems"
-    alias bb="bl --binstubs .bundle/bin"
-
-    # Because this PATH is magic, prepend_path won't add it, as it
-    # doesn't exist at runtime.
-    prepend_path ./.bundle/bin
-
-    alias bi="bundle install"
-    alias be="bundle exec"
 }
 
 fix_path() {
