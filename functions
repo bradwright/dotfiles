@@ -13,13 +13,21 @@ normalise_path() {
 }
 
 prepend_path () {
-    normalise_path $1
-    export PATH="$1:$PATH" # prepend to beginning
+    if [ "$path" ]; then
+        path=($1 $path)
+    else
+        normalise_path $1
+        export PATH="$1:$PATH" # prepend to beginning
+    fi
 }
 
 append_path () {
-    normalise_path $1
-    export PATH="$PATH:$1" # append to end
+    if [ "$path" ]; then
+        path=($path $1)
+    else
+        normalise_path $1
+        export PATH="$PATH:$1" # append to end
+    fi
 }
 
 find_emacs() {
