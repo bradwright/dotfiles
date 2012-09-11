@@ -1,6 +1,6 @@
 SOURCE		:= $(CURDIR)
 TARGET		:= $(HOME)
-FILES		:= bashrc bash_profile functions tmux.conf gitconfig gitignore ackrc zshrc zshenv screenrc inputrc irbrc
+FILES		:= bashrc bash_profile aliases functions tmux.conf gitconfig gitignore ackrc zshrc zshenv screenrc inputrc irbrc
 
 SUBL_TARGET := "$(HOME)/Library/Application Support/Sublime Text 2/Packages/User"
 UNAME		:= $(shell uname)

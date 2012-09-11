@@ -92,18 +92,9 @@ find_ruby() {
 
     # shortcut for making local bundles
 
-    # From http://tomafro.net/2012/06/tip-bundler-with-binstubs
-    # I don't want to specifically overwrite bundle, as that won't fly
-    # in production etc.
-    alias bl="bundle install --path .bundle/gems"
-    alias bb="bl --binstubs .bundle/bin"
-
     # Because this PATH is magic, prepend_path won't add it, as it
     # doesn't exist at runtime.
     prepend_path ./.bundle/bin
-
-    alias bi="bundle install"
-    alias be="bundle exec"
 
     # check for rbenv first
     local FOUND_RBENV=false
@@ -145,4 +136,9 @@ git_prompt_info() {
         local BRANCH=$(git symbolic-ref HEAD 2>/dev/null) || return
         echo "${BRANCH#refs/heads/}"
     fi
+}
+
+# Source a file if it exists
+source_if_exists() {
+    [ -f $1 ] && source $1
 }

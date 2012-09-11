@@ -78,11 +78,13 @@ precmd() {
 }
 
 # Install Git prompt/completion
-[ -f /usr/local/etc/bash_completion.d/git-prompt.sh ] && source /usr/local/etc/bash_completion.d/git-prompt.sh
-[ -f /usr/local/etc/bash_completion.d/git-completion.sh ] && source /usr/local/etc/bash_completion.d/git-prompt.sh
-[ -f /etc/bash_completion.d/git ] && source /etc/bash_completion.d/git
+source_if_exists /usr/local/etc/bash_completion.d/git-prompt.sh
+source_if_exists /usr/local/etc/bash_completion.d/git-prompt.sh
+source_if_exists /etc/bash_completion.d/git
 
 # Local overrides
-[ -f $HOME/.local_zshrc ] && source $HOME/.local_zshrc
+source_if_exists $HOME/.local_zshrc
 # Aliases
-[ -f $HOME/.bash_aliases ] && source $HOME/.bash_aliases
+source_if_exists $HOME/.bash_aliases
+# My own aliases
+source_if_exists $HOME/.aliases
