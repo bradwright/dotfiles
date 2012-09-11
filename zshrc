@@ -36,9 +36,6 @@ if [ "$TMUX" ] && [ $TERM = "xterm-256color" ]; then
     export TERM="screen-256color"
 fi
 
-# which platform?
-UNAME=`uname`
-
 # Include library functionss
 if [ -f $HOME/.functions ]; then
     source $HOME/.functions
