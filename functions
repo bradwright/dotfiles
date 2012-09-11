@@ -100,10 +100,6 @@ find_ruby() {
 
     # shortcut for making local bundles
 
-    # Because this PATH is magic, prepend_path won't add it, as it
-    # doesn't exist at runtime.
-    prepend_path ./.bundle/bin
-
     # check for rbenv first
     local FOUND_RBENV=false
     if [ -d $HOME/.rbenv/bin ]; then
@@ -126,6 +122,10 @@ find_ruby() {
             fi
             ;;
     esac
+
+    # Because this PATH is magic, prepend_path won't add it, as it
+    # doesn't exist at runtime.
+    prepend_path ./.bundle/bin
 }
 
 fix_path() {
