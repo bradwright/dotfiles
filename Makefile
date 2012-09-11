@@ -12,7 +12,8 @@ all: clean install
 git_submodule:
 	git submodule update --init
 
-install_emacs: git_submodule
+install_emacs:
+	$(MAKE) git_submodule
 	$(MAKE) -C emacs.d all
 
 clean_emacs:
@@ -41,7 +42,7 @@ install_dotfiles:
 	@chmod 700 ~/.ssh/
 	@ln -sf $(SOURCE)/sshrc ~/.ssh/rc
 
-install: git_submodule install_emacs subl install_dotfiles
+install: install_emacs subl install_dotfiles
 
 clean: clean_emacs clean_subl
 	@-for f in $(FILES); do \
