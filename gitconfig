@@ -3,7 +3,6 @@
         ui = true
 [user]
         name = Bradley Wright
-        email = brad@intranation.com
 [alias]
         co = checkout
         st = status -sb
@@ -14,20 +13,6 @@
         default = tracking
 [core]
         excludesfile = ~/.gitignore
-# alias some common Git origins/endpoints
-# http://www.kernel.org/pub/software/scm/git/docs/git-clone.html
-[url "git@github.com:"]
-        insteadOf = "gh:"
-        pushInsteadOf = "github:"
-        pushInsteadOf = "git://github.com/"
-[url "git://github.com/"]
-        insteadOf = "github:"
-[url "git@gist.github.com:"]
-        insteadOf = "gst:"
-        pushInsteadOf = "gist:"
-        pushInsteadOf = "git://gist.github.com/"
-[url "git://gist.github.com/"]
-        insteadOf = "gist:"
 # local overrides - git 1.7.10 or higher
 # http://stackoverflow.com/a/9733277
 [include]
