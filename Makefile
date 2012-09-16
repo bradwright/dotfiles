@@ -1,6 +1,6 @@
 SOURCE		:= $(CURDIR)
 TARGET		:= $(HOME)
-FILES		:= bashrc bash_profile aliases functions tmux.conf gitconfig gitignore ackrc zshrc zshenv screenrc inputrc irbrc
+FILES		:= bashrc bash_profile aliases functions gitconfig gitignore ackrc zshrc zshenv screenrc inputrc irbrc
 
 SUBL_TARGET := "$(HOME)/Library/Application Support/Sublime Text 2/Packages/User"
 UNAME		:= $(shell uname)
@@ -34,6 +34,14 @@ install_subl:
 clean_subl:
 	@rm -rf "$(SUBL_TARGET)"
 
+install_tmux:
+	ln -sf $(CURDIR)/tmux-$(UNAME).conf $(TARGET)/.tmux.conf
+	ln -sf $(CURDIR)/tmux.conf $(TARGET)/.tmux-all.conf
+
+clean_tmux:
+	@-unlink $(TARGET)/.tmux.conf
+	@-unlink $(TARGET)/.tmux-all.conf
+
 install_dotfiles:
 	@for f in $(FILES); do \
 		ln -sf $(SOURCE)/$$f $(TARGET)/.$$f; \
@@ -42,10 +50,12 @@ install_dotfiles:
 	@chmod 700 ~/.ssh/
 	@ln -sf $(SOURCE)/sshrc ~/.ssh/rc
 
-install: install_emacs subl install_dotfiles
-
-clean: clean_emacs clean_subl
+clean_dotfiles:
 	@-for f in $(FILES); do \
 		unlink $(TARGET)/.$$f; \
 	done
 	@-unlink $(TARGET)/.ssh/rc
+
+install: install_emacs subl install_dotfiles install_tmux
+
+clean: clean_emacs clean_subl clean_tmux clean_dotfiles
