@@ -3,10 +3,32 @@
 # Most of this borrowed from:
 # https://github.com/threedaymonk/config/blob/master/zshrc
 
+# initialize autocomplete here, otherwise functions won't be loaded
+autoload -Uz zutil
+autoload -Uz compinit
+autoload -Uz complist
+compinit
+
+unsetopt menu_complete   # do not autoselect the first completion entry
+unsetopt flowcontrol
+setopt auto_menu         # show completion menu on succesive tab press
+setopt complete_in_word
+setopt always_to_end
+
+# http://zsh.sourceforge.net/Doc/Release/Completion-System.html (search for "auto-description")
 zstyle ':completion:*' auto-description 'specify: %d'
+
+# http://zsh.sourceforge.net/Doc/Release/Completion-System.html#Control-Functions
 zstyle ':completion:*' completer _expand _complete _correct _approximate
+
+# Prepend "Completing X" to group headings
 zstyle ':completion:*' format 'Completing %d'
+
+# display ALL groups of commands as headings (e.g "Make targets
+# ... Make variables" etc)
 zstyle ':completion:*' group-name ''
+
+# show completion menu when number of options is at least 2
 zstyle ':completion:*' menu select=2
 if /usr/bin/which dircolors >/dev/null; then
   eval "$(dircolors -b)"
@@ -18,12 +40,9 @@ zstyle ':completion:*' matcher-list '' 'm:{a-z-}={A-Z_}' 'r:|[._-]=* r:|=* l:|=*
 zstyle ':completion:*' select-prompt %SScrolling active: current selection at %p%s
 zstyle ':completion:*' use-compctl false
 zstyle ':completion:*' verbose true
+# Use a cache otherwise rake, apt etc. are unusable
+zstyle ':completion::complete:*' use-cache 1
 
-# initialize autocomplete here, otherwise functions won't be loaded
-autoload -Uz zutil
-autoload -Uz compinit
-autoload -Uz complist
-compinit
 
 # so backwards kill works over directories and not the whole path
 autoload -U select-word-style
