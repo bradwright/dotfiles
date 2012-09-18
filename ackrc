@@ -17,3 +17,6 @@ cucumber=.feature
 
 # Ignore local .bundle Gems
 --ignore-dir=.bundle
+
+# always page, and output ansi
+--pager=less -r
