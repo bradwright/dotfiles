@@ -109,7 +109,7 @@ find_ruby() {
         FOUND_RBENV=true
     fi
 
-    if [ $FOUND_RBENV ]; then
+    if $FOUND_RBENV; then
         case $1 in
             zsh*)
                 if command -v rbenv > /dev/null; then
