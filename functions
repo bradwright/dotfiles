@@ -98,10 +98,9 @@ find_completion() {
 find_ruby() {
     # Ruby libraries
 
-    # shortcut for making local bundles
-
     # check for rbenv first
     local FOUND_RBENV=false
+
     if [ -d $HOME/.rbenv/bin ]; then
         prepend_path $HOME/.rbenv/bin
         FOUND_RBENV=true
@@ -109,19 +108,21 @@ find_ruby() {
         prepend_path /usr/local/Library/LinkedKegs/rbenv/bin
         FOUND_RBENV=true
     fi
-    $FOUND_RBENV || return
-    case $1 in
-        zsh*)
-            if command -v rbenv > /dev/null; then
-                eval "$(rbenv init - zsh)"
-            fi
-            ;;
-        *)
-            if command -v rbenv > /dev/null; then
-                eval "$(rbenv init -)"
-            fi
-            ;;
-    esac
+
+    if [ $FOUND_RBENV ]; then
+        case $1 in
+            zsh*)
+                if command -v rbenv > /dev/null; then
+                    eval "$(rbenv init - zsh)"
+                fi
+                ;;
+            *)
+                if command -v rbenv > /dev/null; then
+                    eval "$(rbenv init -)"
+                fi
+                ;;
+        esac
+    fi
 
     # Because this PATH is magic, prepend_path won't add it, as it
     # doesn't exist at runtime.
