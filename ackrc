@@ -11,6 +11,12 @@ puppet=.pp
 --type-set
 cucumber=.feature
 
+--type-set
+erb=.erb
+
+--type-add
+html=.html.erb
+
 # ignore minified JS files
 -G
 (?<![\-\.]min\.js)$
