@@ -17,6 +17,9 @@ erb=.erb
 --type-add
 html=.html.erb
 
+# Ignore SQL files
+--nosql
+
 # ignore minified JS files
 -G
 (?<![\-\.]min\.js)$
