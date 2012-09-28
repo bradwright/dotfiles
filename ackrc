@@ -27,5 +27,8 @@ html=.html.erb
 # Ignore local .bundle Gems
 --ignore-dir=.bundle
 
+# ignore coverage
+--ignore-dir=coverage
+
 # always page, and output ansi
 --pager=less -r
