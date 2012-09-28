@@ -79,20 +79,30 @@ find_brew() {
 }
 
 find_completion() {
-    # enable programmable completion features (you don't need to enable
-    # this, if it's already enabled in /etc/bash.bashrc and /etc/profile
-    # sources /etc/bash.bashrc).
-    if [ $UNAME = Linux ] && ! shopt -oq posix; then
-        if [ -f /etc/bash_completion ]; then
-            source /etc/bash_completion
-        elif [ -d /etc/bash_completion.d ]; then
-            echo "Run 'sudo apt-get install bash-completion' to install completion"
-        fi
-    elif [ $UNAME = Darwin ]; then
-        if [ -f `brew --prefix`/etc/bash_completion ]; then
-            . `brew --prefix`/etc/bash_completion
-        fi
-    fi
+    case $1 in
+        zsh*)
+            if [ -d /usr/local/share/zsh-completions ]; then
+                fpath=(/usr/local/share/zsh-completions $fpath)
+            fi
+            ;;
+        *)
+            # enable programmable completion features (you don't need
+            # to enable this, if it's already enabled in
+            # /etc/bash.bashrc and /etc/profile sources
+            # /etc/bash.bashrc).
+            if [ $UNAME = Linux ] && ! shopt -oq posix; then
+                if [ -f /etc/bash_completion ]; then
+                    source /etc/bash_completion
+                elif [ -d /etc/bash_completion.d ]; then
+                    echo "Run 'sudo apt-get install bash-completion' to install completion"
+                fi
+            elif [ $UNAME = Darwin ]; then
+                if [ -f `brew --prefix`/etc/bash_completion ]; then
+                    . `brew --prefix`/etc/bash_completion
+                fi
+            fi
+            ;;
+    esac
 }
 
 find_ruby() {

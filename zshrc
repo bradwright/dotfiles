@@ -116,6 +116,9 @@ source_if_exists /usr/local/etc/bash_completion.d/git-prompt.sh
 source_if_exists /usr/local/etc/bash_completion.d/git-completion.sh
 source_if_exists /etc/bash_completion.d/git
 
+# zsh completions
+find_completion zsh
+
 # Local overrides
 source_if_exists $HOME/.local_zshrc
 # Aliases
