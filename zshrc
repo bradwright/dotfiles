@@ -1,8 +1,5 @@
 # -*- mode: sh -*-
 
-# Most of this borrowed from:
-# https://github.com/threedaymonk/config/blob/master/zshrc
-
 # initialize autocomplete here, otherwise functions won't be loaded
 autoload -Uz zutil
 autoload -Uz compinit
