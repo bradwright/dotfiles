@@ -7,6 +7,7 @@
         co = checkout
         st = status -sb
         l = log --decorate --name-status
+        graph = log --graph --format='%Cred%h%Creset %s <%Cgreen%ae>'
 [branch]
         autosetuprebase = always
 [push]
