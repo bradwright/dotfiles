@@ -5,19 +5,12 @@ FILES		:= bashrc bash_profile aliases functions gitconfig gitignore ackrc zshrc 
 SUBL_TARGET := "$(HOME)/Library/Application Support/Sublime Text 2/Packages/User"
 UNAME		:= $(shell uname)
 
-.PHONY: git_submodule install_emacs clean_emacs install clean
+.PHONY: git_submodule install clean
 
 all: clean install
 
 git_submodule:
 	git submodule update --init
-
-install_emacs:
-	$(MAKE) git_submodule
-	$(MAKE) -C emacs.d all
-
-clean_emacs:
-	$(MAKE) -C emacs.d clean
 
 install_subl-Darwin:
 	$(MAKE) SUBL_TARGET="$(HOME)/Library/Application Support/Sublime Text 2/Packages/User" install_subl
@@ -56,6 +49,6 @@ clean_dotfiles:
 	done
 	@-unlink $(TARGET)/.ssh/rc
 
-install: install_emacs subl install_dotfiles install_tmux
+install: subl install_dotfiles install_tmux
 
-clean: clean_emacs clean_subl clean_tmux clean_dotfiles
+clean: clean_subl clean_tmux clean_dotfiles
