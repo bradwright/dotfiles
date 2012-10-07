@@ -39,6 +39,7 @@ install_dotfiles:
 	@for f in $(FILES); do \
 		ln -sf $(SOURCE)/$$f $(TARGET)/.$$f; \
 	done
+	@ln -sf $(SOURCE)/bin $(TARGET)/
 	@mkdir -p ~/.ssh/
 	@chmod 700 ~/.ssh/
 	@ln -sf $(SOURCE)/sshrc ~/.ssh/rc
@@ -48,6 +49,7 @@ clean_dotfiles:
 		unlink $(TARGET)/.$$f; \
 	done
 	@-unlink $(TARGET)/.ssh/rc
+	@-unlink $(TARGET)/bin
 
 install: subl install_dotfiles install_tmux
 
