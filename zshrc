@@ -58,9 +58,6 @@ HISTSIZE=1000
 SAVEHIST=1000
 HISTFILE=~/.zsh_history
 
-export EDITOR="emacsclient -t"
-export VISUAL="$EDITOR"
-
 export SHOW_GIT_PROMPT=true
 
 # Work around tmux's if-shell functionality being crap
@@ -72,6 +69,8 @@ fi
 if [ -f $HOME/.functions ]; then
     source $HOME/.functions
 fi
+
+set_editor
 
 # Show stuff in prompt
 precmd() {

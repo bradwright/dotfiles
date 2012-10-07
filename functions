@@ -146,6 +146,22 @@ fix_path() {
     fi
 }
 
+set_editor() {
+    EDITOR="emacsclient"
+    case $UNAME in
+        Darwin*)
+            EDITOR=$EDITOR
+            ;;
+        Linux*)
+            EDITOR="$EDITOR -t"
+            ;;
+    esac
+    export EDITOR
+    export VISUAL=$EDITOR
+    export GIT_EDITOR=$EDITOR
+}
+
+
 git_prompt_info() {
     # Adds git information to my prompt
     if type __git_ps1 >/dev/null 2>&1; then
