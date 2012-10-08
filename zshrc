@@ -87,7 +87,7 @@ precmd() {
         PS1="%F{magenta}%m "
     fi
 
-    PS1="${PS1}${clr}%F{green}%~ "
+    PS1="${clr}${PS1}${clr}%F{green}%~ "
     if [ "$SSH_CONNECTION" ]; then
         ENDPROMPT="%F{red}>>${clr} "
     else
