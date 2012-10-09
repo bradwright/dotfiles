@@ -17,6 +17,9 @@ erb=.erb
 --type-add
 html=.html.erb
 
+--type-set
+conf=.conf
+
 # Ignore SQL files
 --nosql
 
