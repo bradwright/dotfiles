@@ -103,6 +103,17 @@ precmd() {
         fi
     fi
 
+    # set title of shell
+    title_mode=0
+    # xterm can take tab titles using the 1 bit
+    case $TERM in
+        *xterm*)
+            print -Pn "\033]1;%~\007"
+            title_mode=2
+            ;;
+    esac
+    print -Pn "\033]$title_mode;%n@%M: %~\007"
+
 }
 
 # Install Git prompt/completion
