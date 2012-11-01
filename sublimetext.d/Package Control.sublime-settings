@@ -1,6 +1,7 @@
 {
 	"installed_packages":
 	[
+		"emmet-sublime",
 		"Git",
 		"GotoOpenFile",
 		"nginx",
@@ -10,5 +11,9 @@
 		"SublimeCodeIntel",
 		"SublimeLinter",
 		"Theme - Soda"
+	],
+	"repositories":
+	[
+		"https://github.com/sergeche/emmet-sublime"
 	]
 }
