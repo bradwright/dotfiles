@@ -1,5 +1,7 @@
 # -*- mode: sh -*-
 
+[ "$TERM" = "dumb" ] && return
+
 # initialize autocomplete here, otherwise functions won't be loaded
 autoload -Uz zutil
 autoload -Uz compinit
