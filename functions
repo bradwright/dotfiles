@@ -111,27 +111,14 @@ find_ruby() {
     # check for rbenv first
     local FOUND_RBENV=false
 
-    if [ -d $HOME/.rbenv/bin ]; then
+    if [ -d $HOME/.rbenv ]; then
         prepend_path $HOME/.rbenv/bin
+        prepend_path $HOME/.rbenv/shims
         FOUND_RBENV=true
-    elif [ -d /usr/local/Library/LinkedKegs/rbenv/bin ]; then
-        prepend_path /usr/local/Library/LinkedKegs/rbenv/bin
+    elif [ -d /usr/local/Library/LinkedKegs/rbenv ]; then
+        prepend_path /usr/local/Library/LinkedKegs/rbenv
+        prepend_path /usr/local/Library/LinkedKegs/shims
         FOUND_RBENV=true
-    fi
-
-    if $FOUND_RBENV; then
-        case $1 in
-            zsh*)
-                if command -v rbenv > /dev/null; then
-                    eval "$(rbenv init - zsh)"
-                fi
-                ;;
-            *)
-                if command -v rbenv > /dev/null; then
-                    eval "$(rbenv init -)"
-                fi
-                ;;
-        esac
     fi
 
     # Because this PATH is magic, prepend_path won't add it, as it
