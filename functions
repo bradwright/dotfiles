@@ -121,8 +121,6 @@ find_ruby() {
         FOUND_RBENV=true
     fi
 
-    # Because this PATH is magic, prepend_path won't add it, as it
-    # doesn't exist at runtime.
     prepend_path ./.bundle/bin
 }
 
