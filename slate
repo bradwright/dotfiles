@@ -1,0 +1,9 @@
+# This is the default .slate file.
+# If no ~/.slate file exists this is the file that will be used.
+
+config defaultToCurrentScreen true
+
+# Layout aliases
+alias MacBookAir 1440x900
+
+default home resolutions:${MacBookAir}
