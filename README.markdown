@@ -19,6 +19,21 @@ reverse of how they're executed on Linux).
 Also included are `tmux` and `screen` configuration for when I need to
 set up a remote machine.
 
+## Installing pbcopy/pbpaste Launch Daemons
+
+Copy the XML out of `bin/rpbcopy` and `bin/rpbpaste` into files named:
+
+* `~/Library/LaunchAgents/localhost.pbcopy.plist` and
+* `~/Library/LaunchAgents/localhost.pbpaste.plist` respectively.
+
+Then run:
+
+    launchctl load ~/Library/LaunchAgents/pbcopy.plist
+    launchctl load ~/Library/LaunchAgents/pbpaste.plist
+
+to start the daemons. For more information please see
+[remote pbcopy](http://seancoates.com/blogs/remote-pbcopy).
+
 ## Formerly known as `homedir`
 
 This used to be called `homedir`, and was based on
