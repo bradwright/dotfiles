@@ -1,5 +1,5 @@
 #!/bin/sh
-cat | nc -q1 localhost 2224
+cat - | nc localhost 2224
 
 # Needs this LaunchDaemon on the host Mac:
 
