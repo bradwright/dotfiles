@@ -1,0 +1,2 @@
+#!/bin/sh
+nc -q1 localhost 2225
