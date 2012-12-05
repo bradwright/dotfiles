@@ -118,11 +118,15 @@ precmd() {
     fi
 
     # set title of shell
-    title_mode=0
+    local title_mode=0
     # xterm can take tab titles using the 1 bit
     case $TERM in
         *xterm*)
-            print -Pn "\033]1;%~\007"
+            if [ "$SSH_CONNECTION" ]; then
+                print -Pn "\033]1;@%m: %~\007"
+            else
+                print -Pn "\033]1;%~\007"
+            fi
             title_mode=2
             ;;
     esac
