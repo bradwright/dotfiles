@@ -1,23 +1,31 @@
 # Add JSON, SCSS, and Puppet to ack
---type-add js=json
+--type-add
+js=json
 
---type-set scss=scss
+--type-set
+scss=scss
 
---type-set puppet=pp
+--type-set
+puppet=pp
 
---type-set cucumber=feature
+--type-set
+cucumber=feature
 
---type-set erb=erb
+--type-set
+erb=erb
 
---type-add html=html.erb
+--type-add
+html=html.erb
 
---type-set conf=conf
+--type-set
+conf=conf
 
 # Ignore SQL files
 --nosql
 
 # ignore minified JS files
--G (?<![\-\.]min\.js)$
+-G
+(?<![\-\.]min\.js)$
 
 # Ignore local .bundle Gems
 --ignore-dir=.bundle
