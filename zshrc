@@ -130,7 +130,9 @@ precmd() {
             title_mode=2
             ;;
     esac
-    print -Pn "\033]$title_mode;%n@%M: %~\007"
+    # Emacs terminal emulators can't handle this print statement
+    # TODO: factor this out to be xterm specific
+    [[ $TERM != eterm* ]] && print -Pn "\033]$title_mode;%n@%M: %~\007"
 
 }
 
