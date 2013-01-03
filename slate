@@ -2,8 +2,23 @@
 # If no ~/.slate file exists this is the file that will be used.
 
 config defaultToCurrentScreen true
+config checkDefaultsOnLoad true
 
 # Layout aliases
 alias MacBookAir 1440x900
 
+# General aliases
+alias sox screenOriginX
+alias soy screenOriginY
+alias ssx screenSizeX
+alias ssy screenSizeY
+
+# show Emacs in the centre, 80 columns wide in current font
+alias emacsSmall move (${ssx}-660)/2;0 660;871 ${MacBookAir}
+# show Mail right in the centre
+alias mailSmall move (${ssx}-1150)/2;${soy}+(${ssy}-740)/2 1150;740 ${MacBookAir}
+
 default home resolutions:${MacBookAir}
+
+layout home 'Emacs' ${emacsSmall}
+layout home 'Mail' ${mailSmall}
