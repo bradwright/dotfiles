@@ -18,7 +18,14 @@ alias emacsSmall move (${ssx}-660)/2;0 660;871 ${MacBookAir}
 # show Mail right in the centre
 alias mailSmall move (${ssx}-1150)/2;${soy}+(${ssy}-740)/2 1150;740 ${MacBookAir}
 
+alias emacsDev move ${sox};${soy} ${ssx};${ssy} ${MacBookAir}
+
 default home resolutions:${MacBookAir}
 
 layout home 'Emacs' ${emacsSmall}
 layout home 'Mail' ${mailSmall}
+
+layout dev 'Emacs' ${emacsDev}
+
+bind h:ctrl;alt;cmd layout home
+bind d:ctrl;alt;cmd layout dev
