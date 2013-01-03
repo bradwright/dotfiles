@@ -13,8 +13,8 @@ alias soy screenOriginY
 alias ssx screenSizeX
 alias ssy screenSizeY
 
-# show Emacs in the centre, 80 columns wide in current font
-alias emacsSmall move (${ssx}-660)/2;0 660;871 ${MacBookAir}
+# show Emacs in the centre, 100 columns wide in current font
+alias emacsSmall move (${ssx}-821)/2;0 821;871 ${MacBookAir}
 # show Mail right in the centre
 alias mailSmall move (${ssx}-1150)/2;${soy}+(${ssy}-740)/2 1150;740 ${MacBookAir}
 
