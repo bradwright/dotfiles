@@ -27,5 +27,7 @@ layout home 'Mail' ${mailSmall}
 
 layout dev 'Emacs' ${emacsDev}
 
-bind h:ctrl;alt;cmd layout home
-bind d:ctrl;alt;cmd layout dev
+bind h:ctrl;alt;cmd sequence layout home > focus 'Google Chrome'
+bind d:ctrl;alt;cmd sequence layout dev > focus 'Emacs'
+
+bind r:ctrl;alt;cmd relaunch
