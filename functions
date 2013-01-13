@@ -48,9 +48,12 @@ find_homebrew() {
 find_completion() {
     case $1 in
         zsh*)
+            # shared zsh completions
             if [ -d /usr/local/share/zsh-completions ]; then
                 fpath=(/usr/local/share/zsh-completions $fpath)
             fi
+            # homebrew rbenv
+            source_if_exists /usr/local/Library/LinkedKegs/rbenv/completions/rbenv.zsh
             ;;
         *)
             # enable programmable completion features (you don't need
