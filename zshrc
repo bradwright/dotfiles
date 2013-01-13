@@ -87,8 +87,6 @@ if [ -f $HOME/.functions ]; then
     source $HOME/.functions
 fi
 
-set_editor
-
 # Show stuff in prompt
 precmd() {
     # Clear all colours

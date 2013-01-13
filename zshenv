@@ -13,3 +13,5 @@ typeset -U path
 find_homebrew
 find_ruby zsh
 fix_path
+
+set_editor
