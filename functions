@@ -54,6 +54,11 @@ find_completion() {
             fi
             # homebrew rbenv
             source_if_exists /usr/local/Library/LinkedKegs/rbenv/completions/rbenv.zsh
+            if [ -f /usr/local/Library/LinkedKegs/git/etc/bash_completion.d/git-completion.bash ]; then
+                zstyle ':completion:*:*:git:*' script /usr/local/Library/LinkedKegs/git/etc/bash_completion.d/git-completion.bash
+            elif [ -f /usr/local/Library/LinkedKegs/git/etc/bash_completion.d/git-completion.sh ]; then
+                zstyle ':completion:*:*:git:*' script /usr/local/Library/LinkedKegs/git/etc/bash_completion.d/git-completion.sh
+            fi
             ;;
         *)
             # enable programmable completion features (you don't need
@@ -66,6 +71,8 @@ find_completion() {
                 elif [ -d /etc/bash_completion.d ]; then
                     echo "Run 'sudo apt-get install bash-completion' to install completion"
                 fi
+                source_if_exists /usr/local/etc/bash_completion.d/git-completion.bash
+                source_if_exists /usr/local/etc/bash_completion.d/git-completion.sh
             elif [ $UNAME = Darwin ]; then
                 if [ -f `brew --prefix`/etc/bash_completion ]; then
                     . `brew --prefix`/etc/bash_completion
