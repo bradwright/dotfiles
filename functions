@@ -30,20 +30,6 @@ append_path () {
     fi
 }
 
-find_emacs() {
-    # finds my Emacs install
-
-    # Homebrew specific finding of emacs - this is via the LinkedKegs
-    # method of installing things (which points at the latest
-    # installed version).
-
-    # We assume Linux has its shit together and doesn't need extra
-    # mangling.
-    if [ $UNAME = Darwin ] && [ -e /usr/local/Library/LinkedKegs/emacs/bin/emacs ]; then
-        prepend_path /usr/local/Library/LinkedKegs/emacs/bin
-    fi
-}
-
 find_subl() {
     # Finds Sublime Text 2 and adds the `subl` helper to the PATH
     if [ -e "${HOME}/Applications/Sublime Text 2.app/Contents/SharedSupport/bin/subl" ]; then
@@ -51,30 +37,11 @@ find_subl() {
     fi
 }
 
-find_git() {
-    # it's recommended *not* to put /usr/local/bin before /usr/bin
-    # because there might be system dependencies - however if I don't
-    # do something, XCode's Git ends up before my custom one in the
-    # path.
-
-    # This is Homebrew specific - it works around the readlink command
-    # failing across upgrades by pointing directly at the symlink
-    # Homebrew uses.
-    if [ $UNAME = Darwin ] && [ -e /usr/local/Library/LinkedKegs/git/bin/git ]; then
-        prepend_path /usr/local/Library/LinkedKegs/git/bin
-    elif [ -e /usr/local/bin/git ]; then
-        local git=$(readlink /usr/local/bin/git)
-        if [ -n "$git" ]; then
-            prepend_path /usr/local/bin/$(dirname $git)
-        fi
-    fi
-}
-
-find_brew() {
+find_homebrew() {
     # explicitly put homebrew bin in PATH, as other shells might not
     # find it
     if [ $UNAME = Darwin ] && command -v brew > /dev/null; then
-        append_path `brew --prefix`/bin
+        prepend_path `brew --prefix`/bin
     fi
 }
 
@@ -116,7 +83,7 @@ find_ruby() {
         prepend_path $HOME/.rbenv/shims
         FOUND_RBENV=true
     elif [ -d /usr/local/Library/LinkedKegs/rbenv ]; then
-        prepend_path /usr/local/Library/LinkedKegs/rbenv
+        prepend_path /usr/local/Library/LinkedKegs/rbenv/bin
         prepend_path /usr/local/Library/LinkedKegs/shims
         FOUND_RBENV=true
     fi
