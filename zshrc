@@ -2,6 +2,9 @@
 
 [ "$TERM" = "dumb" ] && return
 
+# zsh completions - this must be done before compinit
+find_completion zsh
+
 # initialize autocomplete here, otherwise functions won't be loaded
 autoload -Uz zutil
 autoload -Uz compinit
@@ -142,9 +145,6 @@ source_if_exists /usr/local/etc/bash_completion.d/git-completion.bash
 source_if_exists /usr/local/etc/bash_completion.d/git-prompt.sh
 source_if_exists /usr/local/etc/bash_completion.d/git-completion.sh
 source_if_exists /etc/bash_completion.d/git
-
-# zsh completions
-find_completion zsh
 
 # Local overrides
 source_if_exists $HOME/.local_zshrc
