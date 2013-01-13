@@ -10,8 +10,6 @@ fi
 
 typeset -U path
 
-find_emacs
-find_git
-find_brew
+find_homebrew
 find_ruby zsh
 fix_path
