@@ -92,14 +92,12 @@ precmd() {
     # Clear all colours
     clr="%b%f%k"
 
+    # Don't show the host on localhost
+    PS1=""
     # my Tmux config has the host already, so we can hide it from the
-    # prompt.
-    if [ "$TMUX_PANE" ]; then
-        PS1=""
-    elif [ "$SSH_CONNECTION" ]; then
+    # prompt on SSH connections.
+    if [ "$SSH_CONNECTION" -a ! "$TMUX_PANE" ]; then
         PS1="%F{red}%m "
-    else
-        PS1="%F{magenta}%m "
     fi
 
     PS1="${clr}${PS1}${clr}%F{green}%~ "
@@ -118,8 +116,11 @@ precmd() {
         fi
     fi
 
+    set_title
+}
+
+set_title() {
     # set title of shell
-    local title_mode=0
     # xterm can take tab titles using the 1 bit
     case $TERM in
         *xterm*)
@@ -128,13 +129,9 @@ precmd() {
             else
                 print -Pn "\033]1;%~\007"
             fi
-            title_mode=2
+            print -Pn "\033]2;%n@%M: %~\007"
             ;;
     esac
-    # Emacs terminal emulators can't handle this print statement
-    # TODO: factor this out to be xterm specific
-    [[ $TERM != eterm* ]] && print -Pn "\033]$title_mode;%n@%M: %~\007"
-
 }
 
 # Install Git prompt/completion
