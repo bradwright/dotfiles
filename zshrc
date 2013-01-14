@@ -71,8 +71,8 @@ bindkey -e
 # Ignore dupes and share history
 setopt histignorealldups sharehistory
 # Big history
-HISTSIZE=1000
-SAVEHIST=1000
+HISTSIZE=100000
+SAVEHIST=100000
 HISTFILE=~/.zsh_history
 
 export SHOW_GIT_PROMPT=true
