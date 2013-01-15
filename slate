@@ -1,4 +1,4 @@
-# -*- mode: conf -*-
+# -*- mode: conf-space  -*-
 
 config defaultToCurrentScreen true
 config checkDefaultsOnLoad true
