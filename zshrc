@@ -56,8 +56,7 @@ if [[ -r ~/.ssh/known_hosts ]]; then
   h=($h ${${${(f)"$(cat ~/.ssh/known_hosts{,2} || true)"}%%\ *}%%,*}) 2>/dev/null
 fi
 if [[ $#h -gt 0 ]]; then
-  zstyle ':completion:*:ssh:*' hosts $h
-  zstyle ':completion:*:slogin:*' hosts $h
+  zstyle ':completion:*:(ssh|scp|sftp|slogin):*' hosts $h
 fi
 
 # so backwards kill works over directories and not the whole path
