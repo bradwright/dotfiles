@@ -32,6 +32,7 @@ zstyle ':completion:*' group-name ''
 
 # show completion menu when number of options is at least 2
 zstyle ':completion:*' menu select=2
+
 if /usr/bin/which dircolors >/dev/null; then
   eval "$(dircolors -b)"
 fi
@@ -43,7 +44,8 @@ zstyle ':completion:*' select-prompt %SScrolling active: current selection at %p
 
 zstyle ':completion:*' verbose true
 # Use a cache otherwise rake, apt etc. are unusable
-zstyle ':completion::complete:*' use-cache 1
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path ${HOME}/.zsh_cache
 
 # Autocomplete the SSH command based on ssh_config and known_hosts
 h=()
