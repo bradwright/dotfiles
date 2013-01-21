@@ -138,8 +138,10 @@ set_title() {
 }
 
 # Install Git prompt/completion
-source_if_exists /usr/local/etc/bash_completion.d/git-prompt.bash
-source_if_exists /usr/local/etc/bash_completion.d/git-prompt.sh
+## Homebrew
+source_if_exists `brew --prefix`/etc/bash_completion.d/git-prompt.bash
+source_if_exists `brew --prefix`/etc/bash_completion.d/git-prompt.sh
+## Linux
 source_if_exists /etc/bash_completion.d/git
 
 # Local overrides
