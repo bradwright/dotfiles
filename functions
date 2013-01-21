@@ -30,13 +30,6 @@ append_path () {
     fi
 }
 
-find_subl() {
-    # Finds Sublime Text 2 and adds the `subl` helper to the PATH
-    if [ -e "${HOME}/Applications/Sublime Text 2.app/Contents/SharedSupport/bin/subl" ]; then
-        prepend_path ~/Applications/Sublime\ Text\ 2.app/Contents/SharedSupport/bin
-    fi
-}
-
 find_homebrew() {
     # explicitly put homebrew bin in PATH, as other shells might not
     # find it
