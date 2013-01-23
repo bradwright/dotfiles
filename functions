@@ -41,19 +41,21 @@ find_homebrew() {
 find_completion() {
     case $1 in
         zsh*)
-            local homebrew=`brew --prefix`
             # shared zsh completions
             if [ -d /usr/local/share/zsh-completions ]; then
                 fpath=(/usr/local/share/zsh-completions $fpath)
-            elif [ -d $homebrew/share/zsh-completions ]; then
-                fpath=($homebrew/share/zsh-completions $fpath)
+            elif command -v brew > /dev/null && [ -d `brew --prefix`/share/zsh-completions ]; then
+                fpath=(`brew --prefix`/share/zsh-completions $fpath)
             fi
             # homebrew rbenv
-            source_if_exists $homebrew/Library/LinkedKegs/rbenv/completions/rbenv.zsh
-            if [ -f $homebrew/Library/LinkedKegs/git/etc/bash_completion.d/git-completion.bash ]; then
-                zstyle ':completion:*:*:git:*' script $homebrew/Library/LinkedKegs/git/etc/bash_completion.d/git-completion.bash
-            elif [ -f $homebrew/Library/LinkedKegs/git/etc/bash_completion.d/git-completion.sh ]; then
-                zstyle ':completion:*:*:git:*' script $homebrew/Library/LinkedKegs/git/etc/bash_completion.d/git-completion.sh
+            if command -v brew > /dev/null; then
+                local homebrew=`brew --prefix`
+                source_if_exists $homebrew/Library/LinkedKegs/rbenv/completions/rbenv.zsh
+                if [ -f $homebrew/Library/LinkedKegs/git/etc/bash_completion.d/git-completion.bash ]; then
+                    zstyle ':completion:*:*:git:*' script $homebrew/Library/LinkedKegs/git/etc/bash_completion.d/git-completion.bash
+                elif [ -f $homebrew/Library/LinkedKegs/git/etc/bash_completion.d/git-completion.sh ]; then
+                    zstyle ':completion:*:*:git:*' script $homebrew/Library/LinkedKegs/git/etc/bash_completion.d/git-completion.sh
+                fi
             fi
             ;;
         *)
@@ -69,7 +71,7 @@ find_completion() {
                 fi
                 source_if_exists /usr/local/etc/bash_completion.d/git-completion.bash
                 source_if_exists /usr/local/etc/bash_completion.d/git-completion.sh
-            elif [ $UNAME = Darwin ]; then
+            elif [ $UNAME = Darwin ] && command -v brew > /dev/null; then
                 if [ -f `brew --prefix`/etc/bash_completion ]; then
                     . `brew --prefix`/etc/bash_completion
                 fi
@@ -88,7 +90,7 @@ find_ruby() {
         prepend_path $HOME/.rbenv/bin
         prepend_path $HOME/.rbenv/shims
         FOUND_RBENV=true
-    elif [ -d `brew --prefix`/Library/LinkedKegs/rbenv ]; then
+    elif command -v brew > /dev/null && [ -d `brew --prefix`/Library/LinkedKegs/rbenv ]; then
         prepend_path `brew --prefix`/Library/LinkedKegs/rbenv/bin
         prepend_path `brew --prefix`/Library/LinkedKegs/shims
         FOUND_RBENV=true

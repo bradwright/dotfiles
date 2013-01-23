@@ -139,8 +139,10 @@ set_title() {
 
 # Install Git prompt/completion
 ## Homebrew
-source_if_exists `brew --prefix`/etc/bash_completion.d/git-prompt.bash
-source_if_exists `brew --prefix`/etc/bash_completion.d/git-prompt.sh
+if command -v brew > /dev/null; then
+    source_if_exists `brew --prefix`/etc/bash_completion.d/git-prompt.bash
+    source_if_exists `brew --prefix`/etc/bash_completion.d/git-prompt.sh
+fi
 ## Linux
 source_if_exists /etc/bash_completion.d/git
 
