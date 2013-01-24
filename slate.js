@@ -9,7 +9,7 @@
 slate.config('defaultToCurrentScreen', true);
 slate.config('checkDefaultsOnLoad', true);
 
-var hostname = slate.shell('/bin/hostname', true),
+var hostname = slate.shell('/bin/hostname', true).trim(),
     // default resolution - suitable for MacBook Air 13" and MacBook Pro 15"
     macResolution = '1440x900';
 
