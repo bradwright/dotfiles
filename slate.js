@@ -14,7 +14,7 @@ var hostname = slate.shell('/bin/hostname', true).trim(),
     macResolution = '1440x900';
 
 // FIXME: why doesn't this hostname check work?
-if (hostname === "kernel" || true) {
+if (hostname === "kernel") {
     // home MacBook Air
     var oneScreenLayout = S.layout('oneScreen', {
         'Emacs': {
