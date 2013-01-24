@@ -17,6 +17,7 @@ var hostname = slate.shell('/bin/hostname', true).trim(),
 if (hostname === "kernel") {
     // home MacBook Air
     var oneScreenLayout = S.layout('oneScreen', {
+        // show Emacs in the centre, 100 columns wide in current font
         'Emacs': {
             'operations': [
                 S.op("move", {
@@ -27,17 +28,32 @@ if (hostname === "kernel") {
                 })
             ]
         },
-        // TODO
+        // show Mail right in the centre
         'Mail': {
-            'operations': "move (screenSizeX-1150)/2;screenOriginY+(screenSizeY-740)/2 1150;740" + macResolution
+            'operations': [
+                S.op("move", {
+                    'x': '(screenSizeX - 1150) / 2',
+                    'y': 'screenOriginY + (screenSizeY - 740)/2',
+                    'width': '1150',
+                    'height': '740'
+                })
+            ]
         },
-        // TODO
+        // show iTerm in 140 columns wide, 30 deep
         'iTerm': {
-            'operations': "move (screenSizeX-1130)/2;screenOriginY+(screenSizeY-556)/2 1130;556 " + macResolution
+            'operations': [
+                S.op('move', {
+                    'x': '(screenSizeX - 1130) / 2',
+                    'y': 'screenOriginY + (screenSizeY - 556) / 2',
+                    'width': '1130',
+                    'height': '556'
+                })
+            ]
         }
     });
 }
 
-slate.bind('d:ctrl;alt;cmd', slate.operation('layout', {'name': oneScreenLayout}));
+slate.bind('h:ctrl;alt;cmd', slate.operation('layout', {'name': oneScreenLayout}));
+slate.bind('r:ctrl;alt;cmd', slate.operation('relaunch'));
 
 slate.default([macResolution], oneScreenLayout);
