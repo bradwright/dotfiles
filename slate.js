@@ -20,7 +20,7 @@ if (hostname === "kernel") {
         'Emacs': {
             'operations': [
                 S.op("move", {
-                    'x': '(screenSizeX-821)/2',
+                    'x': '(screenSizeX - 821) / 2',
                     'y': '0',
                     'width': '821',
                     'height': '871'
