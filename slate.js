@@ -68,6 +68,16 @@ else if (hostname.indexOf('GDS') !== -1) {
                     'height': 'screenSizeY'
                 })
             ]
+        },
+        'Emacs': {
+            'operations': [
+                S.op("move", {
+                    'x': 'screenOriginX',
+                    'y': 'screenOriginY',
+                    'width': 'screenSizeX',
+                    'height': 'screenSizeY'
+                })
+            ]
         }
     });
     oneExternalScreenLayout = S.layout('externalViewSonicScreen', {
@@ -88,6 +98,26 @@ else if (hostname.indexOf('GDS') !== -1) {
                     'y': 'screenOriginY',
                     'width': '576',
                     'height': '1054'
+                })
+            ]
+        },
+        'iTerm': {
+            'operations': [
+                S.op("move", {
+                    'x': 'screenOriginX',
+                    'y': 'screenOriginY',
+                    'width': 'screenSizeX',
+                    'height': 'screenSizeY'
+                })
+            ]
+        },
+        'Emacs': {
+            'operations': [
+                S.op("move", {
+                    'x': 'screenOriginX',
+                    'y': 'screenOriginY',
+                    'width': 'screenSizeX',
+                    'height': 'screenSizeY'
                 })
             ]
         }
