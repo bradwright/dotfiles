@@ -57,7 +57,16 @@ if (hostname === "kernel") {
     });
 }
 else if (hostname.indexOf('GDS') !== -1) {
-    // GDS
+    var emacsLayout = {
+        'operations': [
+            S.op("move", {
+                'x': 'screenOriginX',
+                'y': 'screenOriginY',
+                'width': 'screenSizeX',
+                'height': 'screenSizeY'
+            })
+        ]
+    };
     oneScreenLayout = S.layout('oneScreen', {
         'iTerm': {
             'operations': [
@@ -69,16 +78,8 @@ else if (hostname.indexOf('GDS') !== -1) {
                 })
             ]
         },
-        'Emacs': {
-            'operations': [
-                S.op("move", {
-                    'x': 'screenOriginX',
-                    'y': 'screenOriginY',
-                    'width': 'screenSizeX',
-                    'height': 'screenSizeY'
-                })
-            ]
-        }
+        'Emacs': emacsLayout,
+        'EmacsPretest' : emacsLayout
     });
     oneExternalScreenLayout = S.layout('externalViewSonicScreen', {
         'Google Chrome': {
