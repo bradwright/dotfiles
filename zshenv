@@ -10,8 +10,9 @@ fi
 
 typeset -U path
 
-find_homebrew
-find_ruby zsh
+source_if_exists /opt/boxen/env.sh
+
+find_emacs
 fix_path
 
 set_editor

@@ -80,6 +80,12 @@ find_completion() {
     esac
 }
 
+find_emacs() {
+    if [ "$BOXEN_HOME" ] && [ -d /Applications/Emacs.app/Contents/MacOS/bin/ ]; then
+        prepend_path /Applications/Emacs.app/Contents/MacOS/bin
+    fi
+}
+
 find_ruby() {
     # Ruby libraries
 
