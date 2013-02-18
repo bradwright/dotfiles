@@ -7,9 +7,9 @@ find_completion zsh
 
 # initialize autocomplete here, otherwise functions won't be loaded
 autoload -Uz zutil
-autoload -Uz compinit
+autoload -Uz compinit && compinit
 autoload -Uz complist
-compinit
+autoload -Uz bashcompinit && bashcompinit
 
 unsetopt menu_complete   # do not autoselect the first completion entry
 unsetopt flowcontrol
