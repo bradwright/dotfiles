@@ -2,7 +2,6 @@
 // https://github.com/jigish/slate/wiki/JavaScript-Configs
 
 /*jslint
-  nomen: true,
   white: true
 */
 /*globals slate, _, S */
@@ -13,6 +12,7 @@ slate.config('checkDefaultsOnLoad', true);
 var hostname = slate.shell('/bin/hostname', true).trim(),
     // default resolution - suitable for MacBook Air 13" and MacBook Pro 15"
     macResolution = '1440x900',
+    macBookAir11Resolution = '1366x768',
     viewSonicResolution = '1920x1080',
     oneScreenLayout,
     oneExternalScreenLayout;
@@ -81,6 +81,20 @@ else if (hostname.indexOf('GDS') !== -1) {
         'Emacs': emacsLayout,
         'EmacsPretest' : emacsLayout
     });
+    oneSmallScreenLayout = S.layout('oneSmallScreen', {
+        'iTerm': {
+            'operations': [
+                S.op("move", {
+                    'x': 'screenOriginX',
+                    'y': 'screenOriginY',
+                    'width': 'screenSizeX',
+                    'height': 'screenSizeY'
+                })
+            ]
+        },
+        'Emacs': emacsLayout,
+        'EmacsPretest' : emacsLayout
+    });
     oneExternalScreenLayout = S.layout('externalViewSonicScreen', {
         'Google Chrome': {
             'operations': [
@@ -127,6 +141,7 @@ else if (hostname.indexOf('GDS') !== -1) {
 }
 
 S.def([macResolution], "oneScreen");
+S.def([macBookAir11Resolution], "oneSmallScreen");
 slate.bind('h:ctrl;alt;cmd', slate.operation('layout', {'name': oneScreenLayout}));
 slate.bind('r:ctrl;alt;cmd', slate.operation('relaunch'));
 
