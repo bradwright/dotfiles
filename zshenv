@@ -11,7 +11,6 @@ fi
 typeset -U path
 
 find_ruby
-find_emacs
 fix_path
 
 set_editor

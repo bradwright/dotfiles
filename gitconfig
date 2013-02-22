@@ -14,8 +14,14 @@
 [push]
         default = tracking
 [core]
-        excludesfile = ~/.gitignore
+        excludesfile = /opt/boxen/config/git/gitignore
 # local overrides - git 1.7.10 or higher
 # http://stackoverflow.com/a/9733277
 [include]
     path = ~/.localgitconfig
+
+[hub]
+protocol = https
+
+[credential]
+helper = /opt/boxen/bin/boxen-git-credential
