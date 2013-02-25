@@ -14,3 +14,5 @@ find_ruby
 fix_path
 
 set_editor
+
+source_if_exists $HOME/.local_zshenv
