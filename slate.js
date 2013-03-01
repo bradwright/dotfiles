@@ -1,10 +1,11 @@
-// Slate configuration:
-// https://github.com/jigish/slate/wiki/JavaScript-Configs
-
 /*jslint
-  white: true
+  white: true,
+  nomen: true
 */
 /*globals slate, _, S */
+
+// Slate configuration:
+// https://github.com/jigish/slate/wiki/JavaScript-Configs
 
 slate.config('defaultToCurrentScreen', true);
 slate.config('checkDefaultsOnLoad', true);
@@ -15,7 +16,8 @@ var hostname = slate.shell('/bin/hostname', true).trim(),
     macBookAir11Resolution = '1366x768',
     viewSonicResolution = '1920x1080',
     oneScreenLayout,
-    oneExternalScreenLayout;
+    oneExternalScreenLayout,
+    oneSmallScreenLayout;
 
 
 // FIXME: why doesn't this hostname check work?
@@ -57,7 +59,7 @@ if (hostname === "kernel") {
     });
 }
 else if (hostname.indexOf('GDS') !== -1) {
-    var emacsLayout = {
+    var fullScreen = {
         'operations': [
             S.op("move", {
                 'x': 'screenOriginX',
@@ -68,35 +70,66 @@ else if (hostname.indexOf('GDS') !== -1) {
         ]
     };
     oneScreenLayout = S.layout('oneScreen', {
-        'iTerm': {
-            'operations': [
-                S.op("move", {
-                    'x': 'screenOriginX',
-                    'y': 'screenOriginY',
-                    'width': 'screenSizeX',
-                    'height': 'screenSizeY'
-                })
-            ]
-        },
-        'Emacs': emacsLayout,
-        'EmacsPretest' : emacsLayout
+        'iTerm': fullScreen,
+        'Emacs': fullScreen
     });
     oneSmallScreenLayout = S.layout('oneSmallScreen', {
-        'iTerm': {
+        'iTerm': fullScreen,
+        'Mailplane 3': fullScreen,
+        'Emacs': fullScreen,
+        'Google Chrome': {
             'operations': [
-                S.op("move", {
-                    'x': 'screenOriginX',
-                    'y': 'screenOriginY',
-                    'width': 'screenSizeX',
-                    'height': 'screenSizeY'
+                S.op('move', {
+                    'x': '(screenSizeX - 1340) / 2',
+                    'y': 'screenOriginY + (screenSizeY - 700) / 2',
+                    'width': '1340',
+                    'height': '700'
                 })
             ]
         },
-        'Emacs': emacsLayout,
-        'EmacsPretest' : emacsLayout
+        'Tweetbot': {
+            'operations': [
+                S.op('move', {
+                    'x': 'screenOriginX + (screenSizeX - 500)',
+                    'y': 'screenOriginY + 11',
+                    'width': '480',
+                    'height': '640'
+                })
+            ]
+        },
+        'Messages': {
+            'operations': [
+                S.op('move', {
+                    'x': 'screenOriginX + 20',
+                    'y': 'screenOriginY + 11',
+                    'width': '730',
+                    'height': '542'
+                })
+            ]
+        }
     });
     oneExternalScreenLayout = S.layout('externalViewSonicScreen', {
+        'Tweetbot': {
+            'operations': [
+                S.op('move', {
+                    'x': 'screenOriginX + (screenSizeX - 500)',
+                    'y': 'screenOriginY + 11',
+                    'width': '480',
+                    'height': '640'
+                })
+            ]
+        },
         'Google Chrome': {
+            'operations': [
+                S.op('move', {
+                    'x': 'screenOriginX',
+                    'y': 'screenOriginY',
+                    'width': '1344',
+                    'height': '1054'
+                })
+            ]
+        },
+        'Mailplane 3': {
             'operations': [
                 S.op('move', {
                     'x': 'screenOriginX',
@@ -116,26 +149,8 @@ else if (hostname.indexOf('GDS') !== -1) {
                 })
             ]
         },
-        'iTerm': {
-            'operations': [
-                S.op("move", {
-                    'x': 'screenOriginX',
-                    'y': 'screenOriginY',
-                    'width': 'screenSizeX',
-                    'height': 'screenSizeY'
-                })
-            ]
-        },
-        'Emacs': {
-            'operations': [
-                S.op("move", {
-                    'x': 'screenOriginX',
-                    'y': 'screenOriginY',
-                    'width': 'screenSizeX',
-                    'height': 'screenSizeY'
-                })
-            ]
-        }
+        'iTerm': fullScreen,
+        'Emacs': fullScreen
     });
     S.def([viewSonicResolution], "externalViewSonicScreen");
 }
