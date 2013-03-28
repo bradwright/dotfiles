@@ -77,6 +77,7 @@ else if (hostname.indexOf('GDS') !== -1) {
         'iTerm': fullScreen,
         'Mailplane 3': fullScreen,
         'Emacs': fullScreen,
+        'OmniFocus': fullScreen,
         'Google Chrome': {
             'operations': [
                 S.op('move', {
@@ -88,6 +89,16 @@ else if (hostname.indexOf('GDS') !== -1) {
             ]
         },
         'Tweetbot': {
+        'Safari': {
+            'operations': [
+                S.op('move', {
+                    'x': '(screenSizeX - 1340) / 2',
+                    'y': 'screenOriginY + (screenSizeY - 700) / 2',
+                    'width': '1340',
+                    'height': '700'
+                })
+            ]
+        },
             'operations': [
                 S.op('move', {
                     'x': 'screenOriginX + (screenSizeX - 500)',
@@ -120,6 +131,26 @@ else if (hostname.indexOf('GDS') !== -1) {
             ]
         },
         'Google Chrome': {
+            'operations': [
+                S.op('move', {
+                    'x': 'screenOriginX',
+                    'y': 'screenOriginY',
+                    'width': '1344',
+                    'height': '1054'
+                })
+            ]
+        },
+        'Safari': {
+            'operations': [
+                S.op('move', {
+                    'x': 'screenOriginX',
+                    'y': 'screenOriginY',
+                    'width': '1344',
+                    'height': '1054'
+                })
+            ]
+        },
+        'OmniFocus': {
             'operations': [
                 S.op('move', {
                     'x': 'screenOriginX',
