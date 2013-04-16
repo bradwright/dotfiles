@@ -26,3 +26,6 @@ set          prefer-visible-bell on
 "\C-w":      unix-filename-rubout
 "":          unix-filename-rubout
 "\C-x*":     glob-expand-word
+
+# Make tab completion work across symlinks
+set mark-symlinked-directories on
