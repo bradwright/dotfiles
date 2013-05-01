@@ -9,6 +9,7 @@
         l = log --decorate --name-status
         graph = log --graph --format='%Cred%h%Creset %s <%Cgreen%ae>'
         lines = diff --stat
+        amend = commit --amend -C HEAD
 [branch]
         autosetuprebase = always
 [push]
