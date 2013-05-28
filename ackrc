@@ -23,10 +23,6 @@ conf=conf
 # Ignore SQL files
 --nosql
 
-# ignore minified JS files
--G
-(?<![\-\.]min\.js)$
-
 # Ignore local .bundle Gems
 --ignore-dir=.bundle
 
