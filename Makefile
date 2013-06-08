@@ -1,6 +1,6 @@
 SOURCE		:= $(CURDIR)
 TARGET		:= $(HOME)
-FILES		:= bashrc bash_profile aliases functions gitconfig gitignore ackrc zshrc zshenv screenrc inputrc irbrc slate.js gemrc
+FILES		:= bashrc bash_profile aliases functions local_gitconfig gitignore ackrc zshrc zshenv screenrc inputrc irbrc slate.js gemrc
 
 UNAME		:= $(shell uname)
 
