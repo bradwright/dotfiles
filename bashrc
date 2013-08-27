@@ -35,14 +35,11 @@ fix_path
 set_editor
 
 # local changes
-if [ -f ~/.local_bashrc ]; then
-    . ~/.local_bashrc
-fi
-
+source_if_exists $HOME/.local_bashrc
 # include aliases
-if [ -f ~/.bash_aliases ]; then
-    . ~/.bash_aliases
-fi
+source_if_exists $HOME/.bash_aliases
+# My own aliases
+source_if_exists $HOME/.aliases
 
 # Colours
 txtblk='\[\033[0;30m\]' # Black - Regular
