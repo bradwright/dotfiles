@@ -28,13 +28,11 @@ if [ -f $HOME/.functions ]; then
     source $HOME/.functions
 fi
 
-find_emacs
-find_git
-find_brew
 find_completion
 find_ruby
-find_subl
 fix_path
+
+set_editor
 
 # local changes
 if [ -f ~/.local_bashrc ]; then
