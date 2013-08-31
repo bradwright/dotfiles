@@ -7,6 +7,27 @@
 // Slate configuration:
 // https://github.com/jigish/slate/wiki/JavaScript-Configs
 
+function merge(obj, toMerge) {
+    "use strict";
+    var copy, attr, newAttr;
+    if (null === obj || "object" !== typeof obj) {
+        return obj;
+    }
+    copy = obj.constructor();
+    for (attr in obj) {
+        if (obj.hasOwnProperty(attr)) {
+            copy[attr] = obj[attr];
+        }
+    }
+    for (newAttr in toMerge) {
+        if (toMerge.hasOwnProperty(newAttr)) {
+            copy[newAttr] = toMerge[newAttr];
+        }
+    }
+    return copy;
+}
+
+
 slate.config('defaultToCurrentScreen', true);
 slate.config('checkDefaultsOnLoad', true);
 
@@ -17,49 +38,8 @@ var hostname = slate.shell('/bin/hostname', true).trim(),
     viewSonicResolution = '1920x1080',
     oneScreenLayout,
     oneExternalScreenLayout,
-    oneSmallScreenLayout;
-
-
-// FIXME: why doesn't this hostname check work?
-if (hostname === "kernel") {
-    // home MacBook Air
-    oneScreenLayout = S.layout('oneScreen', {
-        'Emacs': {
-            'operations': [
-                S.op("move", {
-                    'x': '(screenSizeX - 821) / 2',
-                    'y': '0',
-                    'width': '821',
-                    'height': '871'
-                })
-            ]
-        },
-        // show Mail right in the centre
-        'Mail': {
-            'operations': [
-                S.op("move", {
-                    'x': '(screenSizeX - 1150) / 2',
-                    'y': 'screenOriginY + (screenSizeY - 740)/2',
-                    'width': '1150',
-                    'height': '740'
-                })
-            ]
-        },
-        // show iTerm in 140 columns wide, 30 deep
-        'iTerm': {
-            'operations': [
-                S.op('move', {
-                    'x': '(screenSizeX - 1130) / 2',
-                    'y': 'screenOriginY + (screenSizeY - 556) / 2',
-                    'width': '1130',
-                    'height': '556'
-                })
-            ]
-        }
-    });
-}
-else if (hostname.indexOf('GDS') !== -1) {
-    var fullScreen = {
+    oneSmallScreenLayout,
+    fullScreen = {
         'operations': [
             S.op("move", {
                 'x': 'screenOriginX',
@@ -69,15 +49,38 @@ else if (hostname.indexOf('GDS') !== -1) {
             })
         ]
     };
-    oneScreenLayout = S.layout('oneScreen', {
-        'iTerm': fullScreen,
-        'Emacs': fullScreen
-    });
-    oneSmallScreenLayout = S.layout('oneSmallScreen', {
-        'iTerm': fullScreen,
-        'Mailplane 3': fullScreen,
-        'Emacs': fullScreen,
-        'OmniFocus': fullScreen,
+
+/*
+ This layout makes sense because I have Emacs and iTerm2 on Spaces 2
+ and 3. OmniFocus is available on every space.
+*/
+var defaultLayout = {
+    'Emacs': fullScreen,
+    'iTerm': fullScreen,
+    'OmniFocus': fullScreen
+};
+
+
+// FIXME: why doesn't this hostname check work?
+if (hostname === "kernel") {
+    // home MacBook Air
+    oneScreenLayout = S.layout('oneScreen', merge(defaultLayout, {
+        'Evernote': fullScreen,
+        'Mail': {
+            'operations': [
+                S.op("move", {
+                    'x': '(screenSizeX - 1150) / 2',
+                    'y': 'screenOriginY + (screenSizeY - 740)/2',
+                    'width': '1150',
+                    'height': '740'
+                })
+            ]
+        }
+    }));
+}
+else if (hostname.indexOf('GDS') !== -1) {
+    oneScreenLayout = S.layout('oneScreen', defaultLayout);
+    oneSmallScreenLayout = S.layout('oneSmallScreen', merge(defaultLayout, {
         'Google Chrome': {
             'operations': [
                 S.op('move', {
@@ -85,26 +88,6 @@ else if (hostname.indexOf('GDS') !== -1) {
                     'y': 'screenOriginY + (screenSizeY - 700) / 2',
                     'width': '1340',
                     'height': '700'
-                })
-            ]
-        },
-        'Tweetbot': {
-        'Safari': {
-            'operations': [
-                S.op('move', {
-                    'x': '(screenSizeX - 1340) / 2',
-                    'y': 'screenOriginY + (screenSizeY - 700) / 2',
-                    'width': '1340',
-                    'height': '700'
-                })
-            ]
-        },
-            'operations': [
-                S.op('move', {
-                    'x': 'screenOriginX + (screenSizeX - 500)',
-                    'y': 'screenOriginY + 11',
-                    'width': '480',
-                    'height': '640'
                 })
             ]
         },
@@ -118,8 +101,8 @@ else if (hostname.indexOf('GDS') !== -1) {
                 })
             ]
         }
-    });
-    oneExternalScreenLayout = S.layout('externalViewSonicScreen', {
+    }));
+    oneExternalScreenLayout = S.layout('externalViewSonicScreen', merge(defaultLayout, {
         'Tweetbot': {
             'operations': [
                 S.op('move', {
@@ -131,16 +114,6 @@ else if (hostname.indexOf('GDS') !== -1) {
             ]
         },
         'Google Chrome': {
-            'operations': [
-                S.op('move', {
-                    'x': 'screenOriginX',
-                    'y': 'screenOriginY',
-                    'width': '1344',
-                    'height': '1054'
-                })
-            ]
-        },
-        'Safari': {
             'operations': [
                 S.op('move', {
                     'x': 'screenOriginX',
@@ -179,10 +152,8 @@ else if (hostname.indexOf('GDS') !== -1) {
                     'height': '1054'
                 })
             ]
-        },
-        'iTerm': fullScreen,
-        'Emacs': fullScreen
-    });
+        }
+    }));
     S.def([viewSonicResolution], "externalViewSonicScreen");
 }
 
