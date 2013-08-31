@@ -103,16 +103,6 @@ else if (hostname.indexOf('GDS') !== -1) {
         }
     }));
     oneExternalScreenLayout = S.layout('externalViewSonicScreen', merge(defaultLayout, {
-        'Tweetbot': {
-            'operations': [
-                S.op('move', {
-                    'x': 'screenOriginX + (screenSizeX - 500)',
-                    'y': 'screenOriginY + 11',
-                    'width': '480',
-                    'height': '640'
-                })
-            ]
-        },
         'Google Chrome': {
             'operations': [
                 S.op('move', {
