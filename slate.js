@@ -52,12 +52,13 @@ var hostname = slate.shell('/bin/hostname', true).trim(),
 
 /*
  This layout makes sense because I have Emacs and iTerm2 on Spaces 2
- and 3. OmniFocus is available on every space.
+ and 3. OmniFocus and Evernote are available on every Space.
 */
 var defaultLayout = {
     'Emacs': fullScreen,
     'iTerm': fullScreen,
-    'OmniFocus': fullScreen
+    'OmniFocus': fullScreen,
+    'Evernote': fullScreen
 };
 
 
