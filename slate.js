@@ -114,6 +114,16 @@ else if (hostname.indexOf('GDS') !== -1) {
                 })
             ]
         },
+        'Safari': {
+            'operations': [
+                S.op('move', {
+                    'x': 'screenOriginX',
+                    'y': 'screenOriginY',
+                    'width': '1344',
+                    'height': '1054'
+                })
+            ]
+        },
         'OmniFocus': {
             'operations': [
                 S.op('move', {
