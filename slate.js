@@ -156,6 +156,7 @@ else if (hostname.indexOf('GDS') !== -1) {
         }
     }));
     S.def([viewSonicResolution], "externalViewSonicScreen");
+    slate.default([viewSonicResolution], oneExternalScreenLayout);
 }
 
 S.def([macResolution], "oneScreen");
@@ -164,3 +165,4 @@ slate.bind('h:ctrl;alt;cmd', slate.operation('layout', {'name': oneScreenLayout}
 slate.bind('r:ctrl;alt;cmd', slate.operation('relaunch'));
 
 slate.default([macResolution], oneScreenLayout);
+slate.default([macBookAir11Resolution], oneScreenLayout);
