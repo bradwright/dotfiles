@@ -99,8 +99,6 @@ precmd() {
     # prompt on SSH connections.
     if [ "$SSH_CONNECTION" -a ! "$TMUX_PANE" ]; then
         PS1="%F{red}%m "
-    elif [ ! "$TMUX_PANE" ]; then
-        PS1="%F{magenta}%m "
     fi
 
     PS1="${clr}${PS1}${clr}%F{green}%~ "
