@@ -58,7 +58,8 @@ var defaultLayout = {
     'Emacs': fullScreen,
     'iTerm': fullScreen,
     'OmniFocus': fullScreen,
-    'Evernote': fullScreen
+    'Evernote': fullScreen,
+    'Calendar': fullScreen
 };
 
 
