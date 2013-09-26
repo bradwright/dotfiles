@@ -1,3 +1,5 @@
+# -*- mode: gitignore-*-
+
 # Emacs backups
 .\#*
 
@@ -9,3 +11,6 @@
 
 # Anything under a local .bundle
 .bundle
+
+# ctags
+TAGS
