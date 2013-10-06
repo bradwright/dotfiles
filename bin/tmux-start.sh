@@ -5,7 +5,7 @@
 
 export PATH=$PATH:usr/local/bin
 
-default_name=_default
+default_name=local
 
 # abort if we're already inside a TMUX session
 [ "$TMUX" == "" ] || exit 0
