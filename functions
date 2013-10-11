@@ -107,17 +107,19 @@ fix_path() {
 }
 
 set_editor() {
-    EDITOR="emacsclient"
+    EDITOR="et"
+    VISUAL=$EDITOR
     case $UNAME in
         Darwin*)
             EDITOR=$EDITOR
+            VISUAL="ec"
             ;;
         Linux*)
             EDITOR="$EDITOR -t"
             ;;
     esac
     export EDITOR
-    export VISUAL=$EDITOR
+    export VISUAL
     export GIT_EDITOR=$EDITOR
 }
 
