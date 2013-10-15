@@ -36,6 +36,7 @@ var hostname = slate.shell('/bin/hostname', true).trim(),
     macResolution = '1440x900',
     macBookAir11Resolution = '1366x768',
     viewSonicResolution = '1920x1080',
+    dellResolution = '1920x1200',
     oneScreenLayout,
     oneExternalScreenLayout,
     oneSmallScreenLayout,
@@ -111,7 +112,7 @@ else if (hostname.indexOf('GDS') !== -1) {
                     'x': 'screenOriginX',
                     'y': 'screenOriginY',
                     'width': '1344',
-                    'height': '1054'
+                    'height': 'screenSizeY'
                 })
             ]
         },
@@ -121,7 +122,7 @@ else if (hostname.indexOf('GDS') !== -1) {
                     'x': 'screenOriginX',
                     'y': 'screenOriginY',
                     'width': '1344',
-                    'height': '1054'
+                    'height': 'screenSizeY'
                 })
             ]
         },
@@ -131,7 +132,7 @@ else if (hostname.indexOf('GDS') !== -1) {
                     'x': 'screenOriginX',
                     'y': 'screenOriginY',
                     'width': '1344',
-                    'height': '1054'
+                    'height': 'screenSizeY'
                 })
             ]
         },
@@ -141,7 +142,7 @@ else if (hostname.indexOf('GDS') !== -1) {
                     'x': 'screenOriginX',
                     'y': 'screenOriginY',
                     'width': '1344',
-                    'height': '1054'
+                    'height': 'screenSizeY'
                 })
             ]
         },
@@ -151,13 +152,12 @@ else if (hostname.indexOf('GDS') !== -1) {
                     'x': 'screenOriginX + 1344',
                     'y': 'screenOriginY',
                     'width': '576',
-                    'height': '1054'
+                    'height': 'screenSizeY'
                 })
             ]
         }
     }));
     S.def([viewSonicResolution], "externalViewSonicScreen");
-    slate.default([viewSonicResolution], oneExternalScreenLayout);
 }
 
 S.def([macResolution], "oneScreen");
@@ -166,4 +166,6 @@ slate.bind('h:ctrl;alt;cmd', slate.operation('layout', {'name': oneScreenLayout}
 slate.bind('r:ctrl;alt;cmd', slate.operation('relaunch'));
 
 slate.default([macResolution], oneScreenLayout);
-slate.default([macBookAir11Resolution], oneScreenLayout);
+slate.default([macBookAir11Resolution], oneSmallScreenLayout);
+slate.default([viewSonicResolution], oneExternalScreenLayout);
+slate.default([dellResolution], oneExternalScreenLayout);
