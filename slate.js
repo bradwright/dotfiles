@@ -66,7 +66,6 @@ var defaultLayout = {
 if (hostname === "kernel") {
     // home MacBook Air
     oneScreenLayout = S.layout('oneScreen', merge(defaultLayout, {
-        'Evernote': fullScreen,
         'Mail': {
             'operations': [
                 S.op("move", {
