@@ -63,8 +63,6 @@ var defaultLayout = {
     'Calendar': fullScreen
 };
 
-
-// FIXME: why doesn't this hostname check work?
 if (hostname === "kernel") {
     // home MacBook Air
     oneScreenLayout = S.layout('oneScreen', merge(defaultLayout, {
@@ -105,6 +103,7 @@ else if (hostname.indexOf('GDS') !== -1) {
             ]
         }
     }));
+    S.def([macBookAir11Resolution], "oneSmallScreen");
     oneExternalScreenLayout = S.layout('externalViewSonicScreen', merge(defaultLayout, {
         'Google Chrome': {
             'operations': [
@@ -161,11 +160,15 @@ else if (hostname.indexOf('GDS') !== -1) {
 }
 
 S.def([macResolution], "oneScreen");
-S.def([macBookAir11Resolution], "oneSmallScreen");
+
 slate.bind('h:ctrl;alt;cmd', slate.operation('layout', {'name': oneScreenLayout}));
 slate.bind('r:ctrl;alt;cmd', slate.operation('relaunch'));
 
 slate.default([macResolution], oneScreenLayout);
-slate.default([macBookAir11Resolution], oneSmallScreenLayout);
-slate.default([viewSonicResolution], oneExternalScreenLayout);
-slate.default([dellResolution], oneExternalScreenLayout);
+if (oneSmallScreenLayout !== undefined) {
+    slate.default([macBookAir11Resolution], oneSmallScreenLayout);
+}
+if (oneExternalScreenLayout !== undefined) {
+    slate.default([viewSonicResolution], oneExternalScreenLayout);
+    slate.default([dellResolution], oneExternalScreenLayout);
+}
