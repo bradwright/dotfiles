@@ -60,7 +60,8 @@ var defaultLayout = {
     'iTerm': fullScreen,
     'OmniFocus': fullScreen,
     'Evernote': fullScreen,
-    'Calendar': fullScreen
+    'Calendar': fullScreen,
+    'Mailplane 3': fullScreen
 };
 
 if (hostname === "kernel") {
