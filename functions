@@ -135,6 +135,11 @@ git_prompt_info() {
     fi
 }
 
+set_go_path() {
+    export GOPATH=~/go
+    append_path $GOPATH/bin
+}
+
 # Source a file if it exists
 source_if_exists() {
     [ -f $1 ] && source $1

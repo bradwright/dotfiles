@@ -15,4 +15,6 @@ fix_path
 
 set_editor
 
+set_go_path
+
 source_if_exists $HOME/.local_zshenv
