@@ -120,7 +120,8 @@ set_editor() {
     esac
     export EDITOR
     export VISUAL
-    export GIT_EDITOR=$EDITOR
+    # We don't want to use 'ec' for this as it doesn't block the terminal
+    export GIT_EDITOR='emacsclient'
 }
 
 
