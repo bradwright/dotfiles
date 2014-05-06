@@ -145,3 +145,11 @@ set_go_path() {
 source_if_exists() {
     [ -f $1 ] && source $1
 }
+
+function set-eterm-dir {
+    # Sets up some eterm variables so TRAMP  works
+    # Adapted from: http://www.emacswiki.org/emacs/AnsiTermHints#toc5
+    echo -e "\033AnSiTu" "$LOGNAME"
+    echo -e "\033AnSiTc" "$(pwd)"
+    echo -e "\033AnSiTh" "$(hostname)"
+}

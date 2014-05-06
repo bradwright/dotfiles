@@ -118,6 +118,12 @@ precmd() {
     fi
 
     set_title
+
+    # We only want eterm magic with the right terminal and on a remote
+    # connection
+    if [ "$TERM" = "eterm-color" ] && [[ -n "$SSH_CONNECTION" ]]; then
+        set-eterm-dir
+    fi
 }
 
 set_title() {
