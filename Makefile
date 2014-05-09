@@ -35,12 +35,6 @@ clean_dotfiles:
 	@-unlink $(TARGET)/.ssh/rc
 	@-unlink $(TARGET)/bin
 
-install_private_xml:
-	@ln -sf $(SOURCE)/keyremap4macbook/private.xml ~/Library/Application\ Support/KeyRemap4MacBook/
+install: install_dotfiles install_tmux
 
-clean_private_xml:
-	@unlink ~/Library/Application\ Support/KeyRemap4MacBook/private.xml
-
-install: install_dotfiles install_tmux install_private_xml
-
-clean: clean_tmux clean_dotfiles clean_private_xml
+clean: clean_tmux clean_dotfiles
