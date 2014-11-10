@@ -14,3 +14,5 @@
         autosetuprebase = always
 [push]
         default = tracking
+[fetch]
+        prune = true # requires Git 1.8.5 or higher
