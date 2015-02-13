@@ -18,3 +18,6 @@ set_editor
 set_go_path
 
 source_if_exists $HOME/.local_zshenv
+
+# Make sure that gpg-agent can still authenticate even when redirecting stdout
+export GPG_TTY=$(tty)
