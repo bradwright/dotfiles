@@ -1,6 +1,6 @@
 SOURCE		:= $(CURDIR)
 TARGET		:= $(HOME)
-FILES		:= bashrc bash_profile aliases functions local_gitconfig gitignore ackrc zshrc zshenv screenrc inputrc irbrc slate.js gemrc sbtconfig
+FILES		:= bashrc bash_profile aliases functions local_gitconfig gitignore ackrc zshrc zshenv screenrc inputrc irbrc slate.js gemrc sbtconfig vimrc
 
 UNAME		:= $(shell uname)
 
@@ -27,6 +27,7 @@ install_dotfiles:
 	@mkdir -p ~/.ssh/
 	@chmod 700 ~/.ssh/
 	@ln -sf $(SOURCE)/sshrc ~/.ssh/rc
+	@ln -sf $(SOURCE)/vim $(TARGET)/
 
 clean_dotfiles:
 	@-for f in $(FILES); do \
@@ -34,6 +35,7 @@ clean_dotfiles:
 	done
 	@-unlink $(TARGET)/.ssh/rc
 	@-unlink $(TARGET)/bin
+	@-unlink $(TARGET)/vim
 
 install: install_dotfiles install_tmux
 
