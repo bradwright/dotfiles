@@ -1,6 +1,6 @@
 set nocompatible
 
-syntax on
+filetype off
 
 set rtp+=~/.vim/bundle/Vundle.vim
 call vundle#begin()
@@ -11,7 +11,11 @@ Plugin 'fatih/vim-go'
 Plugin 'tpope/vim-fugitive'
 
 call vundle#end()
+
+
 filetype plugin indent on
+syntax on
+
 
 " Unicode
 set encoding=utf-8
