@@ -8,6 +8,7 @@ Plugin 'gmarik/Vundle.vim'
 
 Plugin 'altercation/vim-colors-solarized'
 Plugin 'fatih/vim-go'
+Plugin 'tpope/vim-fugitive'
 
 call vundle#end()
 filetype plugin indent on
