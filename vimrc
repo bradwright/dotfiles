@@ -2,7 +2,7 @@ set nocompatible
 
 syntax on
 
-set rtp+=bundle/Vundle.vim
+set rtp+=~/.vim/bundle/Vundle.vim
 call vundle#begin()
 Plugin 'gmarik/Vundle.vim'
 
