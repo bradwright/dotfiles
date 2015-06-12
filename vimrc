@@ -9,6 +9,7 @@ Plugin 'gmarik/Vundle.vim'
 Plugin 'altercation/vim-colors-solarized'
 Plugin 'fatih/vim-go'
 Plugin 'tpope/vim-fugitive'
+Plugin 'thoughtbot/pick.vim'
 
 call vundle#end()
 
@@ -55,3 +56,10 @@ nmap <leader>gc :Gcommit<cr>
 nmap <leader>ga :Gwrite<cr>
 nmap <leader>gl :Glog<cr>
 nmap <leader>gd :Gdiff<cr>
+
+" Pick
+nnoremap <Leader>t :call PickFile()<CR>
+nnoremap <Leader>pf :call PickFile()<CR>
+nnoremap <Leader>ps :call PickFileSplit()<CR>
+nnoremap <Leader>pv :call PickFileVerticalSplit()<CR>
+nnoremap <Leader>b :call PickBuffer()<CR>
