@@ -40,6 +40,8 @@ endif
 set ruler
 set showcmd
 
+set noswapfile
+
 let mapleader = ","
 let maplocalleader = ","
 
