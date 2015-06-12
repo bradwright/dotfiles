@@ -42,3 +42,6 @@ set showcmd
 
 let mapleader = ","
 let maplocalleader = ","
+
+" Fugitive
+nnoremap <Leader>g :Gstatus<CR>
