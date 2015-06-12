@@ -17,6 +17,8 @@ call vundle#end()
 filetype plugin indent on
 syntax on
 
+" Always show statusline
+set laststatus=2
 
 " Unicode
 set encoding=utf-8
