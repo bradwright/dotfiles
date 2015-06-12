@@ -28,6 +28,7 @@ install_dotfiles:
 	@chmod 700 ~/.ssh/
 	@ln -sf $(SOURCE)/sshrc ~/.ssh/rc
 	@ln -sf $(SOURCE)/vim $(TARGET)/
+	@vim +PluginInstall +qall
 
 clean_dotfiles:
 	@-for f in $(FILES); do \
