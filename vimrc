@@ -2,8 +2,14 @@ set nocompatible
 
 syntax on
 
-" Pathogen for packages
-execute pathogen#infect()
+set rtp+=bundle/Vundle.vim
+call vundle#begin()
+Plugin 'gmarik/Vundle.vim'
+
+Plugin 'altercation/vim-colors-solarized'
+Plugin 'fatih/vim-go'
+
+call vundle#end()
 filetype plugin indent on
 
 " Unicode
