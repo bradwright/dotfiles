@@ -113,7 +113,7 @@ precmd() {
 
     if ${SHOW_GIT_PROMPT:=true} ; then
         if git branch >& /dev/null; then
-            PS1="${clr}%F{black}%K{yellow} $(git_prompt_info) ${clr} ${PS1}"
+            PS1="${clr}$(set_git_prompt)${clr} ${PS1}"
         fi
     fi
 
@@ -123,6 +123,15 @@ precmd() {
     # connection
     if [ "$TERM" = "eterm-color" ] && [[ -n "$SSH_CONNECTION" ]]; then
         set-eterm-dir
+    fi
+}
+
+set_git_prompt() {
+    # Set up a different prompt based on whether I'm in Emacs or not
+    if [ "$TERM" = "eterm-color" ]; then
+        print -Pn "%F{blue}($(git_prompt_info))"
+    else
+        print -Pn "%F{black}%K{yellow} $(git_prompt_info) "
     fi
 }
 
