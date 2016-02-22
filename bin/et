@@ -19,8 +19,8 @@
 # -t starts in terminal, since I won't be using the gui
 # can also pass in -n if you want to have the shell return right away
 
-if [ -z "$INSIDE_EMACS" ]; then
-    emacsclient -n "$@"
+if [ -n "$INSIDE_EMACS" ]; then
+    emacsclient "$@"
 else
     exec emacsclient -a "" -t "$@"
 fi
