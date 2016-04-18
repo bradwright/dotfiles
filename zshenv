@@ -3,6 +3,9 @@
 # don't ring the bell for everything ever
 setopt nobeep
 
+# Prefix commands with whitespace to avoid saving them in shell historya
+setopt HIST_IGNORE_SPACE
+
 # Include library functionss
 if [ -f $HOME/.functions ]; then
     source $HOME/.functions
