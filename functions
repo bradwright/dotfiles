@@ -104,6 +104,9 @@ fix_path() {
     if [ -d $HOME/bin ]; then
         prepend_path $HOME/bin
     fi
+
+    # add /usr/local/bin
+    prepend_path /usr/local/bin
 }
 
 set_editor() {
