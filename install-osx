@@ -2,10 +2,10 @@
 
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
-brew tap Homebrew/bundle
-brew install mas
+/usr/local/bin/brew tap Homebrew/bundle
+/usr/local/bin/brew install mas
 
-brew bundle
+/usr/local/bin/brew bundle
 
 mkdir -p ~/Projects
 
