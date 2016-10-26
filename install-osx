@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+
+brew tap Homebrew/bundle
+brew install mas
+
+brew bundle
+
+mkdir -p ~/Projects
+
+[ -d ~/Projects/emacs.d ] || (git clone git@github.com:bradwright/emacs.d ~/Projects/emacs.d && cd ~/Projects/emacs.d && make && cd -)
+
+make
