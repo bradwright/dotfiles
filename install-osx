@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
 
-/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+[ -d /usr/local/Homebrew ] || /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
 /usr/local/bin/brew tap Homebrew/bundle
-/usr/local/bin/brew install mas
+[ `which mas` ] || /usr/local/bin/brew install mas
 
 /usr/local/bin/brew bundle
 
@@ -13,11 +13,13 @@ mkdir -p ~/Projects
 
 make
 
-# Set default shell to ZSH
-if grep -qL /usr/local/bin/zsh /etc/shells; then
-	echo "/usr/local/bin/zsh" >> /etc/shells
+if [ "$SHELL" != "/usr/local/bin/zsh" ]; then
+    # Set default shell to ZSH
+    if grep -qL /usr/local/bin/zsh /etc/shells; then
+	    sudo echo "/usr/local/bin/zsh" >> /etc/shells
+    fi
+    chsh -s /usr/local/bin/zsh
 fi
-chsh -s /usr/local/bin/zsh
 
 # Go packages
 go get -u golang.org/x/tools/cmd/godoc \
