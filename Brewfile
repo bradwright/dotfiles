@@ -2,6 +2,7 @@
 cask_args appdir: '/Applications'
 tap 'caskroom/cask'
 
+brew 'aspell', args: ['--with-lang-en']
 brew 'fzf'
 brew 'git'
 brew 'go'
