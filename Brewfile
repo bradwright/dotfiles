@@ -1,6 +1,7 @@
 # -*- mode: ruby -*-
 cask_args appdir: '/Applications'
 tap 'caskroom/cask'
+tap 'caskroom/fonts'
 
 brew 'aspell', args: ['--with-lang-en']
 brew 'fzf'
@@ -28,6 +29,8 @@ cask 'iterm2'
 cask 'omnifocus'
 cask 'skype'
 cask 'spotify'
+
+cask 'font-inconsolata'
 
 mas '1Password', id: 443987910
 mas 'Evernote', id: 406056744
