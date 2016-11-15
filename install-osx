@@ -27,3 +27,9 @@ go get -u golang.org/x/tools/cmd/godoc \
     && go get -u github.com/rogpeppe/godef \
     && go get -u github.com/kisielk/errcheck \
     && pkill -f gocode || true
+
+# Local overrides
+cat <<EOF > ~/.local_zshrc
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+cdpath=($HOME/Projects ~)
+EOF
