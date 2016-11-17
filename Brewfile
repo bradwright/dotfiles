@@ -35,6 +35,7 @@ cask 'skype'
 cask 'spotify'
 
 cask 'font-inconsolata'
+cask 'font-fira-mono'
 
 mas '1Password', id: 443987910
 mas 'Evernote', id: 406056744
