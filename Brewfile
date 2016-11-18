@@ -24,6 +24,7 @@ brew 'homebrew/completions/docker-completion'
 brew 'homebrew/completions/docker-compose-completion'
 
 cask 'alfred'
+cask 'atom'
 cask 'docker'
 cask 'dropbox'
 cask 'emacs'
