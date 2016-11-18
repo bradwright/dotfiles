@@ -33,6 +33,7 @@ cask 'iterm2'
 cask 'omnifocus'
 cask 'skype'
 cask 'spotify'
+cask 'typora'
 
 cask 'font-inconsolata'
 cask 'font-fira-mono'
