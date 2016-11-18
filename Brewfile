@@ -1,5 +1,6 @@
 # -*- mode: ruby -*-
 cask_args appdir: '/Applications'
+
 tap 'caskroom/cask'
 tap 'caskroom/fonts'
 tap 'homebrew/completions'
@@ -38,9 +39,9 @@ cask 'typora'
 cask 'font-inconsolata'
 cask 'font-fira-mono'
 
-mas '1Password', id: 443987910
-mas 'Evernote', id: 406056744
+mas '1Password',     id: 443987910
+mas 'Evernote',      id: 406056744
 mas 'Fantastical 2', id: 975937182
-mas 'Slack', id: 803453959
-mas 'Tweetbot', id: 557168941
-mas 'UnPlugged', id: 423123087
+mas 'Slack',         id: 803453959
+mas 'Tweetbot',      id: 557168941
+mas 'UnPlugged',     id: 423123087
