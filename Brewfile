@@ -8,6 +8,7 @@ brew 'aspell', args: ['--with-lang-en']
 brew 'fzf'
 brew 'git'
 brew 'go'
+brew 'heroku'
 brew 'hub'
 brew 'python'
 brew 'python3'
