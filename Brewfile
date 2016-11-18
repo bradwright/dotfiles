@@ -1,9 +1,8 @@
 # -*- mode: ruby -*-
 cask_args appdir: '/Applications'
 
-tap 'caskroom/cask'
-tap 'caskroom/fonts'
-tap 'homebrew/completions'
+tap 'homebrew/services'
+
 
 brew 'aspell', args: ['--with-lang-en']
 brew 'fzf'
@@ -20,9 +19,13 @@ brew 'zsh'
 brew 'zsh-completions'
 brew 'zsh-lovers'
 
+
+tap 'homebrew/completions'
 brew 'homebrew/completions/docker-completion'
 brew 'homebrew/completions/docker-compose-completion'
 
+
+tap 'caskroom/cask'
 cask 'alfred'
 cask 'atom'
 cask 'docker'
@@ -37,8 +40,11 @@ cask 'skype'
 cask 'spotify'
 cask 'typora'
 
+
+tap 'caskroom/fonts'
 cask 'font-inconsolata'
 cask 'font-fira-mono'
+
 
 mas '1Password',     id: 443987910
 mas 'Evernote',      id: 406056744
