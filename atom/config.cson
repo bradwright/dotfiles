@@ -1,0 +1,20 @@
+"*":
+  core:
+    disabledPackages: [
+      "metrics"
+      "file-mode"
+    ]
+    telemetryConsent: "no"
+    themes: [
+      "one-dark-ui"
+      "solarized-dark-syntax"
+    ]
+  editor:
+    fontFamily: "Inconsolata"
+    fontSize: 18
+    invisibles: {}
+  "exception-reporting":
+    userId: "fbfaa2c4-cd8a-3a13-5eb6-862e55d27126"
+  "go-plus": {}
+  welcome:
+    showOnStartup: false

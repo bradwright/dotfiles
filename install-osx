@@ -33,3 +33,6 @@ cat <<EOF > ~/.local_zshrc
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 cdpath=($HOME/Projects ~)
 EOF
+
+# Install Atom and APM
+./install-atom

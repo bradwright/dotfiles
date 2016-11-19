@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+
+[ -f `which apm` ] || exit 1
+
+apm install advanced-open-file
+apm install atom-fuzzy-grep
+apm install autocomplete-go
+apm install builder-go
+apm install go-config
+apm install go-debug
+apm install go-get
+apm install go-plus
+apm install godoc
+apm install gofmt
+apm install gometalinter-linter
+apm install gorename
+apm install highlight-line
+apm install linter
+apm install navigator-go
+apm install navigator-godef
+apm install tester-go
