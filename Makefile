@@ -35,6 +35,15 @@ clean_dotfiles:
 	@-unlink $(TARGET)/.ssh/rc
 	@-unlink $(TARGET)/bin
 
-install: install_dotfiles install_tmux
+.PHONY: clean_atomrc
+clean_atomrc:
+	@-unlink $(TARGET)/.atom
 
-clean: clean_tmux clean_dotfiles
+.PHONY: install_atomrc
+install_atomrc:
+	@-ln -sf $(SOURCE)/atom $(TARGET)/.atom
+
+
+install: install_dotfiles install_tmux install_atomrc
+
+clean: clean_tmux clean_dotfiles clean_atomrc
