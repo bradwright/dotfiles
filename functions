@@ -112,15 +112,16 @@ fix_path() {
 set_editor() {
     EDITOR="et"
     VISUAL=$EDITOR
+
     case $UNAME in
         Darwin*)
-            EDITOR=$EDITOR
             VISUAL="ec"
             ;;
         Linux*)
             EDITOR="$EDITOR -t"
             ;;
     esac
+
     export EDITOR
     export VISUAL
     # We don't want to use 'ec' for this as it doesn't block the terminal
