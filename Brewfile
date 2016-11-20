@@ -21,6 +21,9 @@ brew 'zsh'
 brew 'zsh-completions'
 brew 'zsh-lovers'
 
+tap 'neovim/neovim'
+brew 'neovim'
+
 
 tap 'homebrew/completions'
 brew 'homebrew/completions/docker-completion'
