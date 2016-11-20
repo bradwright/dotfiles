@@ -124,8 +124,8 @@ set_editor() {
 
     export EDITOR
     export VISUAL
-    # We don't want to use 'ec' for this as it doesn't block the terminal
-    export GIT_EDITOR='emacsclient'
+
+    export GIT_EDITOR='vim +star'
 }
 
 
