@@ -16,6 +16,7 @@ brew 'the_silver_searcher'
 brew 'tmux'
 brew 'vim', args: ['--with-lua']
 brew 'wget'
+brew 'xhyve'
 brew 'zsh'
 brew 'zsh-completions'
 brew 'zsh-lovers'
