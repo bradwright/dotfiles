@@ -10,6 +10,7 @@ brew 'git'
 brew 'go'
 brew 'heroku'
 brew 'hub'
+brew 'kubernetes-cli' # kubectl
 brew 'python'
 brew 'python3'
 brew 'the_silver_searcher'
