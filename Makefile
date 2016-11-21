@@ -40,7 +40,7 @@ clean_atomrc:
 	@-unlink $(TARGET)/.atom
 
 .PHONY: install_atomrc
-install_atomrc:
+install_atomrc: clean_atomrc
 	@-ln -sf $(SOURCE)/atom $(TARGET)/.atom
 
 
