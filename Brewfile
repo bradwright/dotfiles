@@ -46,6 +46,7 @@ cask 'omnifocus'
 cask 'skype'
 cask 'spotify'
 cask 'typora'
+cask 'virtualbox'
 
 
 tap 'caskroom/fonts'
