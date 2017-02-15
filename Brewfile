@@ -26,9 +26,8 @@ tap 'neovim/neovim'
 brew 'neovim'
 
 
-tap 'homebrew/completions'
-brew 'homebrew/completions/docker-completion'
-brew 'homebrew/completions/docker-compose-completion'
+brew 'docker-completion'
+brew 'docker-compose-completion'
 
 
 tap 'caskroom/cask'
