@@ -5,7 +5,7 @@
 /usr/local/bin/brew tap Homebrew/bundle
 [ `which mas` ] || /usr/local/bin/brew install mas
 
-/usr/local/bin/brew bundle
+/usr/local/bin/brew bundle --no-upgrade
 
 mkdir -p ~/Projects
 
