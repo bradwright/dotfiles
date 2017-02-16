@@ -14,6 +14,8 @@
     fontSize: 18
     invisibles: {}
     showLineNumbers: false
+    softWrap: true
+    softWrapAtPreferredLineLength: true
   "exception-reporting":
     userId: "fbfaa2c4-cd8a-3a13-5eb6-862e55d27126"
   "go-plus": {}
