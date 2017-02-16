@@ -22,6 +22,9 @@ brew 'zsh'
 brew 'zsh-completions'
 brew 'zsh-lovers'
 
+# ZSH
+brew 'antigen'
+
 tap 'neovim/neovim'
 brew 'neovim'
 

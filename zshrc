@@ -156,3 +156,8 @@ source_if_exists $HOME/.local_zshrc
 source_if_exists $HOME/.bash_aliases
 # My own aliases
 source_if_exists $HOME/.aliases
+
+# ZSH plugins
+[ -s `brew --prefix`/share/antigen/antigen.zsh ] && source `brew --prefix`/share/antigen/antigen.zsh
+
+antigen bundle lukechilds/zsh-nvm
