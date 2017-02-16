@@ -24,3 +24,6 @@ source_if_exists $HOME/.local_zshenv
 
 # Make sure that gpg-agent can still authenticate even when redirecting stdout
 export GPG_TTY=$(tty)
+
+# Lazy load NVM to avoid startup hit
+export NVM_LAZY_LOAD=true
