@@ -10,6 +10,7 @@
         graph = log --graph --format='%Cred%h%Creset %s <%Cgreen%ae>'
         lines = diff --stat
         amend = commit --amend -C HEAD
+        words = diff --word-diff
 [branch]
         autosetuprebase = always
 [push]
