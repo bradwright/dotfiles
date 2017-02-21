@@ -27,3 +27,4 @@
 # https://atom.io/docs/latest/using-atom-basic-customization#cson
 'atom-text-editor':
   'cmd-shift-g': 'git-plus:run'
+  'cmd-shift-k': 'git-plus:checkout'
