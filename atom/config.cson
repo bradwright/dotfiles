@@ -1,4 +1,6 @@
 "*":
+  "atom-fuzzy-grep":
+    showFullPath: true
   core:
     disabledPackages: [
       "metrics"
