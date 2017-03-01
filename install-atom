@@ -4,7 +4,7 @@
 
 apm install advanced-open-file
 apm install atom-fuzzy-grep
-apm insyall atom-typescript
+apm install atom-typescript
 apm install editorconfig
 apm install git-plus
 apm install go-debug
