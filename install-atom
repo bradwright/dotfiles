@@ -4,6 +4,7 @@
 
 apm install advanced-open-file
 apm install atom-fuzzy-grep
+apm install atom-react-native-autocomplete
 apm install atom-typescript
 apm install editorconfig
 apm install git-plus
@@ -15,3 +16,4 @@ apm install language-r
 apm install linter
 apm install markdown-scroll-sync
 apm install markdown-writer
+apm install react
