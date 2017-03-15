@@ -13,6 +13,7 @@
         words = diff --word-diff
 [branch]
         autosetuprebase = always
+        autoSetupMerge = always
 [push]
         default = tracking
 [fetch]
