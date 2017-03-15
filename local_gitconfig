@@ -3,6 +3,7 @@
         ui = true
 [user]
         name = Bradley Wright
+        email = brad@intranation.com
 [alias]
         co = checkout
         st = status -sb
