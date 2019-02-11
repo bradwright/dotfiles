@@ -4,18 +4,16 @@ cask_args appdir: '/Applications'
 tap 'homebrew/services'
 
 
-brew 'aspell', args: ['--with-lang-en']
+brew 'aspell'
 brew 'fzf'
 brew 'git'
 brew 'go'
-brew 'heroku'
 brew 'hub'
 brew 'kubernetes-cli' # kubectl
 brew 'python'
 brew 'python3'
 brew 'the_silver_searcher'
 brew 'tmux'
-brew 'vim', args: ['--with-lua']
 brew 'wget'
 brew 'xhyve'
 brew 'zsh'
@@ -27,6 +25,9 @@ brew 'antigen'
 
 tap 'neovim/neovim'
 brew 'neovim'
+
+tap 'heroku/brew'
+brew 'heroku'
 
 
 brew 'docker-completion'
