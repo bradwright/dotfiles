@@ -5,6 +5,7 @@ tap 'homebrew/services'
 
 
 brew 'aspell'
+brew 'awscli'
 brew 'fzf'
 brew 'git'
 brew 'go'
