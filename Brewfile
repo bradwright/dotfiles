@@ -58,6 +58,7 @@ cask 'font-fira-mono'
 
 
 mas '1Password',     id: 443987910
+mas 'Bear',          id: 1091189122
 mas 'Evernote',      id: 406056744
 mas 'Fantastical 2', id: 975937182
 mas 'Slack',         id: 803453959
