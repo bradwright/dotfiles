@@ -52,7 +52,7 @@ cask 'typora'
 
 tap 'caskroom/fonts'
 cask 'font-inconsolata'
-cask 'font-fira-mono'
+cask 'caskroom/fonts/font-fira-mono'
 
 
 mas '1Password',     id: 443987910
