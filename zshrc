@@ -161,5 +161,6 @@ source_if_exists $HOME/.aliases
 [ -s `brew --prefix`/share/antigen/antigen.zsh ] && source `brew --prefix`/share/antigen/antigen.zsh
 
 antigen bundle lukechilds/zsh-nvm
+antigen apply
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
