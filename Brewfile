@@ -48,6 +48,7 @@ cask 'rocket'
 cask 'skype'
 cask 'spotify'
 cask 'typora'
+cask 'visual-studio-code'
 
 
 tap 'caskroom/fonts'
