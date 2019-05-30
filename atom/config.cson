@@ -5,6 +5,8 @@
     disabledPackages: [
       "metrics"
       "file-mode"
+      "language-ruby-on-rails"
+      "language-ruby"
     ]
     packagesWithKeymapsDisabled: [
       "highlight-line"
