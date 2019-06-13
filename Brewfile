@@ -54,6 +54,7 @@ cask 'visual-studio-code'
 tap 'caskroom/fonts'
 cask 'font-inconsolata'
 cask 'caskroom/fonts/font-fira-mono'
+cask 'caskroom/fonts/font-fira-code'
 
 
 mas '1Password',     id: 443987910
