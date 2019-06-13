@@ -57,7 +57,7 @@ cask 'caskroom/fonts/font-fira-mono'
 cask 'caskroom/fonts/font-fira-code'
 
 
-mas '1Password',     id: 443987910
+mas '1Password 7',   id: 1333542190
 mas 'Bear',          id: 1091189122
 mas 'Evernote',      id: 406056744
 mas 'Fantastical 2', id: 975937182
