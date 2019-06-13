@@ -59,8 +59,10 @@ cask 'caskroom/fonts/font-fira-code'
 
 mas '1Password 7',   id: 1333542190
 mas 'Bear',          id: 1091189122
+mas 'Drafts',        id: 1435957248
 mas 'Evernote',      id: 406056744
 mas 'Fantastical 2', id: 975937182
 mas 'Slack',         id: 803453959
+mas 'Things',        id: 904280696
 mas 'Tweetbot',      id: 557168941
 mas 'UnPlugged',     id: 423123087
