@@ -47,6 +47,7 @@ cask 'omnifocus'
 cask 'rocket'
 cask 'skype'
 cask 'spotify'
+cask 'thingsmacsandboxhelper'
 cask 'typora'
 cask 'visual-studio-code'
 
