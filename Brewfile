@@ -34,7 +34,7 @@ brew 'docker-completion'
 brew 'docker-compose-completion'
 
 
-tap 'caskroom/cask'
+tap 'homebrew/cask-cask'
 cask 'alfred'
 cask 'atom'
 cask 'docker'
@@ -53,7 +53,7 @@ cask 'typora'
 cask 'visual-studio-code'
 
 
-tap 'caskroom/fonts'
+tap 'homebrew/cask-fonts'
 cask 'font-inconsolata'
 cask 'caskroom/fonts/font-fira-mono'
 cask 'caskroom/fonts/font-fira-code'
