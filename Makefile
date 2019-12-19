@@ -3,6 +3,7 @@ TARGET		:= $(HOME)
 FILES		:= bashrc bash_profile aliases functions local_gitconfig gitignore ackrc zshrc zshenv screenrc inputrc irbrc slate.js gemrc sbtconfig hushlogin hyper.js
 
 UNAME		:= $(shell uname)
+BREW		:= $(shell brew --prefix)
 
 .PHONY: git_submodule install clean
 
@@ -28,6 +29,9 @@ install_dotfiles:
 	@chmod 700 ~/.ssh/
 	@ln -sf $(SOURCE)/sshrc ~/.ssh/rc
 
+install_fzf:
+	@$(BREW)/opt/fzf/install --all
+
 clean_dotfiles:
 	@-for f in $(FILES); do \
 		unlink $(TARGET)/.$$f; \
@@ -44,6 +48,6 @@ install_atomrc: clean_atomrc
 	@-ln -sf $(SOURCE)/atom $(TARGET)/.atom
 
 
-install: install_dotfiles install_tmux install_atomrc
+install: install_dotfiles install_tmux install_atomrc install_fzf
 
 clean: clean_tmux clean_dotfiles clean_atomrc
