@@ -30,7 +30,7 @@ install_dotfiles:
 	@ln -sf $(SOURCE)/sshrc ~/.ssh/rc
 
 install_fzf:
-	@$(BREW)/opt/fzf/install --all
+	@$(BREW)/opt/fzf/install --all 1>/dev/null
 
 clean_dotfiles:
 	@-for f in $(FILES); do \
