@@ -64,7 +64,7 @@ mas 'Bear',                 id: 1091189122
 mas 'Drafts',               id: 1435957248
 mas 'Evernote',             id: 406056744
 mas 'Evernote Web Clipper', id: 1481669779
-mas 'Fantastical 2',        id: 975937182
+mas 'Fantastical',          id: 975937182
 mas 'Ghostery Lite',        id: 1436953057
 mas 'Instapaper',           id: 1481302432
 mas 'Slack',                id: 803453959
