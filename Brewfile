@@ -54,6 +54,7 @@ cask 'visual-studio-code'
 
 
 tap 'homebrew/cask-fonts'
+cask 'font-ibm-plex'
 cask 'font-inconsolata'
 cask 'caskroom/fonts/font-fira-mono'
 cask 'caskroom/fonts/font-fira-code'
