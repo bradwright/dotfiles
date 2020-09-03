@@ -36,7 +36,6 @@ brew 'docker-compose-completion'
 
 tap 'homebrew/cask-cask'
 cask 'alfred'
-cask 'atom'
 cask 'choosy'
 cask 'docker'
 cask 'dropbox'
