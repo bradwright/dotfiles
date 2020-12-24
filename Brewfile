@@ -34,7 +34,7 @@ brew 'docker-completion'
 brew 'docker-compose-completion'
 
 
-tap 'homebrew/cask-cask'
+tap 'homebrew/cask'
 cask 'alfred'
 cask 'choosy'
 cask 'docker'
@@ -55,8 +55,8 @@ cask 'visual-studio-code'
 tap 'homebrew/cask-fonts'
 cask 'font-ibm-plex'
 cask 'font-inconsolata'
-cask 'caskroom/fonts/font-fira-mono'
-cask 'caskroom/fonts/font-fira-code'
+cask 'font-fira-mono'
+cask 'font-fira-code'
 
 
 mas '1Password 7',          id: 1333542190
