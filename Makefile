@@ -1,6 +1,6 @@
 SOURCE		:= $(CURDIR)
 TARGET		:= $(HOME)
-FILES		:= bashrc bash_profile aliases functions local_gitconfig gitignore ackrc zshrc zshenv screenrc inputrc irbrc slate.js gemrc sbtconfig hushlogin hyper.js
+FILES		:= bashrc bash_profile aliases finicky.js functions local_gitconfig gitignore ackrc zshrc zshenv screenrc inputrc irbrc slate.js gemrc sbtconfig hushlogin hyper.js
 
 UNAME		:= $(shell uname)
 BREW		:= $(shell brew --prefix)
