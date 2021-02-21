@@ -62,12 +62,15 @@ cask 'font-fira-code'
 
 mas '1Password 7',          id: 1333542190
 mas 'Bear',                 id: 1091189122
-mas 'Drafts',               id: 1435957248
 mas 'Evernote',             id: 406056744
 mas 'Evernote Web Clipper', id: 1481669779
 mas 'Fantastical',          id: 975937182
 mas 'Ghostery Lite',        id: 1436953057
-mas 'Instapaper',           id: 1481302432
+mas 'Hand Mirror',          id: 1502839586
+mas 'Hush',                 id: 1544743900
+mas 'Instapaper Save',      id: 1481302432
+mas 'Mindnode',             id: 1289197285
+mas 'Moom',                 id: 419330170
 mas 'Slack',                id: 803453959
 mas 'Things',               id: 904280696
 mas 'Tweetbot',             id: 557168941
