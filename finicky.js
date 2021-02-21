@@ -10,15 +10,6 @@ module.exports = {
             hash: ''
         }),
         browser: 'Superhuman',
-      },
-      {
-        match: ({ url }) => url.host.startsWith("www.notion.so"),
-        url: ({ url }) => ({
-          ...url,
-          protocol: 'notion',
-          host: ''
-        }),
-        browser: 'Notion',
       }
     ]
   }
