@@ -14,7 +14,14 @@ module.exports = {
             hash: ''
         }),
         browser: 'Superhuman',
+      },
+      {
+        match: ({ url }) => url.host.startsWith("www.notion.so") && url.pathname.startsWith('/bradwright'),
+        url: ({ url }) => ({
+            ...url,
+          protocol: 'notion'
+        }),
+        browser: 'Notion',
       }
     ]
   }
-  
