@@ -107,6 +107,11 @@ fix_path() {
 
     # add /usr/local/bin
     prepend_path /usr/local/bin
+
+    # work around homebrew
+    if [ -d /opt/homebrew/bin ]; then
+        prepend_path /opt/homebrew/bin
+    fi
 }
 
 set_editor() {
