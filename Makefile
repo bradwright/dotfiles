@@ -1,6 +1,6 @@
 SOURCE		:= $(CURDIR)
 TARGET		:= $(HOME)
-FILES		:= bashrc bash_profile aliases finicky.js functions local_gitconfig gitignore ackrc zshrc zshenv screenrc inputrc irbrc slate.js gemrc sbtconfig hushlogin hyper.js
+FILES		:= bashrc bash_profile aliases finicky.js functions local_gitconfig gitignore ackrc zshrc zshenv inputrc irbrc gemrc hushlogin
 
 UNAME		:= $(shell uname)
 BREW		:= $(shell brew --prefix)
@@ -11,14 +11,6 @@ all: clean install
 
 git_submodule:
 	git submodule update --init
-
-install_tmux:
-	@ln -sf $(CURDIR)/tmux-$(UNAME).conf $(TARGET)/.tmux.conf
-	@ln -sf $(CURDIR)/tmux.conf $(TARGET)/.tmux-all.conf
-
-clean_tmux:
-	@-unlink $(TARGET)/.tmux.conf
-	@-unlink $(TARGET)/.tmux-all.conf
 
 install_dotfiles:
 	@for f in $(FILES); do \
@@ -37,17 +29,7 @@ clean_dotfiles:
 		unlink $(TARGET)/.$$f; \
 	done
 	@-unlink $(TARGET)/.ssh/rc
-	@-unlink $(TARGET)/bin
 
-.PHONY: clean_atomrc
-clean_atomrc:
-	@-unlink $(TARGET)/.atom
+install: install_dotfiles install_fzf
 
-.PHONY: install_atomrc
-install_atomrc: clean_atomrc
-	@-ln -sf $(SOURCE)/atom $(TARGET)/.atom
-
-
-install: install_dotfiles install_tmux install_atomrc install_fzf
-
-clean: clean_tmux clean_dotfiles clean_atomrc
+clean: clean_tmux clean_dotfiles
