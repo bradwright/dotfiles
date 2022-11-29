@@ -10,5 +10,3 @@ alias bb="bl --binstubs .bundle/bin"
 
 alias bi="bundle install"
 alias be="bundle exec"
-
-alias headers="curl -I"
