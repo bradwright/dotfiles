@@ -20,6 +20,8 @@ install_dotfiles:
 	@mkdir -p ~/.ssh/
 	@chmod 700 ~/.ssh/
 	@ln -sf $(SOURCE)/sshrc ~/.ssh/rc
+	@mkdir -p ~/Library/Application\ Support/com.mitchellh.ghostty/
+	@ln -sf $(SOURCE)/ghostty-config ~/Library/Application\ Support/com.mitchellh.ghostty/config
 
 install_fzf:
 	@$(BREW)/opt/fzf/install --all 1>/dev/null
@@ -29,6 +31,7 @@ clean_dotfiles:
 		unlink $(TARGET)/.$$f; \
 	done
 	@-unlink $(TARGET)/.ssh/rc
+	@-unlink ~/Library/Application\ Support/com.mitchellh.ghostty/config
 
 install: install_dotfiles install_fzf
 
