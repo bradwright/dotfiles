@@ -27,3 +27,8 @@ export GPG_TTY=$(tty)
 
 # Lazy load NVM to avoid startup hit
 export NVM_LAZY_LOAD=true
+
+if [ -d $HOME/.config/doom ]; then
+    prepend_path "$HOME/.config/emacs/bin"
+    prepend_path "/Applications/Emacs.app/Contents/MacOS"
+fi
