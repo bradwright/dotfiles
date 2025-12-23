@@ -41,21 +41,18 @@ find_homebrew() {
 find_completion() {
     case $1 in
         zsh*)
+            # homebrew completions (includes brew itself)
+            if command -v brew > /dev/null; then
+                local homebrew=`brew --prefix`
+                if [ -d $homebrew/share/zsh/site-functions ]; then
+                    fpath=($homebrew/share/zsh/site-functions $fpath)
+                fi
+            fi
             # shared zsh completions
             if [ -d /usr/local/share/zsh-completions ]; then
                 fpath=(/usr/local/share/zsh-completions $fpath)
             elif command -v brew > /dev/null && [ -d `brew --prefix`/share/zsh-completions ]; then
                 fpath=(`brew --prefix`/share/zsh-completions $fpath)
-            fi
-            # homebrew rbenv
-            if command -v brew > /dev/null; then
-                local homebrew=`brew --prefix`
-                source_if_exists $homebrew/Library/LinkedKegs/rbenv/completions/rbenv.zsh
-                if [ -f $homebrew/Library/LinkedKegs/git/etc/bash_completion.d/git-completion.bash ]; then
-                    zstyle ':completion:*:*:git:*' script $homebrew/Library/LinkedKegs/git/etc/bash_completion.d/git-completion.bash
-                elif [ -f $homebrew/Library/LinkedKegs/git/etc/bash_completion.d/git-completion.sh ]; then
-                    zstyle ':completion:*:*:git:*' script $homebrew/Library/LinkedKegs/git/etc/bash_completion.d/git-completion.sh
-                fi
             fi
             ;;
         *)
