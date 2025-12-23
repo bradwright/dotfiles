@@ -142,11 +142,6 @@ set_title() {
 }
 
 # Install Git prompt/completion
-## Homebrew
-if command -v brew > /dev/null; then
-    source_if_exists `brew --prefix`/etc/bash_completion.d/git-prompt.bash
-    source_if_exists `brew --prefix`/etc/bash_completion.d/git-prompt.sh
-fi
 ## Linux
 source_if_exists /etc/bash_completion.d/git
 
@@ -160,7 +155,10 @@ source_if_exists $HOME/.aliases
 # ZSH plugins
 [ -s `brew --prefix`/share/antigen/antigen.zsh ] && source `brew --prefix`/share/antigen/antigen.zsh
 
+antigen bundle brew
 antigen bundle lukechilds/zsh-nvm
 antigen apply
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+prepend_path ~/.local/bin
