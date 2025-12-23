@@ -17,3 +17,6 @@ TAGS
 
 # Vim
 *.swp
+
+# Claude Code
+.claude/
