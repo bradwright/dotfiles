@@ -83,3 +83,4 @@ auto-update = check
 
 # Keybindings
 keybind = shift+enter=text:\x1b\r
+keybind = alt+backspace=text:\x17
