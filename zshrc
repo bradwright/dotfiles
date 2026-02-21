@@ -155,6 +155,9 @@ source_if_exists $HOME/.aliases
 # ZSH plugins
 [ -s `brew --prefix`/share/antigen/antigen.zsh ] && source `brew --prefix`/share/antigen/antigen.zsh
 
+# Lazy load NVM to avoid startup hit
+export NVM_LAZY_LOAD=true
+
 antigen bundle brew
 antigen bundle lukechilds/zsh-nvm
 antigen apply
