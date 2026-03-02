@@ -1,0 +1,30 @@
+{
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-sonnet-4-6",
+  "defaultThinkingLevel": "off",
+  "theme": "solarized-dark",
+  "quietStartup": true,
+  "showHardwareCursor": true,
+  "editorPaddingX": 0,
+  "collapseChangelog": true,
+  "doubleEscapeAction": "none",
+  "hideThinkingBlock": true,
+  "compaction": {
+    "enabled": true,
+    "reserveTokens": 8192,
+    "keepRecentTokens": 10000
+  },
+  "terminal": {
+    "showImages": false,
+    "clearOnShrink": false
+  },
+  "images": {
+    "blockImages": true
+  },
+  "retry": {
+    "enabled": true,
+    "maxRetries": 2,
+    "baseDelayMs": 1000
+  },
+  "lastChangelogVersion": "0.55.3"
+}

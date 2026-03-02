@@ -22,6 +22,11 @@ install_dotfiles:
 	@ln -sf $(SOURCE)/sshrc ~/.ssh/rc
 	@mkdir -p ~/Library/Application\ Support/com.mitchellh.ghostty/
 	@ln -sf $(SOURCE)/ghostty-config ~/Library/Application\ Support/com.mitchellh.ghostty/config
+	@mkdir -p ~/.pi/agent/themes/
+	@ln -sf $(SOURCE)/pi/settings.json ~/.pi/agent/settings.json
+	@ln -sf $(SOURCE)/pi/themes/warp.json ~/.pi/agent/themes/warp.json
+	@ln -sf $(SOURCE)/pi/themes/solarized-dark.json ~/.pi/agent/themes/solarized-dark.json
+	@ln -sf $(SOURCE)/pi/themes/solarized-light.json ~/.pi/agent/themes/solarized-light.json
 
 install_fzf:
 	@$(BREW)/opt/fzf/install --all 1>/dev/null
@@ -32,6 +37,10 @@ clean_dotfiles:
 	done
 	@-unlink $(TARGET)/.ssh/rc
 	@-unlink ~/Library/Application\ Support/com.mitchellh.ghostty/config
+	@-unlink ~/.pi/agent/settings.json
+	@-unlink ~/.pi/agent/themes/warp.json
+	@-unlink ~/.pi/agent/themes/solarized-dark.json
+	@-unlink ~/.pi/agent/themes/solarized-light.json
 
 install: install_dotfiles install_fzf
 
