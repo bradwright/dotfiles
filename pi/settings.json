@@ -26,5 +26,8 @@
     "maxRetries": 2,
     "baseDelayMs": 1000
   },
-  "lastChangelogVersion": "0.55.4"
+  "lastChangelogVersion": "0.55.4",
+  "packages": [
+    "git:github.com/leblancfg/pi-ansi-themes"
+  ]
 }
