@@ -2,7 +2,7 @@
   "defaultProvider": "anthropic",
   "defaultModel": "claude-sonnet-4-6",
   "defaultThinkingLevel": "off",
-  "theme": "solarized-dark",
+  "theme": "ansi-dark",
   "quietStartup": true,
   "showHardwareCursor": true,
   "editorPaddingX": 0,
@@ -26,5 +26,5 @@
     "maxRetries": 2,
     "baseDelayMs": 1000
   },
-  "lastChangelogVersion": "0.55.3"
+  "lastChangelogVersion": "0.55.4"
 }
