@@ -1,14 +1,12 @@
 {
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-opus-4-6",
-  "defaultThinkingLevel": "off",
-  "theme": "ansi-dark",
-  "quietStartup": true,
+  "defaultModel": "claude-sonnet-4-6",
+  "defaultThinkingLevel": "medium",
+  "theme": "solarized-dark",
   "showHardwareCursor": true,
   "editorPaddingX": 0,
   "collapseChangelog": true,
   "doubleEscapeAction": "none",
-  "hideThinkingBlock": true,
   "compaction": {
     "enabled": true,
     "reserveTokens": 8192,
