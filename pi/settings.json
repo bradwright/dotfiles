@@ -1,6 +1,6 @@
 {
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-sonnet-4-6",
+  "defaultModel": "claude-opus-4-6",
   "defaultThinkingLevel": "off",
   "theme": "ansi-dark",
   "quietStartup": true,
@@ -27,6 +27,12 @@
     "baseDelayMs": 1000
   },
   "lastChangelogVersion": "0.55.4",
+  "enabledModels": [
+    "claude-sonnet-4-6",
+    "claude-opus-4-6",
+    "gpt-5.3-codex",
+    "gemini-3-pro-*"
+  ],
   "packages": [
     "git:github.com/leblancfg/pi-ansi-themes"
   ]
