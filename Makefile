@@ -1,8 +1,7 @@
 SOURCE		:= $(CURDIR)
 TARGET		:= $(HOME)
-FILES		:= bashrc bash_profile aliases finicky.js functions local_gitconfig gitignore ackrc zshrc zshenv inputrc irbrc gemrc hushlogin
+FILES		:= aliases finicky.js functions local_gitconfig gitignore ackrc zshrc zshenv inputrc irbrc gemrc hushlogin
 
-UNAME		:= $(shell uname)
 BREW		:= $(shell brew --prefix)
 
 .PHONY: git_submodule install clean
@@ -44,4 +43,4 @@ clean_dotfiles:
 
 install: install_dotfiles install_fzf
 
-clean: clean_tmux clean_dotfiles
+clean: clean_dotfiles

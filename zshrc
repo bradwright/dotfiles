@@ -141,14 +141,8 @@ set_title() {
     esac
 }
 
-# Install Git prompt/completion
-## Linux
-source_if_exists /etc/bash_completion.d/git
-
 # Local overrides
 source_if_exists $HOME/.local_zshrc
-# Aliases
-source_if_exists $HOME/.bash_aliases
 # My own aliases
 source_if_exists $HOME/.aliases
 
