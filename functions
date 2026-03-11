@@ -57,8 +57,18 @@ fix_path() {
         prepend_path "$HOME/bin"
     fi
 
+    # Ensure Homebrew is discoverable on Apple Silicon before calling brew.
+    if [ -d /opt/homebrew/bin ]; then
+        prepend_path /opt/homebrew/bin
+    fi
+    if [ -d /opt/homebrew/sbin ]; then
+        prepend_path /opt/homebrew/sbin
+    fi
+
+    # Normalize to the active brew prefix once brew is on PATH.
     if command -v brew > /dev/null; then
         prepend_path "$(brew --prefix)/bin"
+        prepend_path "$(brew --prefix)/sbin"
     fi
 }
 

@@ -147,14 +147,19 @@ source_if_exists $HOME/.local_zshrc
 source_if_exists $HOME/.aliases
 
 # ZSH plugins
-[ -s `brew --prefix`/share/antigen/antigen.zsh ] && source `brew --prefix`/share/antigen/antigen.zsh
+if command -v brew > /dev/null; then
+    ANTIGEN_PATH="$(brew --prefix)/share/antigen/antigen.zsh"
+    [ -s "$ANTIGEN_PATH" ] && source "$ANTIGEN_PATH"
+fi
 
-# Lazy load NVM to avoid startup hit
-export NVM_LAZY_LOAD=true
+if command -v antigen > /dev/null; then
+    # Lazy load NVM to avoid startup hit
+    export NVM_LAZY_LOAD=true
 
-antigen bundle brew
-antigen bundle lukechilds/zsh-nvm
-antigen apply
+    antigen bundle brew
+    antigen bundle lukechilds/zsh-nvm
+    antigen apply
+fi
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
