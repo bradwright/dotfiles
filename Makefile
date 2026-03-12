@@ -25,6 +25,7 @@ install_dotfiles:
 	@ln -sf $(SOURCE)/starship.toml $(TARGET)/.config/starship.toml
 	@mkdir -p ~/.config/fish/
 	@ln -sf $(SOURCE)/fish/config.fish ~/.config/fish/config.fish
+	@ln -sf $(SOURCE)/fish/fish_plugins ~/.config/fish/fish_plugins
 	@mkdir -p ~/.pi/agent/themes/
 	@ln -sf $(SOURCE)/pi/settings.json ~/.pi/agent/settings.json
 	@ln -sf $(SOURCE)/pi/themes/warp.json ~/.pi/agent/themes/warp.json
@@ -39,6 +40,7 @@ clean_dotfiles:
 	@-unlink ~/Library/Application\ Support/com.mitchellh.ghostty/config
 	@-unlink ~/.config/starship.toml
 	@-unlink ~/.config/fish/config.fish
+	@-unlink ~/.config/fish/fish_plugins
 	@-unlink ~/.pi/agent/settings.json
 	@-unlink ~/.pi/agent/themes/warp.json
 	@-unlink ~/.pi/agent/themes/solarized-dark.json

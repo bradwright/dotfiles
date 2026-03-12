@@ -76,11 +76,6 @@ HISTSIZE=100000
 SAVEHIST=100000
 HISTFILE=~/.zsh_history
 
-# Work around tmux's if-shell functionality being crap
-if [ "$TMUX" ] && [ $TERM = "xterm-256color" ]; then
-    export TERM="screen-256color"
-fi
-
 # Include library functionss
 if [ -f $HOME/.functions ]; then
     source $HOME/.functions
@@ -111,6 +106,22 @@ if command -v antigen > /dev/null; then
     antigen apply
 fi
 
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+# fzf shell integration (keybindings and completion)
+if command -v fzf > /dev/null; then
+    eval "$(fzf --zsh)"
+    # Use fd for fzf file search (respects .gitignore)
+    export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+    export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+    # Use fd for directory search
+    export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
+    # Preview files with bat, directories with eza
+    export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-range=:500 {}'"
+    export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 {}'"
+fi
+
+# zoxide (smarter cd)
+if command -v zoxide > /dev/null; then
+    eval "$(zoxide init zsh)"
+fi
 
 prepend_path ~/.local/bin
