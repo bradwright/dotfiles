@@ -11,3 +11,12 @@ alias bb="bl --binstubs .bundle/bin"
 alias bi="bundle install"
 alias be="bundle exec"
 
+# Modern CLI replacements
+alias ls="eza"
+alias ll="eza -lg"
+alias la="eza -lag"
+alias tree="eza --tree"
+alias cat="bat --plain"
+alias du="dust"
+alias top="btm"
+
