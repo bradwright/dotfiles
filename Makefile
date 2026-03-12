@@ -21,6 +21,8 @@ install_dotfiles:
 	@ln -sf $(SOURCE)/sshrc ~/.ssh/rc
 	@mkdir -p ~/Library/Application\ Support/com.mitchellh.ghostty/
 	@ln -sf $(SOURCE)/ghostty-config ~/Library/Application\ Support/com.mitchellh.ghostty/config
+	@mkdir -p ~/.config/
+	@ln -sf $(SOURCE)/starship.toml $(TARGET)/.config/starship.toml
 	@mkdir -p ~/.pi/agent/themes/
 	@ln -sf $(SOURCE)/pi/settings.json ~/.pi/agent/settings.json
 	@ln -sf $(SOURCE)/pi/themes/warp.json ~/.pi/agent/themes/warp.json
@@ -36,6 +38,7 @@ clean_dotfiles:
 	done
 	@-unlink $(TARGET)/.ssh/rc
 	@-unlink ~/Library/Application\ Support/com.mitchellh.ghostty/config
+	@-unlink ~/.config/starship.toml
 	@-unlink ~/.pi/agent/settings.json
 	@-unlink ~/.pi/agent/themes/warp.json
 	@-unlink ~/.pi/agent/themes/solarized-dark.json

@@ -76,8 +76,6 @@ HISTSIZE=100000
 SAVEHIST=100000
 HISTFILE=~/.zsh_history
 
-export SHOW_GIT_PROMPT=true
-
 # Work around tmux's if-shell functionality being crap
 if [ "$TMUX" ] && [ $TERM = "xterm-256color" ]; then
     export TERM="screen-256color"
@@ -88,58 +86,10 @@ if [ -f $HOME/.functions ]; then
     source $HOME/.functions
 fi
 
-# Show stuff in prompt
-precmd() {
-    # Clear all colours
-    local clr="%b%f%k"
-
-    # Don't show the host on localhost
-    PS1=""
-    # my Tmux config has the host already, so we can hide it from the
-    # prompt on SSH connections.
-    if [ "$SSH_CONNECTION" -a ! "$TMUX_PANE" ]; then
-        PS1="%F{red}%m "
-    fi
-
-    PS1="${clr}${PS1}${clr}%F{green}%~ "
-    if [ "$SSH_CONNECTION" ]; then
-        ENDPROMPT="%F{red}>>${clr} "
-    else
-        ENDPROMPT="%F{yellow}>>${clr} "
-    fi
-
-    PS1="${PS1}${ENDPROMPT}"
-    PS2="${ENDPROMPT}"
-
-    if ${SHOW_GIT_PROMPT:=true} ; then
-        if git branch >& /dev/null; then
-            PS1="${clr}%F{black}%K{yellow} $(git_prompt_info) ${clr} ${PS1}"
-        fi
-    fi
-
-    set_title
-
-    # We only want eterm magic with the right terminal and on a remote
-    # connection
-    if [ "$TERM" = "eterm-color" ] && [[ -n "$SSH_CONNECTION" ]]; then
-        set-eterm-dir
-    fi
-}
-
-set_title() {
-    # set title of shell
-    # xterm can take tab titles using the 1 bit
-    case $TERM in
-        *xterm*)
-            if [ "$SSH_CONNECTION" ]; then
-                print -Pn "\033]1;@%m: %~\007"
-            else
-                print -Pn "\033]1;%~\007"
-            fi
-            print -Pn "\033]2;%n@%M: %~\007"
-            ;;
-    esac
-}
+# Use starship prompt (https://starship.rs)
+if command -v starship > /dev/null; then
+    eval "$(starship init zsh)"
+fi
 
 # Local overrides
 source_if_exists $HOME/.local_zshrc

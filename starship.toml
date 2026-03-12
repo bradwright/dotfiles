@@ -1,0 +1,80 @@
+# -*- mode: conf-toml -*-
+
+# Timeout for commands executed by starship (ms)
+command_timeout = 500
+
+# Prompt format: git context on the left, directory and indicator
+format = """$git_branch$git_status$git_state \
+$directory\
+$golang$nodejs$python$ruby\
+$cmd_duration\
+$line_break\
+$character"""
+
+# Two-line prompt: indicator changes colour on success/failure
+[character]
+success_symbol = "[>](bold yellow)"
+error_symbol = "[>](bold red)"
+
+[directory]
+style = "bold green"
+truncation_length = 5
+truncate_to_repo = false
+
+# --- Git ------------------------------------------------------------------
+# Mirrors the old yellow-background branch display
+[git_branch]
+symbol = ""
+style = "bg:yellow fg:black"
+format = "[ $branch ]($style)"
+
+[git_status]
+# Show counts so you always know what's pending
+format = "( [\\[$all_status$ahead_behind\\]]($style) )"
+style = "bold yellow"
+stashed = "S"
+
+[git_state]
+format = "[$state( $progress_current/$progress_total)]($style) "
+style = "bold yellow"
+
+# --- Language contexts (shown only when relevant files are detected) -------
+[golang]
+style = "bold cyan"
+format = "[$symbol($version )]($style)"
+
+[nodejs]
+style = "bold cyan"
+format = "[$symbol($version )]($style)"
+detect_files = ["package.json", ".node-version", ".nvmrc"]
+detect_folders = ["node_modules"]
+detect_extensions = []
+
+[python]
+style = "bold cyan"
+format = "[$symbol($version )]($style)"
+
+[ruby]
+style = "bold cyan"
+format = "[$symbol($version )]($style)"
+
+# --- Command duration (only for long-running commands) ---------------------
+[cmd_duration]
+min_time = 2_000
+format = "[took $duration]($style) "
+style = "bold yellow"
+
+# --- Disabled modules we don't need ----------------------------------------
+[package]
+disabled = true
+
+[hostname]
+ssh_only = true
+style = "bold red"
+format = "[$hostname ]($style)"
+
+[username]
+disabled = true
+
+[swift]
+disabled = true

@@ -25,6 +25,7 @@ brew 'wget'
 brew 'zsh'
 brew 'zsh-completions'
 brew 'zsh-lovers'
+brew 'starship'
 
 # ZSH
 brew 'antigen'
