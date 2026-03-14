@@ -1,3 +1,4 @@
+# -*- mode: conf; -*-
 # This is the configuration file for Ghostty.
 #
 # This template file has been automatically created at the following
@@ -54,15 +55,24 @@ font-family = Inconsolata Nerd Font
 font-size = 18
 font-thicken = true
 
-# Window & Appearance
-window-padding-x = 8
-window-padding-y = 8
-window-theme = ghostty
+# Window & Appearance — dark chrome to match solarized dark
+window-padding-x = 12
+window-padding-y = 4
+window-theme = dark
 macos-titlebar-style = tabs
 
-# Cursor
+# Cursor — solarized orange for visibility on dark base03 background
 cursor-style = block
 cursor-style-blink = true
+cursor-color = #cb4b16
+cursor-text = #002b36
+
+# Solarized palette — keep bold from remapping to bright, which would
+# break the carefully designed base tones
+bold-is-bright = false
+
+# Selection — invert for clear visibility against the muted solarized tones
+selection-invert-fg-bg = true
 
 # Shell Integration
 shell-integration = detect
@@ -75,6 +85,11 @@ mouse-hide-while-typing = true
 # Performance & Rendering
 scrollback-limit = 10000
 window-vsync = true
+
+# Splits — overlay unfocused splits with solarized base02 so the active
+# pane is clearly distinguishable
+unfocused-split-opacity = 0.7
+unfocused-split-fill = #073642
 
 # Quality of Life
 confirm-close-surface = true
