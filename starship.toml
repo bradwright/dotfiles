@@ -13,7 +13,7 @@ $python\
 $character"""
 
 [directory]
-style = "blue"
+style = "green"
 
 [character]
 success_symbol = "[❯](purple)"
@@ -25,7 +25,7 @@ format = "[$branch]($style)"
 style = "bright-black"
 
 [git_status]
-format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](218) ($ahead_behind$stashed)]($style)"
+format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](blue) ($ahead_behind$stashed)]($style)"
 style = "cyan"
 conflicted = "​"
 untracked = "​"
