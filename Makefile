@@ -78,6 +78,7 @@ clean_nvim:
 
 install_pi:
 	@mkdir -p $(TARGET)/.pi/agent/themes/
+	@mkdir -p $(TARGET)/.pi/agent/skills/
 	@# Merge managed settings into the live file, but keep Pi-managed runtime keys.
 	@# This avoids noisy git diffs when Pi updates default model/provider or changelog version.
 	@tmp=$$(mktemp); \
@@ -94,12 +95,58 @@ install_pi:
 		cp $(SOURCE)/pi/settings.json $$tmp; \
 	fi; \
 	mv $$tmp $(TARGET)/.pi/agent/settings.json
-	@ln -sf $(SOURCE)/pi/themes/warp.json $(TARGET)/.pi/agent/themes/warp.json
-	@ln -sf $(SOURCE)/pi/themes/solarized-dark.json $(TARGET)/.pi/agent/themes/solarized-dark.json
-	@ln -sf $(SOURCE)/pi/themes/solarized-light.json $(TARGET)/.pi/agent/themes/solarized-light.json
+	@# Sync all repo-managed skills into ~/.pi/agent/skills.
+	@# First prune stale managed symlinks, then link current repo skills.
+	@if [ -d $(TARGET)/.pi/agent/skills ]; then \
+		for skill in $(TARGET)/.pi/agent/skills/*; do \
+			[ -L "$$skill" ] || continue; \
+			src=$$(readlink "$$skill"); \
+			case "$$src" in \
+				$(SOURCE)/pi/skills/*) [ -e "$$src" ] || unlink "$$skill" ;; \
+			esac; \
+		done; \
+	fi
+	@if [ -d $(SOURCE)/pi/skills ]; then \
+		for skill in $(SOURCE)/pi/skills/*; do \
+			[ -e "$$skill" ] || continue; \
+			ln -sfn "$$skill" "$(TARGET)/.pi/agent/skills/$$(basename "$$skill")"; \
+		done; \
+	fi
+	@# Sync all repo-managed themes into ~/.pi/agent/themes.
+	@# First prune stale managed symlinks, then link current repo themes.
+	@if [ -d $(TARGET)/.pi/agent/themes ]; then \
+		for theme in $(TARGET)/.pi/agent/themes/*; do \
+			[ -L "$$theme" ] || continue; \
+			src=$$(readlink "$$theme"); \
+			case "$$src" in \
+				$(SOURCE)/pi/themes/*) [ -e "$$src" ] || unlink "$$theme" ;; \
+			esac; \
+		done; \
+	fi
+	@if [ -d $(SOURCE)/pi/themes ]; then \
+		for theme in $(SOURCE)/pi/themes/*; do \
+			[ -e "$$theme" ] || continue; \
+			ln -sfn "$$theme" "$(TARGET)/.pi/agent/themes/$$(basename "$$theme")"; \
+		done; \
+	fi
 
 clean_pi:
 	@-unlink $(TARGET)/.pi/agent/settings.json
-	@-unlink $(TARGET)/.pi/agent/themes/warp.json
-	@-unlink $(TARGET)/.pi/agent/themes/solarized-dark.json
-	@-unlink $(TARGET)/.pi/agent/themes/solarized-light.json
+	@-if [ -d $(TARGET)/.pi/agent/skills ]; then \
+		for skill in $(TARGET)/.pi/agent/skills/*; do \
+			[ -L "$$skill" ] || continue; \
+			src=$$(readlink "$$skill"); \
+			case "$$src" in \
+				$(SOURCE)/pi/skills/*) unlink "$$skill" ;; \
+			esac; \
+		done; \
+	fi
+	@-if [ -d $(TARGET)/.pi/agent/themes ]; then \
+		for theme in $(TARGET)/.pi/agent/themes/*; do \
+			[ -L "$$theme" ] || continue; \
+			src=$$(readlink "$$theme"); \
+			case "$$src" in \
+				$(SOURCE)/pi/themes/*) unlink "$$theme" ;; \
+			esac; \
+		done; \
+	fi
