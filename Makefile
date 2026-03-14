@@ -27,7 +27,22 @@ install_dotfiles:
 	@ln -sf $(SOURCE)/fish/config.fish ~/.config/fish/config.fish
 	@ln -sf $(SOURCE)/fish/fish_plugins ~/.config/fish/fish_plugins
 	@mkdir -p ~/.pi/agent/themes/
-	@ln -sf $(SOURCE)/pi/settings.json ~/.pi/agent/settings.json
+	@# Merge managed settings into the live file, but keep Pi-managed runtime keys.
+	@# This avoids noisy git diffs when Pi updates default model/provider or changelog version.
+	@tmp=$$(mktemp); \
+	if [ -f ~/.pi/agent/settings.json ]; then \
+		jq -s ' \
+			(.[0] // {}) as $$repo | \
+			(.[1] // {}) as $$live | \
+			($$live * $$repo) \
+			| .defaultModel = ($$live.defaultModel // .defaultModel) \
+			| .defaultProvider = ($$live.defaultProvider // .defaultProvider) \
+			| .lastChangelogVersion = ($$live.lastChangelogVersion // .lastChangelogVersion) \
+		' $(SOURCE)/pi/settings.json ~/.pi/agent/settings.json > $$tmp; \
+	else \
+		cp $(SOURCE)/pi/settings.json $$tmp; \
+	fi; \
+	mv $$tmp ~/.pi/agent/settings.json
 	@ln -sf $(SOURCE)/pi/themes/warp.json ~/.pi/agent/themes/warp.json
 	@ln -sf $(SOURCE)/pi/themes/solarized-dark.json ~/.pi/agent/themes/solarized-dark.json
 	@ln -sf $(SOURCE)/pi/themes/solarized-light.json ~/.pi/agent/themes/solarized-light.json
