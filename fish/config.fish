@@ -3,6 +3,9 @@
 # Bail out early for non-interactive shells (scripts, scp, etc.)
 status is-interactive; or return
 
+# Suppress fish's startup greeting for a cleaner prompt
+set -g fish_greeting
+
 # ---------------------------------------------------------------------------
 # PATH
 # ---------------------------------------------------------------------------
