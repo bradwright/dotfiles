@@ -79,6 +79,7 @@ clean_nvim:
 install_pi:
 	@mkdir -p $(TARGET)/.pi/agent/themes/
 	@mkdir -p $(TARGET)/.pi/agent/skills/
+	@mkdir -p $(TARGET)/.pi/agent/extensions/
 	@# Merge managed settings into the live file, but keep Pi-managed runtime keys.
 	@# This avoids noisy git diffs when Pi updates default model/provider or changelog version.
 	@tmp=$$(mktemp); \
@@ -112,6 +113,23 @@ install_pi:
 			ln -sfn "$$skill" "$(TARGET)/.pi/agent/skills/$$(basename "$$skill")"; \
 		done; \
 	fi
+	@# Sync all repo-managed extensions into ~/.pi/agent/extensions.
+	@# First prune stale managed symlinks, then link current repo extensions.
+	@if [ -d $(TARGET)/.pi/agent/extensions ]; then \
+		for ext in $(TARGET)/.pi/agent/extensions/*; do \
+			[ -L "$$ext" ] || continue; \
+			src=$$(readlink "$$ext"); \
+			case "$$src" in \
+				$(SOURCE)/pi/extensions/*) [ -e "$$src" ] || unlink "$$ext" ;; \
+			esac; \
+		done; \
+	fi
+	@if [ -d $(SOURCE)/pi/extensions ]; then \
+		for ext in $(SOURCE)/pi/extensions/*; do \
+			[ -e "$$ext" ] || continue; \
+			ln -sfn "$$ext" "$(TARGET)/.pi/agent/extensions/$$(basename "$$ext")"; \
+		done; \
+	fi
 	@# Sync all repo-managed themes into ~/.pi/agent/themes.
 	@# First prune stale managed symlinks, then link current repo themes.
 	@if [ -d $(TARGET)/.pi/agent/themes ]; then \
@@ -132,6 +150,15 @@ install_pi:
 
 clean_pi:
 	@-unlink $(TARGET)/.pi/agent/settings.json
+	@-if [ -d $(TARGET)/.pi/agent/extensions ]; then \
+		for ext in $(TARGET)/.pi/agent/extensions/*; do \
+			[ -L "$$ext" ] || continue; \
+			src=$$(readlink "$$ext"); \
+			case "$$src" in \
+				$(SOURCE)/pi/extensions/*) unlink "$$ext" ;; \
+			esac; \
+		done; \
+	fi
 	@-if [ -d $(TARGET)/.pi/agent/skills ]; then \
 		for skill in $(TARGET)/.pi/agent/skills/*; do \
 			[ -L "$$skill" ] || continue; \
