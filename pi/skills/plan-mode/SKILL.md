@@ -66,6 +66,16 @@ The user drives every transition. Never switch phases or models without the user
 
 There are no fixed model assignments. The user chooses which model to use for each revision via `/model`. Any model can draft, revise, or review. The revision number and model name are recorded in the Revision History so the sequence is always clear.
 
+## Model Identity Recording (Mandatory)
+
+Every Revision History entry must include the **exact active model identifier** that produced that entry (for example, the exact string shown by `/model`).
+
+Rules:
+- Never guess, paraphrase, or substitute another model name.
+- Never copy model names from template examples.
+- If the exact model identifier is not available in runtime metadata, **stop and ask the user to provide it** (or ask them to run `/model`) before writing/updating Revision History.
+- If a previous entry contains an incorrect model name, correct it and note the correction in a new history bullet.
+
 ## Invocation Modes
 
 The `/skill:plan-mode` command may include arguments:
@@ -109,16 +119,20 @@ This file is the **source of truth**. Every model reads it before acting and wri
 <!-- Major bumps (2.0, 3.0) when review feedback is incorporated -->
 <!-- Minor bumps (1.1, 1.2) for draft iterations within a cycle -->
 
-### Draft 1.0 — <date>, by <model-name>
+### Draft 1.0 — <date>, by <exact-model-id>
 - Initial plan drafted.
 
-### Draft 1.1 — <date>, by <model-name>
+### Draft 1.1 — <date>, by <exact-model-id>
 - <user feedback addressed, what changed>
 
-### Review — <date>, by <model-name>
-- <findings, approval state>
+### Review — <date>, by <exact-model-id>
+- <findings>
+- Model recommendation: READY | READY WITH NOTES | NEEDS REVISION
 
-### Draft 2.0 — <date>, by <model-name>
+### User Approval — <date>
+- User approval: APPROVED
+
+### Draft 2.0 — <date>, by <exact-model-id>
 - Incorporated review feedback: <what changed>
 ```
 
@@ -128,7 +142,7 @@ When revising the plan (as either model):
 
 1. **Read the current plan file first.** Your context may be stale — the other model or the user may have changed it.
 2. **Update the relevant sections in place** — don't append a second "Implementation Plan" section; revise the existing one.
-3. **Append to the Revision History** with the correct version (minor bump for draft iterations, major bump when incorporating review feedback), today's date, and your model name, summarising what you changed and why.
+3. **Append to the Revision History** with the correct version (minor bump for draft iterations, major bump when incorporating review feedback), today's date, and the exact active model identifier, summarising what you changed and why.
 4. Keep the plan concise but executable. Don't let it bloat across iterations.
 
 ## Drafting Flow
@@ -137,7 +151,7 @@ When revising the plan (as either model):
 
 1. Read relevant files, trace code paths. Use read-only investigation.
 2. Ask clarifying questions when requirements are ambiguous.
-3. Write the initial plan file with all sections above. Record this as **Draft 1.0** in the Revision History, including today's date and your model name.
+3. Write the initial plan file with all sections above. Record this as **Draft 1.0** in the Revision History, including today's date and the exact active model identifier.
 4. **Stop and wait for user feedback.** Summarise what you wrote and ask if they want changes.
 
 ### Minor Revisions — Draft 1.1, 1.2, …
@@ -146,7 +160,7 @@ The user has comments or questions about the current draft. Each time:
 
 1. **Read the current plan file** — it may have been updated since your last turn.
 2. Address the user's feedback. Revise plan sections in place.
-3. Append the next minor version (e.g. Draft 1.1 → 1.2) to Revision History with your model name.
+3. Append the next minor version (e.g. Draft 1.1 → 1.2) to Revision History with the exact active model identifier.
 4. **Stop and wait for user feedback.** Summarise what changed.
 
 Never assume the draft is ready for review. The user will explicitly say when they want to send it for review.
@@ -157,7 +171,7 @@ After a review, the user will tell you which feedback to act on. This may happen
 
 1. **Read the current plan file** — it contains the review findings.
 2. Incorporate the user's chosen feedback. Revise plan sections in place.
-3. Append the next major version (e.g. Draft 1.x → Draft 2.0) to Revision History with your model name.
+3. Append the next major version (e.g. Draft 1.x → Draft 2.0) to Revision History with the exact active model identifier.
 4. **Stop and wait for user feedback.** Summarise what changed and whether you think it's ready for another review or approval.
 
 ## Review Flow (`review <plan-file>`)
@@ -175,12 +189,13 @@ Use this mode to stress-test and refine a plan. Any model can review.
    - Simpler alternatives when appropriate
 3. **Write findings into the plan file:**
    - Update relevant sections if you find concrete issues (e.g. a missing file in "Files to Touch").
-   - Append a **Review** entry to Revision History with your model name and findings.
-4. End with an approval state in the Revision History entry:
-   - `APPROVED` — ready to execute
-   - `APPROVED WITH NOTES` — minor issues noted but not blocking
-   - `NEEDS REVISION` — significant issues, should go back for another drafting pass
+   - Append a **Review** entry to Revision History with the exact active model identifier and findings.
+4. End with a **model recommendation** in the Revision History entry. This is the model's assessment, **not** final approval — only the user can approve a plan. Use one of:
+   - `Model recommendation: READY` — model believes the plan is ready to execute
+   - `Model recommendation: READY WITH NOTES` — minor issues noted but not blocking in the model's view
+   - `Model recommendation: NEEDS REVISION` — significant issues found, model recommends another drafting pass
 5. **Stop and wait for user feedback.** Summarise your findings. The user may:
+   - **Approve the plan** — only the user can do this. Record `User approval: APPROVED` in a new Revision History entry.
    - Ask clarifying questions to understand your findings before deciding — answer them without modifying the plan.
    - Tell you which feedback to act on — incorporate it as the next major draft (Draft N+1.0).
    - Switch to another model to incorporate the feedback.
