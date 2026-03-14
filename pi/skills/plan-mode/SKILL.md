@@ -26,7 +26,7 @@ Draft 1 (model investigates + writes plan.md)
   ↓
 User feedback / discussion loop
   ├─ Discussion or questions (no edit request):
-  │    → Append verbatim notes to feedback.md
+  │    → Append summary of discussion to feedback.md
   │    → plan.md unchanged
   └─ Explicit edit request from user:
        → Revise plan.md in place
@@ -99,7 +99,7 @@ For `.pi/plans/<yyyy-mm-dd>-<short-slug>/`:
 ### Files in the Package
 
 - `plan.md` — working implementation draft (what will be built).
-- `feedback.md` — working user/reviewer notes and recommendations (verbatim).
+- `feedback.md` — working user/reviewer notes and recommendations (summarised).
 - `changelog.md` — lightweight ledger of significant events and attribution.
 
 `changelog.md` is a ledger, **not** a working planning surface.
@@ -113,7 +113,7 @@ Maintain strict separation:
 
 Rules:
 - Use `plan.md` + `feedback.md` for planning decisions and edits.
-- Keep discussion/recommendations in `feedback.md` verbatim.
+- Keep discussion/recommendations in `feedback.md` as concise summaries.
 - Do **not** promote feedback into `plan.md` unless the user explicitly asks.
 - When feedback is incorporated into a new draft, remove the incorporated items from `feedback.md`.
 - Keep `changelog.md` concise (one short line per entry). No detailed analysis there.
@@ -145,10 +145,10 @@ Rules:
 ### `feedback.md`
 
 ```markdown
-# Feedback / Discussion (Verbatim)
+# Feedback / Discussion
 
-- User note (verbatim): "..."
-- Reviewer recommendation (verbatim): "..."
+- User note: <concise summary of user's point>
+- Reviewer recommendation: <concise summary of finding>
 ```
 
 ### `changelog.md`
@@ -165,15 +165,18 @@ Rules:
 
 ## Updating the Plan Package
 
+`feedback.md` is the **persistence mechanism** across turns and model switches. Context does not survive in chat history alone — if it's not written to a file, the next turn cannot see it.
+
 When revising the package (as either model):
 
-1. **Read `plan.md` and `feedback.md` first.** Context may be stale.
-2. If user explicitly asks for plan edits, update `plan.md` in place.
-3. If user is discussing/questioning/reviewing without incorporation request, append notes to `feedback.md` and keep `plan.md` unchanged.
-4. Never promote feedback into `plan.md` without explicit user instruction.
-5. Append to `changelog.md` for: new draft creation, review completion, and material in-draft edits. Keep entries to one short line.
-6. Skip changelog entries for tiny wording tweaks and discussion-only turns.
-7. Keep `plan.md` concise. Aim for under ~200 lines in main sections (Goal through Open Questions). If larger, consolidate or split.
+1. **Read `plan.md` and `feedback.md` first.** Context may be stale. Always re-read before acting.
+2. **Persist user input to `feedback.md` before responding substantively.** When the user provides feedback, asks a question, or makes a request, append a concise summary to `feedback.md` as the first action in that turn. Capture the substance — decisions, constraints, questions, requests — not the raw transcript. This ensures the next turn (which may be a different model or a fresh context) has the full discussion history. Do not rely on chat history for persistence.
+3. If user explicitly asks for plan edits, update `plan.md` in place.
+4. If user is discussing/questioning/reviewing without incorporation request, keep `plan.md` unchanged — the feedback is already persisted from step 2.
+5. Never promote feedback into `plan.md` without explicit user instruction.
+6. Append to `changelog.md` for: new draft creation, review completion, and material in-draft edits. Keep entries to one short line.
+7. Skip changelog entries for tiny wording tweaks and discussion-only turns.
+8. Keep `plan.md` concise. Aim for under ~200 lines in main sections (Goal through Open Questions). If larger, consolidate or split.
 
 ## Drafting Flow
 
@@ -182,27 +185,30 @@ When revising the package (as either model):
 1. Read relevant source files and trace code paths.
 2. Ask clarifying questions if requirements are ambiguous.
 3. Create the plan package directory if missing. Initialise all three files with a Title Case header (e.g. `# Plan: <descriptive task title>`, `# Feedback`, `# Changelog`).
-4. Write initial draft to `plan.md`.
-5. Add `Draft 1` to `changelog.md` with date and exact active model name.
-6. Stop and wait for user feedback.
+4. **Persist first**: append a concise summary of the user's task description and any extra context (constraints, preferences, non-obvious requirements) to `feedback.md`. The Goal in `plan.md` captures intent; `feedback.md` captures the input that informed it.
+5. Write initial draft to `plan.md`.
+6. Add `Draft 1` to `changelog.md` with date and exact active model name.
+7. Stop and wait for user feedback.
 
 ### Discussion and Edits (within a draft)
 
 1. Read current `plan.md` + `feedback.md`.
-2. If user explicitly asks for edits, revise `plan.md`.
-3. If edits materially change scope, sequencing, files/components, risks, or validation, append an `Edit` entry to `changelog.md`.
-4. If user is discussing or asking questions, append verbatim notes to `feedback.md` and keep `plan.md` unchanged.
-5. Stop and wait for user feedback.
+2. **Persist first**: append a concise summary of the user's input to `feedback.md` before doing anything else. This is the first tool call in every discussion/edit turn.
+3. If user explicitly asks for edits, revise `plan.md`.
+4. If edits materially change scope, sequencing, files/components, risks, or validation, append an `Edit` entry to `changelog.md`.
+5. If user is discussing or asking questions, keep `plan.md` unchanged — feedback is already persisted from step 2.
+6. Stop and wait for user feedback.
 
 Never assume draft is ready for review; user will explicitly request review.
 
 ### Incorporating Review Feedback — Draft N+1
 
 1. Read current `plan.md` + `feedback.md`. (Do not read `changelog.md` for planning context — only append to it.)
-2. Incorporate only feedback items the user explicitly selected.
-3. Remove incorporated items from `feedback.md`. Unselected items stay — the user may approve the plan with unresolved feedback if they judge it non-blocking.
-4. Append next draft entry (`Draft N+1`) to `changelog.md` with exact model name and short incorporation summary.
-5. Stop and wait for user feedback.
+2. **Persist first**: if the user's incorporation request contains new context or clarifications, append a concise summary to `feedback.md` before incorporating.
+3. Incorporate only feedback items the user explicitly selected.
+4. Remove incorporated items from `feedback.md`. The incorporation request summary from step 2 and any unselected items stay. The user may approve the plan with unresolved feedback if they judge it non-blocking.
+5. Append next draft entry (`Draft N+1`) to `changelog.md` with exact model name and short incorporation summary.
+6. Stop and wait for user feedback.
 
 ## Definition of Ready (for review recommendation)
 
@@ -222,12 +228,13 @@ Use this mode to stress-test and refine a plan package.
 ### Review Pass
 
 1. Read `plan.md`, `feedback.md`, and critical referenced source files.
-2. Evaluate for missing steps, assumptions, sequencing risk, edge cases, validation gaps, and simpler options.
-3. Write review output:
-   - Append findings/recommendations (verbatim) to `feedback.md`.
+2. **Persist first**: if the user provided steering for the review (e.g. "focus on error handling", "check the migration order"), append a concise summary to `feedback.md` before evaluating.
+3. Evaluate for missing steps, assumptions, sequencing risk, edge cases, validation gaps, and simpler options.
+4. Write review output:
+   - Append findings/recommendations (summarised) to `feedback.md`.
    - Do **not** modify `plan.md` unless user explicitly asks for incorporation in that turn.
    - Append a `Review` entry to `changelog.md` with exact model name, recommendation, and 1–2 line summary.
-4. Stop and wait for user feedback.
+5. Stop and wait for user feedback.
 
 User may then:
 - Approve (`Approved — <YYYY-MM-DD>, user.`)
@@ -240,9 +247,10 @@ User may then:
 After a new draft, each review pass should:
 
 1. Read updated `plan.md` + `feedback.md`.
-2. Check whether previous findings were addressed and whether new issues emerged.
-3. Append review findings to `feedback.md` and a concise `Review` ledger line to `changelog.md`.
-4. Stop and wait for user feedback.
+2. **Persist first**: if the user provided new steering or context, append a concise summary to `feedback.md` before evaluating.
+3. Check whether previous findings were addressed and whether new issues emerged.
+4. Append review findings to `feedback.md` and a concise `Review` ledger line to `changelog.md`.
+5. Stop and wait for user feedback.
 
 ## After Approval — Transition to Implementation
 
