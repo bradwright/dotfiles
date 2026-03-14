@@ -16,10 +16,6 @@ end
 # Personal scripts
 fish_add_path --prepend ~/bin ~/.local/bin
 
-# Go
-set -gx GOPATH ~/go
-fish_add_path --append $GOPATH/bin
-
 # Doom Emacs
 if test -d ~/.config/doom
     fish_add_path --prepend ~/.config/emacs/bin /Applications/Emacs.app/Contents/MacOS

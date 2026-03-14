@@ -17,9 +17,6 @@ export EDITOR="nvim"
 export VISUAL="nvim"
 export GIT_EDITOR="nvim +star"
 
-export GOPATH="$HOME/go"
-[[ -d "$GOPATH/bin" ]] && path+=("$GOPATH/bin")
-
 if [[ -d "$HOME/.config/doom" ]]; then
     [[ -d "$HOME/.config/emacs/bin" ]] && path=("$HOME/.config/emacs/bin" $path)
     [[ -d "/Applications/Emacs.app/Contents/MacOS" ]] && path=("/Applications/Emacs.app/Contents/MacOS" $path)
