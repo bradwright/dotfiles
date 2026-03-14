@@ -1,6 +1,6 @@
 SOURCE		:= $(CURDIR)
 TARGET		:= $(HOME)
-FILES		:= aliases local_gitconfig gitignore zshrc zshenv hushlogin
+FILES		:= aliases local_gitconfig gitignore zshrc zshenv
 
 .PHONY: install clean
 
@@ -10,6 +10,7 @@ install_dotfiles:
 	@for f in $(FILES); do \
 		ln -sf $(SOURCE)/$$f $(TARGET)/.$$f; \
 	done
+	@touch $(TARGET)/.hushlogin
 	@mkdir -p ~/Library/Application\ Support/com.mitchellh.ghostty/
 	@ln -sf $(SOURCE)/ghostty-config ~/Library/Application\ Support/com.mitchellh.ghostty/config
 	@mkdir -p ~/.config/
@@ -45,6 +46,7 @@ clean_dotfiles:
 	@-for f in $(FILES); do \
 		unlink $(TARGET)/.$$f; \
 	done
+	@-rm -f $(TARGET)/.hushlogin
 	@-unlink ~/Library/Application\ Support/com.mitchellh.ghostty/config
 	@-unlink ~/.config/starship.toml
 	@-unlink ~/.config/fish/config.fish
