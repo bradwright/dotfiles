@@ -26,6 +26,9 @@ install_dotfiles:
 	@mkdir -p ~/.config/fish/
 	@ln -sf $(SOURCE)/fish/config.fish ~/.config/fish/config.fish
 	@ln -sf $(SOURCE)/fish/fish_plugins ~/.config/fish/fish_plugins
+	@mkdir -p ~/.config/nvim/ftplugin/
+	@ln -sf $(SOURCE)/nvim/init.lua ~/.config/nvim/init.lua
+	@ln -sf $(SOURCE)/nvim/ftplugin/gitcommit.lua ~/.config/nvim/ftplugin/gitcommit.lua
 	@mkdir -p ~/.pi/agent/themes/
 	@# Merge managed settings into the live file, but keep Pi-managed runtime keys.
 	@# This avoids noisy git diffs when Pi updates default model/provider or changelog version.
@@ -56,6 +59,8 @@ clean_dotfiles:
 	@-unlink ~/.config/starship.toml
 	@-unlink ~/.config/fish/config.fish
 	@-unlink ~/.config/fish/fish_plugins
+	@-unlink ~/.config/nvim/init.lua
+	@-unlink ~/.config/nvim/ftplugin/gitcommit.lua
 	@-unlink ~/.pi/agent/settings.json
 	@-unlink ~/.pi/agent/themes/warp.json
 	@-unlink ~/.pi/agent/themes/solarized-dark.json

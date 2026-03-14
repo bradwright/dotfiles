@@ -36,7 +36,7 @@ end
 
 set -gx EDITOR et
 set -gx VISUAL ec
-set -gx GIT_EDITOR 'vim +star'
+set -gx GIT_EDITOR 'nvim +star'
 set -gx GPG_TTY (tty)
 
 # ---------------------------------------------------------------------------

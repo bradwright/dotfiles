@@ -24,6 +24,7 @@
 [core]
         excludesfile = ~/.gitignore
         pager = delta
+        editor = nvim +star
 [interactive]
         diffFilter = delta --color-only
 [delta]
