@@ -9,9 +9,6 @@
 # Compiled Python
 *.pyc
 
-# Anything under a local .bundle
-.bundle
-
 # ctags
 TAGS
 

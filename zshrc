@@ -3,9 +3,13 @@
 [ "$TERM" = "dumb" ] && return
 
 # zsh completions - this must be done before compinit
-find_completion zsh
+if (( $+commands[brew] )); then
+    brew_prefix="$(brew --prefix)"
+    [[ -d "$brew_prefix/share/zsh/site-functions" ]] && fpath=("$brew_prefix/share/zsh/site-functions" $fpath)
+    [[ -d "$brew_prefix/share/zsh-completions" ]] && fpath=("$brew_prefix/share/zsh-completions" $fpath)
+fi
 
-# initialize autocomplete here, otherwise functions won't be loaded
+# initialize autocomplete
 autoload -Uz zutil
 autoload -Uz compinit && compinit
 autoload -Uz complist
@@ -76,20 +80,15 @@ HISTSIZE=100000
 SAVEHIST=100000
 HISTFILE=~/.zsh_history
 
-# Include library functionss
-if [ -f $HOME/.functions ]; then
-    source $HOME/.functions
-fi
-
 # Use starship prompt (https://starship.rs)
 if command -v starship > /dev/null; then
     eval "$(starship init zsh)"
 fi
 
 # Local overrides
-source_if_exists $HOME/.local_zshrc
+[[ -r "$HOME/.local_zshrc" ]] && source "$HOME/.local_zshrc"
 # My own aliases
-source_if_exists $HOME/.aliases
+[[ -r "$HOME/.aliases" ]] && source "$HOME/.aliases"
 
 # ZSH plugins
 if command -v brew > /dev/null; then
@@ -124,4 +123,3 @@ if command -v zoxide > /dev/null; then
     eval "$(zoxide init zsh)"
 fi
 
-prepend_path ~/.local/bin

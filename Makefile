@@ -1,24 +1,15 @@
 SOURCE		:= $(CURDIR)
 TARGET		:= $(HOME)
-FILES		:= aliases finicky.js functions local_gitconfig gitignore ackrc zshrc zshenv inputrc irbrc gemrc hushlogin
+FILES		:= aliases local_gitconfig gitignore zshrc zshenv hushlogin
 
-BREW		:= $(shell brew --prefix)
-
-.PHONY: git_submodule install clean
+.PHONY: install clean
 
 all: clean install
-
-git_submodule:
-	git submodule update --init
 
 install_dotfiles:
 	@for f in $(FILES); do \
 		ln -sf $(SOURCE)/$$f $(TARGET)/.$$f; \
 	done
-	@ln -sf $(SOURCE)/bin $(TARGET)/
-	@mkdir -p ~/.ssh/
-	@chmod 700 ~/.ssh/
-	@ln -sf $(SOURCE)/sshrc ~/.ssh/rc
 	@mkdir -p ~/Library/Application\ Support/com.mitchellh.ghostty/
 	@ln -sf $(SOURCE)/ghostty-config ~/Library/Application\ Support/com.mitchellh.ghostty/config
 	@mkdir -p ~/.config/
@@ -54,7 +45,6 @@ clean_dotfiles:
 	@-for f in $(FILES); do \
 		unlink $(TARGET)/.$$f; \
 	done
-	@-unlink $(TARGET)/.ssh/rc
 	@-unlink ~/Library/Application\ Support/com.mitchellh.ghostty/config
 	@-unlink ~/.config/starship.toml
 	@-unlink ~/.config/fish/config.fish

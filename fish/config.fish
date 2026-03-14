@@ -16,11 +16,6 @@ end
 # Personal scripts
 fish_add_path --prepend ~/bin ~/.local/bin
 
-# rbenv
-if test -d ~/.rbenv
-    fish_add_path --prepend ~/.rbenv/bin ~/.rbenv/shims
-end
-
 # Go
 set -gx GOPATH ~/go
 fish_add_path --append $GOPATH/bin
@@ -42,12 +37,6 @@ set -gx GPG_TTY (tty)
 # ---------------------------------------------------------------------------
 # Abbreviations (expand inline so you see the real command)
 # ---------------------------------------------------------------------------
-
-# Ruby / Bundler
-abbr -a bl 'bundle install --path .bundle/gems'
-abbr -a bb 'bundle install --path .bundle/gems --binstubs .bundle/bin'
-abbr -a bi 'bundle install'
-abbr -a be 'bundle exec'
 
 # Modern CLI replacements
 abbr -a ls  eza
@@ -83,18 +72,6 @@ set -gx nvm_default_version lts
 # zoxide (smarter cd)
 if command -q zoxide
     zoxide init fish | source
-end
-
-# ---------------------------------------------------------------------------
-# Functions
-# ---------------------------------------------------------------------------
-
-function ai --description 'Quick ephemeral pi session'
-    pi --no-session --no-skills --no-extensions --no-prompt-templates $argv
-end
-
-function aic --description 'Continue last pi session'
-    pi -c $argv
 end
 
 # ---------------------------------------------------------------------------

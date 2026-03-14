@@ -10,7 +10,6 @@ a leading dot prepended) by running `make install`. The `Makefile` is the
 single source of truth for which files get installed and where.
 
 Special install destinations:
-- `sshrc` → `~/.ssh/rc`
 - `ghostty-config` → `~/Library/Application Support/com.mitchellh.ghostty/config`
 - `pi/settings.json` → `~/.pi/agent/settings.json`
 - `pi/themes/*.json` → `~/.pi/agent/themes/*.json`
@@ -35,10 +34,10 @@ Special install destinations:
   `Brewfile`, `# -*- mode: conf-unix -*-` for git config files).
 - Shell functions and aliases must be compatible with **both bash and zsh**
   unless they live in a zsh-specific file (i.e. `zshrc` or `zshenv`).
-- Prefer `source_if_exists` (defined in `functions`) over bare `source` /
-  `.` calls to avoid hard failures on missing optional files.
-- Use `prepend_path` / `append_path` (defined in `functions`) instead of
-  directly mutating `$PATH`.
+- Use guarded sourcing for optional files (e.g. `[[ -r file ]] && source file`)
+  to avoid hard failures when local overrides are missing.
+- In zsh files, prefer native `path` array manipulation (`typeset -U path`) to
+  deduplicate entries cleanly.
 - Group related settings with a short comment explaining *why*, not just
   *what*, mirroring the style already in the files.
 
@@ -50,12 +49,12 @@ Special install destinations:
   `/usr/local` or `/opt/homebrew` — the prefix differs between Intel and
   Apple Silicon Macs.
 - Guard Linux-specific code with `[ $UNAME = Linux ]` checks, following the
-  pattern in `functions`.
+  style used in existing shell files.
 
 ## Editor
 
-- The configured `$EDITOR` / `$VISUAL` is `emacsclient` (`et` / `ec`).
-- `GIT_EDITOR` is set to `vim +star` — do not change this.
+- The configured `$EDITOR` / `$VISUAL` is `nvim`.
+- `GIT_EDITOR` is set to `nvim +star` — do not change this.
 - Do not introduce hard dependencies on VS Code, nano, or other editors.
 
 ## Package management
@@ -65,7 +64,6 @@ Special install destinations:
 - `brew install <package>` is pre-approved and may be run without asking.
 - Node is managed via **nvm** (lazy-loaded through the `zsh-nvm` antigen
   plugin). Do not add a hardcoded Node path to `PATH`.
-- Ruby is managed via **rbenv**. Do not add a hardcoded Ruby path.
 
 ## Git hygiene
 
@@ -91,7 +89,7 @@ There is no automated test suite. After making changes, verify correctness by:
 ## What not to do
 
 - Do **not** rename existing files — they are referenced by name in `Makefile`
-  and in `source_if_exists` calls scattered across other dotfiles.
+  and sourced directly from other dotfiles.
 - Do **not** add secrets, tokens, or credentials to any file in this repo.
   Machine-local overrides belong in `~/.local_zshrc`, `~/.local_zshenv`,
   etc., which are sourced by the main files but are intentionally absent from
