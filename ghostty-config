@@ -61,11 +61,9 @@ window-padding-y = 4
 window-theme = dark
 macos-titlebar-style = tabs
 
-# Cursor — solarized orange for visibility on dark base03 background
+# Cursor
 cursor-style = block
 cursor-style-blink = true
-cursor-color = #cb4b16
-cursor-text = #002b36
 
 # Solarized palette — keep bold from remapping to bright, which would
 # break the carefully designed base tones
@@ -79,7 +77,6 @@ shell-integration = detect
 shell-integration-features = cursor,sudo,title
 
 # Mouse & Clipboard
-copy-on-select = true
 mouse-hide-while-typing = true
 
 # Performance & Rendering
