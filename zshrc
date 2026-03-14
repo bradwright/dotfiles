@@ -2,6 +2,13 @@
 
 [ "$TERM" = "dumb" ] && return
 
+# Interactive shell behaviour.
+setopt nobeep
+setopt HIST_IGNORE_SPACE
+
+# Make sure that gpg-agent can still authenticate even when redirecting stdout.
+export GPG_TTY="$(tty)"
+
 # zsh completions - this must be done before compinit
 if (( $+commands[brew] )); then
     brew_prefix="$(brew --prefix)"
