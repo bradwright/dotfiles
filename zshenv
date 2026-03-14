@@ -2,15 +2,15 @@
 
 typeset -U path
 
-# Build PATH using zsh arrays (deduplicated by `typeset -U path`).
+# Initialize Homebrew environment without requiring brew to already be on PATH.
+if [[ -x /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+elif [[ -x /usr/local/bin/brew ]]; then
+    eval "$(/usr/local/bin/brew shellenv zsh)"
+fi
+
+# Personal scripts.
 [[ -d "$HOME/bin" ]] && path=("$HOME/bin" $path)
-
-# Homebrew paths (Apple Silicon + Intel).
-[[ -d /opt/homebrew/bin ]] && path=(/opt/homebrew/bin $path)
-[[ -d /opt/homebrew/sbin ]] && path=(/opt/homebrew/sbin $path)
-[[ -d /usr/local/bin ]] && path=(/usr/local/bin $path)
-[[ -d /usr/local/sbin ]] && path=(/usr/local/sbin $path)
-
 [[ -d "$HOME/.local/bin" ]] && path=("$HOME/.local/bin" $path)
 
 export EDITOR="nvim"

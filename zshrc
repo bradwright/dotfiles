@@ -10,9 +10,12 @@ setopt HIST_IGNORE_SPACE
 export GPG_TTY="$(tty)"
 
 # zsh completions - this must be done before compinit
-if (( $+commands[brew] )); then
+# Homebrew shellenv already wires site-functions; add zsh-completions explicitly.
+brew_prefix="${HOMEBREW_PREFIX:-}"
+if [[ -z "$brew_prefix" ]] && (( $+commands[brew] )); then
     brew_prefix="$(brew --prefix)"
-    [[ -d "$brew_prefix/share/zsh/site-functions" ]] && fpath=("$brew_prefix/share/zsh/site-functions" $fpath)
+fi
+if [[ -n "$brew_prefix" ]]; then
     [[ -d "$brew_prefix/share/zsh-completions" ]] && fpath=("$brew_prefix/share/zsh-completions" $fpath)
 fi
 
@@ -98,8 +101,8 @@ fi
 [[ -r "$HOME/.aliases" ]] && source "$HOME/.aliases"
 
 # ZSH plugins
-if command -v brew > /dev/null; then
-    ANTIGEN_PATH="$(brew --prefix)/share/antigen/antigen.zsh"
+if [[ -n "$brew_prefix" ]]; then
+    ANTIGEN_PATH="$brew_prefix/share/antigen/antigen.zsh"
     [ -s "$ANTIGEN_PATH" ] && source "$ANTIGEN_PATH"
 fi
 
