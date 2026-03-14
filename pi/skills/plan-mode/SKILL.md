@@ -1,6 +1,6 @@
 ---
 name: plan-mode
-description: Iterative planning workflow for coding tasks. Creates an implementation plan in a markdown file, then iterates through numbered revisions (potentially across different models) with user feedback at every step until the plan is approved. Use when the user wants to plan work before implementing.
+description: Iterative planning workflow for coding tasks. Creates an implementation plan package, then iterates through draft/review cycles with user feedback until the plan is approved.
 compatibility: pi with /model command.
 ---
 
@@ -12,88 +12,115 @@ Treat this as **planning-only**. Do not implement code changes yet.
 
 ## Core Concept
 
-Planning is an **iterative loop**, not a one-shot handoff. The plan file is a living document. Each model reads the current state of the plan, writes its findings into it, and the user steers until satisfied.
+Planning is an **iterative loop**, not a one-shot handoff. The user steers every transition.
 
-```
-┌──────────────────────────────────────────────┐
-│  User provides task description               │
-└──────────────────┬───────────────────────────┘
-                   ▼
-┌──────────────────────────────────────────────┐
-│  Draft 1.0: Model A investigates & drafts    │
-└──────────────────┬───────────────────────────┘
-                   ▼
-┌──────────────────────────────────────────────┐
-│  User: reviews, comments, asks for changes   │◄──┐
-└──────────────────┬───────────────────────────┘   │
-                   ▼                                │
-          ┌─────────────────┐                       │
-          │ Ready for       │── no ─────────────────┘
-          │ review?         │   Draft 1.1, 1.2, …
-          └────────┬────────┘   (Model A revises)
-                   │ yes
-                   ▼
-┌──────────────────────────────────────────────┐
-│  User switches to Model B for review         │
-└──────────────────┬───────────────────────────┘
-                   ▼
-┌──────────────────────────────────────────────┐
-│  Review: Model B evaluates plan, writes      │
-│  findings into the plan file                 │
-└──────────────────┬───────────────────────────┘
-                   ▼
-┌──────────────────────────────────────────────┐
-│  User: picks which feedback to act on        │
-└──────────────────┬───────────────────────────┘
-                   ▼
-┌──────────────────────────────────────────────┐
-│  Draft 2.0: Model B incorporates chosen      │
-│  feedback into the plan                      │
-└──────────────────┬───────────────────────────┘
-                   ▼
-          ┌─────────────────┐
-          │ Plan approved?  │── no ── (back to top:
-          │                 │    new draft/review cycle
-          └────────┬────────┘    with Draft 3.0, etc.)
-                   │ yes
-                   ▼
-           Plan is approved.
+```text
+User provides task description
+  ↓
+Create plan package directory with:
+  - plan.md (working draft)
+  - feedback.md (working feedback)
+  - changelog.md (ledger)
+  ↓
+Draft 1 (model investigates + writes plan.md)
+  ↓
+User feedback / discussion loop
+  ├─ Discussion or questions (no edit request):
+  │    → Append verbatim notes to feedback.md
+  │    → plan.md unchanged
+  └─ Explicit edit request from user:
+       → Revise plan.md in place
+       → Add lightweight `Edit` entry to changelog.md only if change is material
+
+User requests review (hands off to another model)
+  ↓
+Review pass
+  → Write findings/recommendations to feedback.md
+  → Do NOT edit plan.md unless user explicitly asks
+  → Add `Review` entry to changelog.md
+  ↓
+User selects which feedback items to incorporate
+  ↓
+Draft 2 (incorporate ONLY selected items into plan.md)
+  → Remove incorporated items from feedback.md
+  → Keep unselected feedback in feedback.md
+  → Add `Draft 2` entry to changelog.md
+  ↓
+Plan approved by user?
+  ├─ no  → Start next draft/review cycle (Draft 3, 4, ...)
+  └─ yes → Add `Approved` entry and ask: "Ready to start building?"
 ```
 
-The user drives every transition. Never switch phases or models without the user explicitly saying so.
+Never switch phases or models unless the user explicitly says so.
 
 ## Model Policy
 
-There are no fixed model assignments. The user chooses which model to use for each revision via `/model`. Any model can draft, revise, or review. The revision number and model name are recorded in the Revision History so the sequence is always clear.
+There are no fixed model assignments. The user chooses model(s) via `/model`.
 
-## Model Identity Recording (Mandatory)
+Every **model-authored** entry in `changelog.md` must include the exact active model name (without provider prefix). Never guess or substitute a model name. If unavailable, stop and ask the user.
 
-Every Revision History entry must include the **exact active model identifier** that produced that entry (for example, the exact string shown by `/model`).
-
-Rules:
-- Never guess, paraphrase, or substitute another model name.
-- Never copy model names from template examples.
-- If the exact model identifier is not available in runtime metadata, **stop and ask the user to provide it** (or ask them to run `/model`) before writing/updating Revision History.
-- If a previous entry contains an incorrect model name, correct it and note the correction in a new history bullet.
+Approval entries are user-authored:
+- `Approved — <YYYY-MM-DD>, user.`
 
 ## Invocation Modes
 
 The `/skill:plan-mode` command may include arguments:
 
 - No args (or any non-review args): run **planning flow**.
-- `review <plan-file>`: run **review flow** for an existing plan file.
+- `review <plan-dir>`: run **review flow** for an existing plan package directory.
 
-Either mode may be invoked multiple times as the plan iterates.
+### Examples
 
-## The Plan File
+```text
+/skill:plan-mode
+/skill:plan-mode plan migration for auth token refresh
+/skill:plan-mode review .pi/plans/2026-03-14-auth-token-refresh
+```
 
-All planning work is recorded in a single file:
+Notes:
+- Any invocation that does not start with the word `review` runs the planning flow.
+- `review <plan-dir>` runs review flow for the specified existing plan package.
 
-- `.pi/plans/<yyyy-mm-dd>-<short-slug>.md`
+## Plan Package (Directory Format)
 
-This file is the **source of truth**. Every model reads it before acting and writes its findings back into it. The user can also edit it directly between rounds.
+All planning work is recorded in one directory:
 
-### Plan File Format
+- `.pi/plans/<yyyy-mm-dd>-<short-slug>/`
+
+### File Naming Rules
+
+For `.pi/plans/<yyyy-mm-dd>-<short-slug>/`:
+
+- `yyyy-mm-dd` must be local current date in ISO format (e.g. `2026-03-14`).
+- `short-slug` must be lowercase kebab-case using only `[a-z0-9-]`.
+- Keep slug concise and stable for the same task (typically 3–8 words, max 60 chars).
+- Do not create a new directory for revisions of the same task; keep iterating in the same package.
+
+### Files in the Package
+
+- `plan.md` — working implementation draft (what will be built).
+- `feedback.md` — working user/reviewer notes and recommendations (verbatim).
+- `changelog.md` — lightweight ledger of significant events and attribution.
+
+`changelog.md` is a ledger, **not** a working planning surface.
+
+## Working vs Ledger Boundary (Mandatory)
+
+Maintain strict separation:
+
+- **Working files:** `plan.md`, `feedback.md`
+- **Ledger file:** `changelog.md`
+
+Rules:
+- Use `plan.md` + `feedback.md` for planning decisions and edits.
+- Keep discussion/recommendations in `feedback.md` verbatim.
+- Do **not** promote feedback into `plan.md` unless the user explicitly asks.
+- When feedback is incorporated into a new draft, remove the incorporated items from `feedback.md`.
+- Keep `changelog.md` concise (one short line per entry). No detailed analysis there.
+
+## File Formats
+
+### `plan.md`
 
 ```markdown
 # <Plan Title>
@@ -113,98 +140,115 @@ This file is the **source of truth**. Every model reads it before acting and wri
 ## Validation Checklist
 
 ## Open Questions
-
-## Revision History
-<!-- append-only log using major.minor versioning -->
-<!-- Major bumps (2.0, 3.0) when review feedback is incorporated -->
-<!-- Minor bumps (1.1, 1.2) for draft iterations within a cycle -->
-
-### Draft 1.0 — <date>, by <exact-model-id>
-- Initial plan drafted.
-
-### Draft 1.1 — <date>, by <exact-model-id>
-- <user feedback addressed, what changed>
-
-### Review — <date>, by <exact-model-id>
-- <findings>
-- Model recommendation: READY | READY WITH NOTES | NEEDS REVISION
-
-### User Approval — <date>
-- User approval: APPROVED
-
-### Draft 2.0 — <date>, by <exact-model-id>
-- Incorporated review feedback: <what changed>
 ```
 
-### Updating the Plan File
+### `feedback.md`
 
-When revising the plan (as either model):
+```markdown
+# Feedback / Discussion (Verbatim)
 
-1. **Read the current plan file first.** Your context may be stale — the other model or the user may have changed it.
-2. **Update the relevant sections in place** — don't append a second "Implementation Plan" section; revise the existing one.
-3. **Append to the Revision History** with the correct version (minor bump for draft iterations, major bump when incorporating review feedback), today's date, and the exact active model identifier, summarising what you changed and why.
-4. Keep the plan concise but executable. Don't let it bloat across iterations.
+- User note (verbatim): "..."
+- Reviewer recommendation (verbatim): "..."
+```
+
+### `changelog.md`
+
+```markdown
+# Changelog
+
+- Draft 1 — <YYYY-MM-DD>, <model-name>: Initial plan.
+- Edit — <YYYY-MM-DD>, <model-name>: <material in-draft change requested by user>.
+- Review — <YYYY-MM-DD>, <model-name>: <RECOMMENDATION> — <1–2 line summary>.
+- Draft 2 — <YYYY-MM-DD>, <model-name>: <what was incorporated>.
+- Approved — <YYYY-MM-DD>, user.
+```
+
+## Updating the Plan Package
+
+When revising the package (as either model):
+
+1. **Read `plan.md` and `feedback.md` first.** Context may be stale.
+2. If user explicitly asks for plan edits, update `plan.md` in place.
+3. If user is discussing/questioning/reviewing without incorporation request, append notes to `feedback.md` and keep `plan.md` unchanged.
+4. Never promote feedback into `plan.md` without explicit user instruction.
+5. Append to `changelog.md` for: new draft creation, review completion, and material in-draft edits. Keep entries to one short line.
+6. Skip changelog entries for tiny wording tweaks and discussion-only turns.
+7. Keep `plan.md` concise. Aim for under ~200 lines in main sections (Goal through Open Questions). If larger, consolidate or split.
 
 ## Drafting Flow
 
-### First Invocation — Draft 1.0
+### First Invocation — Draft 1
 
-1. Read relevant files, trace code paths. Use read-only investigation.
-2. Ask clarifying questions when requirements are ambiguous.
-3. Write the initial plan file with all sections above. Record this as **Draft 1.0** in the Revision History, including today's date and the exact active model identifier.
-4. **Stop and wait for user feedback.** Summarise what you wrote and ask if they want changes.
+1. Read relevant source files and trace code paths.
+2. Ask clarifying questions if requirements are ambiguous.
+3. Create the plan package directory if missing. Initialise all three files with a Title Case header (e.g. `# Plan: <descriptive task title>`, `# Feedback`, `# Changelog`).
+4. Write initial draft to `plan.md`.
+5. Add `Draft 1` to `changelog.md` with date and exact active model name.
+6. Stop and wait for user feedback.
 
-### Minor Revisions — Draft 1.1, 1.2, …
+### Discussion and Edits (within a draft)
 
-The user has comments or questions about the current draft. Each time:
+1. Read current `plan.md` + `feedback.md`.
+2. If user explicitly asks for edits, revise `plan.md`.
+3. If edits materially change scope, sequencing, files/components, risks, or validation, append an `Edit` entry to `changelog.md`.
+4. If user is discussing or asking questions, append verbatim notes to `feedback.md` and keep `plan.md` unchanged.
+5. Stop and wait for user feedback.
 
-1. **Read the current plan file** — it may have been updated since your last turn.
-2. Address the user's feedback. Revise plan sections in place.
-3. Append the next minor version (e.g. Draft 1.1 → 1.2) to Revision History with the exact active model identifier.
-4. **Stop and wait for user feedback.** Summarise what changed.
+Never assume draft is ready for review; user will explicitly request review.
 
-Never assume the draft is ready for review. The user will explicitly say when they want to send it for review.
+### Incorporating Review Feedback — Draft N+1
 
-### Incorporating Review Feedback — Draft N+1.0
+1. Read current `plan.md` + `feedback.md`. (Do not read `changelog.md` for planning context — only append to it.)
+2. Incorporate only feedback items the user explicitly selected.
+3. Remove incorporated items from `feedback.md`. Unselected items stay — the user may approve the plan with unresolved feedback if they judge it non-blocking.
+4. Append next draft entry (`Draft N+1`) to `changelog.md` with exact model name and short incorporation summary.
+5. Stop and wait for user feedback.
 
-After a review, the user will tell you which feedback to act on. This may happen on a different model than the original draft:
+## Definition of Ready (for review recommendation)
 
-1. **Read the current plan file** — it contains the review findings.
-2. Incorporate the user's chosen feedback. Revise plan sections in place.
-3. Append the next major version (e.g. Draft 1.x → Draft 2.0) to Revision History with the exact active model identifier.
-4. **Stop and wait for user feedback.** Summarise what changed and whether you think it's ready for another review or approval.
+Use this checklist for `READY | READY WITH NOTES | NEEDS REVISION`:
 
-## Review Flow (`review <plan-file>`)
+1. Goal, scope, constraints are clear and non-contradictory.
+2. Files/components to touch are explicit and sufficient.
+3. Implementation steps are ordered and actionable.
+4. Risks/edge cases are identified with handling strategy.
+5. Validation checklist has concrete checks and expected outcomes.
+6. Open questions are resolved or explicitly non-blocking.
 
-Use this mode to stress-test and refine a plan. Any model can review.
+## Review Flow (`review <plan-dir>`)
+
+Use this mode to stress-test and refine a plan package.
 
 ### Review Pass
 
-1. **Read the plan file and critical referenced source files.**
-2. Evaluate the plan for:
-   - Missing steps or hidden assumptions
-   - Architectural or sequencing risks
-   - Edge cases and failure modes
-   - Test/validation gaps
-   - Simpler alternatives when appropriate
-3. **Write findings into the plan file:**
-   - Update relevant sections if you find concrete issues (e.g. a missing file in "Files to Touch").
-   - Append a **Review** entry to Revision History with the exact active model identifier and findings.
-4. End with a **model recommendation** in the Revision History entry. This is the model's assessment, **not** final approval — only the user can approve a plan. Use one of:
-   - `Model recommendation: READY` — model believes the plan is ready to execute
-   - `Model recommendation: READY WITH NOTES` — minor issues noted but not blocking in the model's view
-   - `Model recommendation: NEEDS REVISION` — significant issues found, model recommends another drafting pass
-5. **Stop and wait for user feedback.** Summarise your findings. The user may:
-   - **Approve the plan** — only the user can do this. Record `User approval: APPROVED` in a new Revision History entry.
-   - Ask clarifying questions to understand your findings before deciding — answer them without modifying the plan.
-   - Tell you which feedback to act on — incorporate it as the next major draft (Draft N+1.0).
-   - Switch to another model to incorporate the feedback.
+1. Read `plan.md`, `feedback.md`, and critical referenced source files.
+2. Evaluate for missing steps, assumptions, sequencing risk, edge cases, validation gaps, and simpler options.
+3. Write review output:
+   - Append findings/recommendations (verbatim) to `feedback.md`.
+   - Do **not** modify `plan.md` unless user explicitly asks for incorporation in that turn.
+   - Append a `Review` entry to `changelog.md` with exact model name, recommendation, and 1–2 line summary.
+4. Stop and wait for user feedback.
+
+User may then:
+- Approve (`Approved — <YYYY-MM-DD>, user.`)
+- Ask clarifying questions
+- Select feedback to incorporate as next draft
+- Switch models
 
 ### Subsequent Review Passes
 
-The user may send the plan back for another review after a new major draft. Each time:
+After a new draft, each review pass should:
 
-1. **Read the current plan file** — it has been updated since your last review.
-2. Focus on whether previous findings were addressed and whether new issues emerged.
-3. Update the plan file and append a new Review entry to Revision History.
-4. **Stop and wait for user feedback.**
+1. Read updated `plan.md` + `feedback.md`.
+2. Check whether previous findings were addressed and whether new issues emerged.
+3. Append review findings to `feedback.md` and a concise `Review` ledger line to `changelog.md`.
+4. Stop and wait for user feedback.
+
+## After Approval — Transition to Implementation
+
+Once user approves the plan:
+
+1. Record `Approved — <YYYY-MM-DD>, user.` in `changelog.md`.
+2. Treat `plan.md` as the implementation spec.
+3. Ask explicitly: *"Ready to start building? I'll follow the plan as written."*
+4. Do not modify plan package files during implementation unless user explicitly asks.
