@@ -73,9 +73,9 @@ fix_path() {
 }
 
 set_editor() {
-    export EDITOR="et"
-    export VISUAL="ec"
-    export GIT_EDITOR='vim +star'
+    export EDITOR="nvim"
+    export VISUAL="nvim"
+    export GIT_EDITOR="nvim +star"
 }
 
 git_prompt_info() {
