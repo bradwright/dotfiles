@@ -17,3 +17,7 @@ TAGS
 
 # Claude Code
 .claude/
+
+# pi agent
+.pi/build/
+.pi/plans/
