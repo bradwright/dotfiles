@@ -35,6 +35,29 @@ This directory contains project-local Pi extensions.
 - `model-identity.ts`
   - Appends active model id to system prompt for model self-identification tasks.
 
+- `plan-mode.ts`
+  - Adds `/plan` command (alias: `/plan-mode`) for planning-state controls:
+    - `on|off|toggle|status|mode [medium|high|xhigh]`
+    - `new <slug|github-issue-url>` (creates `.pi/plans/<date>-<slug>/` package files and auto-starts `/skill:plan-mode`)
+    - `use <plan-dir>` / `review [plan-dir]` / `clear`
+  - `/plan new <github-issue-url>` fetches issue details via `gh issue view`, saves them to `brief.md`, seeds `feedback.md`, and uses them as the initial planning brief.
+  - `/plan mode` shows a thinking-level selector (`medium|high|xhigh`) with `high` as the default.
+  - Entering plan mode sets thinking to the selected plan thinking level and restores previous thinking when exiting plan mode.
+  - `/plan review` auto-enables plan mode guardrails (if needed) and queues `/skill:plan-mode review <active-plan-dir>` (or uses an explicit plan dir argument).
+  - Adds `/build` command to disable plan mode and queue implementation from active `plan.md`.
+    - `/build mode` shows a thinking-level selector (`low|medium|high|xhigh`) with `medium` as the default.
+    - Sets thinking to the selected build thinking level when starting build.
+    - Requires `Approved — <date>, user.` in `changelog.md` by default.
+    - `--yolo` bypasses the approval check.
+  - Persists mode state (`enabled`, active plan path, previous tool set) in session entry `plan-mode-state`.
+  - Shows active plan slug in footer status while plan mode is enabled.
+  - Restricts tool usage in plan mode:
+    - Active tool set includes `edit`/`write` for plan docs.
+    - Blocks `edit`/`write` outside the active plan package.
+    - Allows only read-oriented bash commands.
+  - Injects hidden planning context before each turn when plan mode is enabled.
+  - Auto-detects active plan dir from `/skill:plan-mode review <plan-dir>` input.
+
 ## Operational notes
 
 - After changes, run `/reload` in Pi to apply extension updates.
