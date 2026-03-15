@@ -3,7 +3,6 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
 type RepoInfo = {
 	alias: string;
-	host: string;
 };
 
 type PullRequestInfo = {
@@ -22,20 +21,14 @@ const USAGE_MODE_ENTRY = "github-statusline-usage-mode";
 function parseGitHubRemote(remoteUrl: string): RepoInfo | null {
 	const cleaned = remoteUrl.trim().replace(/\.git$/, "").replace(/\/$/, "");
 	const patterns = [
-		/^git@([^:]+):([^/]+\/[^/]+)$/,
-		/^ssh:\/\/git@([^/]+)\/([^/]+\/[^/]+)$/,
-		/^https?:\/\/([^/]+)\/([^/]+\/[^/]+)$/,
+		/^git@github\.com:([^/]+\/[^/]+)$/,
+		/^ssh:\/\/git@github\.com\/([^/]+\/[^/]+)$/,
+		/^https?:\/\/github\.com\/([^/]+\/[^/]+)$/,
 	] as const;
 
 	for (const pattern of patterns) {
 		const match = cleaned.match(pattern);
-		if (!match) continue;
-
-		const host = match[1];
-		const alias = match[2];
-		if (!host.toLowerCase().includes("github")) continue;
-
-		return { alias, host };
+		if (match) return { alias: match[1] };
 	}
 
 	return null;
@@ -146,12 +139,12 @@ export default function githubStatusline(pi: ExtensionAPI) {
 	): Promise<PullRequestInfo | null> => {
 		if (!currentBranch || currentBranch === "detached") return null;
 
-		const cacheKey = `${info.host}/${info.alias}#${currentBranch}`;
+		const cacheKey = `${info.alias}#${currentBranch}`;
 		if (prCache && prCache.key === cacheKey && Date.now() - prCache.timestamp < PR_CACHE_TTL_MS) {
 			return prCache.result;
 		}
 
-		const ghRepo = info.host === "github.com" ? info.alias : `${info.host}/${info.alias}`;
+		const ghRepo = info.alias;
 
 		try {
 			const result = await pi.exec(
@@ -278,7 +271,7 @@ export default function githubStatusline(pi: ExtensionAPI) {
 				render(width: number): string[] {
 					const cwd = toHomeRelativePath(ctx.cwd);
 					const label = branch ? (repoInfo?.alias ?? cwd) : cwd;
-					const repoUrl = repoInfo ? `https://${repoInfo.host}/${repoInfo.alias}` : undefined;
+					const repoUrl = repoInfo ? `https://github.com/${repoInfo.alias}` : undefined;
 
 					const topSegments: Segment[] = [{ text: label, color: "success", linkUrl: repoUrl }];
 					if (branch) topSegments.push({ text: ` (${branch})`, color: "dim" });
