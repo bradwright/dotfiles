@@ -142,6 +142,12 @@ Required `RESULT.md` format:
 
 Use file-based PID tracking per task to remain POSIX compatible.
 
+**Important:** Variable assignments MUST be on separate lines (terminated by
+newlines, NOT chained with `&&`) so they execute in the current shell. Only the
+`(…) &` subshell runs in the background. If you chain assignments with `&&`
+into the backgrounded group, they won't be visible to the subsequent `echo`
+line and the PID file path will resolve to `/pid`.
+
 ```bash
 TASK_ID="<task-id>"
 TASK_DIR="$RUN_DIR/tasks/$TASK_ID"
