@@ -142,11 +142,22 @@ Required `RESULT.md` format:
 
 Use file-based PID tracking per task to remain POSIX compatible.
 
-**Important:** Variable assignments MUST be on separate lines (terminated by
-newlines, NOT chained with `&&`) so they execute in the current shell. Only the
-`(…) &` subshell runs in the background. If you chain assignments with `&&`
-into the backgrounded group, they won't be visible to the subsequent `echo`
-line and the PID file path will resolve to `/pid`.
+**CRITICAL — variable scoping with `&`:**
+
+When a command is backgrounded with `&`, bash backgrounds the entire
+preceding compound command — including any `&&`-chained assignments.
+Those assignments then happen in the subshell, NOT the current shell,
+so subsequent lines see empty variables (e.g. `$TASK_DIR` → empty →
+`"$TASK_DIR/pid"` → `"/pid"` → "Read-only file system").
+
+Rules:
+1. Variable assignments MUST use `;` or newlines — NEVER `&&` or `\` continuations.
+2. The redirect `> "$LOG_FILE"` is part of the backgrounded command, so
+   `$LOG_FILE` must already be set in the current shell BEFORE that line.
+3. When spawning multiple tasks, use unique variable names (or a loop) and
+   capture `$!` immediately after each `&`.
+
+Correct pattern for each task (copy exactly):
 
 ```bash
 TASK_ID="<task-id>"
@@ -155,14 +166,19 @@ WORKTREE_DIR="$WORKTREE_ROOT/$TASK_ID"
 PROMPT_FILE="$TASK_DIR/prompt.md"
 LOG_FILE="$TASK_DIR/stdout.log"
 
-(
-  cd "$WORKTREE_DIR" &&
-  pi -p --no-session --no-skills \
+( cd "$WORKTREE_DIR" && pi -p --no-session --no-skills \
     --append-system-prompt "$PROMPT_FILE" \
-    "Implement the assigned task, write RESULT.md in the repository root, and commit all changes (including RESULT.md) with: build($RUN_ID): <task-id> — <short title>."
+    "Implement the assigned task, write RESULT.md in the repository root, and commit all changes (including RESULT.md) with: build($RUN_ID): <task-id> — <short title>." \
 ) > "$LOG_FILE" 2>&1 &
-
 echo $! > "$TASK_DIR/pid"
+```
+
+Never emit this pattern (it is WRONG):
+```bash
+# WRONG — && chains assignments into the backgrounded group
+TASK_DIR="..." && \
+WORKTREE_DIR="..." && \
+( ... ) > "$LOG_FILE" 2>&1 &
 ```
 
 Launch all dependency-free tasks this way. For dependent tasks, wait until prerequisites are approved.
