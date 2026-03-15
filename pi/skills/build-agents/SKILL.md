@@ -38,6 +38,16 @@ Planner → Parallel Implementers → Auto-Reviewer → Merge Agent
 
 Before starting, verify all of these. Stop if any fail.
 
+**Plan mode check:** If the current session is in plan mode (e.g. the user
+triggered this skill via `/plan` or while a planning skill is active), STOP
+immediately. Do not attempt any tool calls. Tell the user:
+
+> This skill requires tool access (git, bash, file I/O) to orchestrate
+> sub-agents. Please exit plan mode first, then invoke `/build-agents` in a
+> normal session.
+
+Only proceed once you can confirm tool access is available.
+
 ```bash
 git diff --quiet && git diff --cached --quiet
 BASE_BRANCH="$(git symbolic-ref --short HEAD)"
