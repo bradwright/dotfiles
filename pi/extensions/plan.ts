@@ -4,17 +4,18 @@ import * as path from "node:path";
 import { isToolCallEventType, type ExtensionAPI, type ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { Key } from "@mariozechner/pi-tui";
 
-const PLAN_MODE_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write"] as const;
+const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write"] as const;
 const FALLBACK_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls"] as const;
 const REQUIRED_PLAN_FILES = ["plan.md", "feedback.md", "changelog.md"] as const;
 const ISSUE_BRIEF_FILE = "brief.md";
 
-const STATE_ENTRY = "plan-mode-state";
-const STATUS_KEY = "plan-mode";
-const PLAN_CONTEXT_TYPE = "plan-mode-context";
+const STATE_ENTRY = "plan-state";
+const LEGACY_STATE_ENTRY = "plan-mode-state";
+const STATUS_KEY = "plan";
+const PLAN_CONTEXT_TYPE = "plan-context";
 
-const PLAN_MODE_USAGE =
-	"/plan — toggle plan mode\n/plan new [context|github-url]\n/plan resume [plan-dir]\n/plan review | clear | status | mode";
+const PLAN_USAGE =
+	"/plan — start new plan or activate existing plan\n/plan new [context|github-url]\n/plan resume [plan-dir]\n/plan review | clear | status | mode";
 
 const GITHUB_ISSUE_FETCH_TIMEOUT_MS = 15000;
 const GITHUB_ISSUE_BODY_MAX_CHARS = 12000;
@@ -110,7 +111,7 @@ type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
 const PLAN_THINKING_LEVELS: ThinkingLevel[] = ["medium", "high", "xhigh"];
 const BUILD_THINKING_LEVELS: ThinkingLevel[] = ["low", "medium", "high", "xhigh"];
 
-type PlanModeState = {
+type PlanState = {
 	enabled: boolean;
 	activePlanDir: string | null;
 	previousTools: string[];
@@ -369,8 +370,8 @@ function persistIssueBriefToPlanPackage(planDir: string, issue: GitHubIssue): vo
 	}
 }
 
-export default function planMode(pi: ExtensionAPI) {
-	let planModeEnabled = false;
+export default function plan(pi: ExtensionAPI) {
+	let planEnabled = false;
 	let activePlanDir: string | null = null;
 	let previousTools: string[] = [];
 	let planThinkingLevel: ThinkingLevel = "high";
@@ -378,8 +379,8 @@ export default function planMode(pi: ExtensionAPI) {
 	let previousThinkingLevel: ThinkingLevel | null = null;
 
 	function persistState(): void {
-		pi.appendEntry<PlanModeState>(STATE_ENTRY, {
-			enabled: planModeEnabled,
+		pi.appendEntry<PlanState>(STATE_ENTRY, {
+			enabled: planEnabled,
 			activePlanDir,
 			previousTools,
 			planThinkingLevel,
@@ -394,7 +395,7 @@ export default function planMode(pi: ExtensionAPI) {
 	}
 
 	function updateStatus(ctx: ExtensionContext): void {
-		if (!planModeEnabled) {
+		if (!planEnabled) {
 			ctx.ui.setStatus(STATUS_KEY, undefined);
 			return;
 		}
@@ -409,7 +410,7 @@ export default function planMode(pi: ExtensionAPI) {
 
 	function computePlanTools(): string[] {
 		const available = availableToolSet();
-		return PLAN_MODE_TOOLS.filter((toolName) => available.has(toolName));
+		return PLAN_TOOLS.filter((toolName) => available.has(toolName));
 	}
 
 	function computeFallbackTools(): string[] {
@@ -417,7 +418,7 @@ export default function planMode(pi: ExtensionAPI) {
 		return FALLBACK_TOOLS.filter((toolName) => available.has(toolName));
 	}
 
-	function setPlanMode(
+	function setPlan(
 		enabled: boolean,
 		ctx: ExtensionContext,
 		options: { notify?: boolean; captureCurrentTools?: boolean } = {},
@@ -425,15 +426,15 @@ export default function planMode(pi: ExtensionAPI) {
 		const { notify = true, captureCurrentTools = true } = options;
 
 		if (enabled) {
-			if (!planModeEnabled && captureCurrentTools) {
+			if (!planEnabled && captureCurrentTools) {
 				previousTools = pi.getActiveTools();
 			}
-			if (!planModeEnabled && previousThinkingLevel === null) {
+			if (!planEnabled && previousThinkingLevel === null) {
 				previousThinkingLevel = pi.getThinkingLevel() as ThinkingLevel;
 			}
 			pi.setThinkingLevel(planThinkingLevel);
 
-			planModeEnabled = true;
+			planEnabled = true;
 			const tools = computePlanTools();
 			if (tools.length > 0) pi.setActiveTools(tools);
 			if (notify) {
@@ -441,7 +442,7 @@ export default function planMode(pi: ExtensionAPI) {
 				ctx.ui.notify(`Plan mode enabled. Thinking: ${planThinkingLevel}.${detail}`, "info");
 			}
 		} else {
-			planModeEnabled = false;
+			planEnabled = false;
 			const available = availableToolSet();
 			const restoreTools = (previousTools.length > 0 ? previousTools : computeFallbackTools()).filter((toolName) =>
 				available.has(toolName),
@@ -460,7 +461,7 @@ export default function planMode(pi: ExtensionAPI) {
 	}
 
 	function formatStatusSummary(ctx: ExtensionContext): string {
-		const mode = planModeEnabled ? "ON" : "OFF";
+		const mode = planEnabled ? "ON" : "OFF";
 		const active = activePlanDir ? toDisplayPath(activePlanDir, ctx.cwd) : "(none)";
 		const tools = pi.getActiveTools().join(", ");
 		const activeThinking = pi.getThinkingLevel();
@@ -481,7 +482,7 @@ export default function planMode(pi: ExtensionAPI) {
 	}
 
 	function usage(ctx: ExtensionContext): void {
-		ctx.ui.notify(PLAN_MODE_USAGE, "warning");
+		ctx.ui.notify(PLAN_USAGE, "warning");
 	}
 
 	function queueUserPrompt(prompt: string, ctx: ExtensionContext): void {
@@ -552,16 +553,152 @@ export default function planMode(pi: ExtensionAPI) {
 		};
 	}
 
-	pi.registerFlag("plan-mode", {
+	pi.registerFlag("plan", {
 		description: "Start in plan mode",
 		type: "boolean",
 		default: false,
 	});
 
+	async function promptThinkingLevel(
+		label: string,
+		levels: ThinkingLevel[],
+		current: ThinkingLevel,
+		ctx: ExtensionContext,
+	): Promise<ThinkingLevel | null> {
+		if (!ctx.hasUI) return current;
+
+		const currentIndex = levels.indexOf(current);
+		const reordered = [
+			...levels.slice(currentIndex),
+			...levels.slice(0, currentIndex),
+		];
+		const choice = await ctx.ui.select(label, reordered as string[]);
+		if (!choice) return null;
+
+		const selected = choice as ThinkingLevel;
+		return levels.includes(selected) ? selected : null;
+	}
+
+	async function handlePlanNew(rest: string, ctx: ExtensionContext): Promise<void> {
+		let issue: GitHubIssue | null = null;
+		let userContext = rest;
+		let slugInput = rest;
+		const issueRef = rest ? parseGitHubIssueUrl(rest) : null;
+
+		if (issueRef) {
+			ctx.ui.notify(`Fetching GitHub issue ${issueRef.url}...`, "info");
+			try {
+				issue = await fetchGitHubIssue(issueRef);
+			} catch (error) {
+				const reason = error instanceof Error ? error.message : String(error);
+				ctx.ui.notify(
+					`Failed to fetch ${issueRef.url}. Ensure gh is installed and authenticated.\n${reason}`,
+					"error",
+				);
+				return;
+			}
+
+			slugInput =
+				slugify(`${issue.repo}-issue-${issue.number}-${issue.title}`) ||
+				slugify(`${issue.repo}-issue-${issue.number}`) ||
+				`issue-${issue.number}`;
+		}
+
+		// If no context provided, ask the user what they want to build
+		if (!slugInput && ctx.hasUI) {
+			const description = (await ctx.ui.input("What do you want to build?", "describe the feature or task"))?.trim() ?? "";
+			if (!description) return;
+			userContext = description;
+			slugInput = description;
+		}
+
+		const slug = slugify(slugInput);
+		if (!slug) {
+			ctx.ui.notify(
+				"Provide a description (e.g. /plan new auth-token-refresh) or a GitHub issue URL.",
+				"warning",
+			);
+			return;
+		}
+
+		// Prompt for thinking level before creating the plan
+		const level = await promptThinkingLevel(
+			"Thinking level for planning:",
+			PLAN_THINKING_LEVELS,
+			planThinkingLevel,
+			ctx,
+		);
+		if (level === null) return;
+		planThinkingLevel = level;
+		persistState();
+
+		const planDir = path.join(ctx.cwd, ".pi", "plans", `${localIsoDate()}-${slug}`);
+		const title = issue ? issue.title : toTitleCase(slug.replace(/-/g, " "));
+		const created = ensurePlanPackage(planDir, title);
+		setActivePlanDir(planDir, ctx);
+		if (!planEnabled) {
+			setPlan(true, ctx, { notify: false, captureCurrentTools: true });
+		}
+
+		const displayPlanDir = toDisplayPath(planDir, ctx.cwd);
+		if (created.length === 0) {
+			ctx.ui.notify(`Using existing plan package: ${displayPlanDir}.`, "info");
+		} else {
+			ctx.ui.notify(
+				`Created ${displayPlanDir} (${created.join(", ")}) and enabled plan mode.`,
+				"info",
+			);
+		}
+
+		if (issue) {
+			try {
+				persistIssueBriefToPlanPackage(planDir, issue);
+				ctx.ui.notify(`Loaded issue #${issue.number}: ${issue.title} (saved to ${ISSUE_BRIEF_FILE}).`, "info");
+			} catch (error) {
+				const reason = error instanceof Error ? error.message : String(error);
+				ctx.ui.notify(`Issue fetched, but failed to persist ${ISSUE_BRIEF_FILE}: ${reason}`, "warning");
+			}
+		}
+
+		const kickoffPrompt = issue
+			? `/skill:plan-mode Start planning using this existing plan package directory: ${planDir}. Read ${ISSUE_BRIEF_FILE} first for the initial brief.\n\n${formatIssueBrief(issue)}`
+			: userContext
+				? `/skill:plan-mode Start planning using this existing plan package directory: ${planDir}.\n\nUser planning context:\n${userContext}`
+				: `/skill:plan-mode Start planning using this existing plan package directory: ${planDir}`;
+		queueUserPrompt(kickoffPrompt, ctx);
+	}
+
 	async function handlePlanCommand(args: string, ctx: ExtensionContext): Promise<void> {
 		const trimmed = args.trim();
 		if (!trimmed) {
-			setPlanMode(!planModeEnabled, ctx);
+			if (planEnabled) {
+				// Already in plan mode — disable it
+				setPlan(false, ctx);
+				return;
+			}
+
+			// Not in plan mode — activate existing plan or start a new one
+			const hasActivePlan = activePlanDir
+				&& fs.existsSync(activePlanDir)
+				&& fs.statSync(activePlanDir).isDirectory()
+				&& requiredFilesMissing(activePlanDir).length === 0;
+
+			if (hasActivePlan) {
+				// Re-activate existing plan with thinking level prompt
+				const level = await promptThinkingLevel(
+					"Thinking level for planning:",
+					PLAN_THINKING_LEVELS,
+					planThinkingLevel,
+					ctx,
+				);
+				if (level === null) return;
+				planThinkingLevel = level;
+				persistState();
+				setPlan(true, ctx);
+			} else {
+				// No active plan — start a new one
+				await handlePlanNew("", ctx);
+			}
 			return;
 		}
 
@@ -570,17 +707,17 @@ export default function planMode(pi: ExtensionAPI) {
 		const rest = restParts.join(" ").trim();
 
 		if (verb === "on" || verb === "enable") {
-			setPlanMode(true, ctx);
+			setPlan(true, ctx);
 			return;
 		}
 
 		if (verb === "off" || verb === "disable") {
-			setPlanMode(false, ctx);
+			setPlan(false, ctx);
 			return;
 		}
 
 		if (verb === "toggle") {
-			setPlanMode(!planModeEnabled, ctx);
+			setPlan(!planEnabled, ctx);
 			return;
 		}
 
@@ -597,14 +734,14 @@ export default function planMode(pi: ExtensionAPI) {
 					return;
 				}
 				planThinkingLevel = requested;
-				if (planModeEnabled) pi.setThinkingLevel(planThinkingLevel);
+				if (planEnabled) pi.setThinkingLevel(planThinkingLevel);
 				persistState();
-				ctx.ui.notify(`Plan mode thinking set to ${planThinkingLevel}.`, "info");
+				ctx.ui.notify(`Plan thinking set to ${planThinkingLevel}.`, "info");
 				return;
 			}
 
 			if (!ctx.hasUI) {
-				ctx.ui.notify(`Plan mode thinking: ${planThinkingLevel} (set with /plan mode [medium|high|xhigh])`, "info");
+				ctx.ui.notify(`Plan thinking: ${planThinkingLevel} (set with /plan mode [medium|high|xhigh])`, "info");
 				return;
 			}
 
@@ -614,7 +751,7 @@ export default function planMode(pi: ExtensionAPI) {
 				...PLAN_THINKING_LEVELS.slice(0, currentIndex),
 			];
 			const choice = await ctx.ui.select(
-				"Choose thinking level for plan mode:",
+				"Choose thinking level for planning:",
 				reordered as string[],
 			);
 			if (!choice) return;
@@ -623,9 +760,9 @@ export default function planMode(pi: ExtensionAPI) {
 			if (!PLAN_THINKING_LEVELS.includes(selected)) return;
 
 			planThinkingLevel = selected;
-			if (planModeEnabled) pi.setThinkingLevel(planThinkingLevel);
+			if (planEnabled) pi.setThinkingLevel(planThinkingLevel);
 			persistState();
-			ctx.ui.notify(`Plan mode thinking set to ${planThinkingLevel}.`, "info");
+			ctx.ui.notify(`Plan thinking set to ${planThinkingLevel}.`, "info");
 			return;
 		}
 
@@ -704,8 +841,8 @@ export default function planMode(pi: ExtensionAPI) {
 				return;
 			}
 
-			if (!planModeEnabled) {
-				setPlanMode(true, ctx, { notify: false, captureCurrentTools: true });
+			if (!planEnabled) {
+				setPlan(true, ctx, { notify: false, captureCurrentTools: true });
 				ctx.ui.notify("Plan mode enabled for safe plan review.", "info");
 			}
 
@@ -716,90 +853,15 @@ export default function planMode(pi: ExtensionAPI) {
 		}
 
 		if (verb === "new") {
-			let issue: GitHubIssue | null = null;
-			const userContext = rest;
-			let slugInput = rest;
-			const issueRef = rest ? parseGitHubIssueUrl(rest) : null;
-
-			if (issueRef) {
-				ctx.ui.notify(`Fetching GitHub issue ${issueRef.url}...`, "info");
-				try {
-					issue = await fetchGitHubIssue(issueRef);
-				} catch (error) {
-					const reason = error instanceof Error ? error.message : String(error);
-					ctx.ui.notify(
-						`Failed to fetch ${issueRef.url}. Ensure gh is installed and authenticated.\n${reason}`,
-						"error",
-					);
-					return;
-				}
-
-				slugInput =
-					slugify(`${issue.repo}-issue-${issue.number}-${issue.title}`) ||
-					slugify(`${issue.repo}-issue-${issue.number}`) ||
-					`issue-${issue.number}`;
-			}
-
-			if (!slugInput && ctx.hasUI) {
-				slugInput = (await ctx.ui.input("Plan slug", "feature-or-task"))?.trim() ?? "";
-			}
-
-			const slug = slugify(slugInput);
-			if (!slug) {
-				ctx.ui.notify(
-					"Provide a slug (e.g. /plan new auth-token-refresh) or a GitHub issue URL.",
-					"warning",
-				);
-				return;
-			}
-
-			const planDir = path.join(ctx.cwd, ".pi", "plans", `${localIsoDate()}-${slug}`);
-			const title = issue ? issue.title : toTitleCase(slug.replace(/-/g, " "));
-			const created = ensurePlanPackage(planDir, title);
-			setActivePlanDir(planDir, ctx);
-			if (!planModeEnabled) {
-				setPlanMode(true, ctx, { notify: false, captureCurrentTools: true });
-			}
-
-			const displayPlanDir = toDisplayPath(planDir, ctx.cwd);
-			if (created.length === 0) {
-				ctx.ui.notify(`Using existing plan package: ${displayPlanDir}.`, "info");
-			} else {
-				ctx.ui.notify(
-					`Created ${displayPlanDir} (${created.join(", ")}) and enabled plan mode.`,
-					"info",
-				);
-			}
-
-			if (issue) {
-				try {
-					persistIssueBriefToPlanPackage(planDir, issue);
-					ctx.ui.notify(`Loaded issue #${issue.number}: ${issue.title} (saved to ${ISSUE_BRIEF_FILE}).`, "info");
-				} catch (error) {
-					const reason = error instanceof Error ? error.message : String(error);
-					ctx.ui.notify(`Issue fetched, but failed to persist ${ISSUE_BRIEF_FILE}: ${reason}`, "warning");
-				}
-			}
-
-			const kickoffPrompt = issue
-				? `/skill:plan-mode Start planning using this existing plan package directory: ${planDir}. Read ${ISSUE_BRIEF_FILE} first for the initial brief.\n\n${formatIssueBrief(issue)}`
-				: userContext
-					? `/skill:plan-mode Start planning using this existing plan package directory: ${planDir}.\n\nUser planning context:\n${userContext}`
-					: `/skill:plan-mode Start planning using this existing plan package directory: ${planDir}`;
-			queueUserPrompt(kickoffPrompt, ctx);
+			await handlePlanNew(rest, ctx);
 			return;
 		}
 
 		usage(ctx);
 	}
 
-	pi.registerCommand("plan-mode", {
-		description: "Plan mode controls: on/off/toggle/status/mode/new/resume/review/clear",
-		handler: async (args, ctx) => handlePlanCommand(args, ctx),
-	});
-
 	pi.registerCommand("plan", {
-		description: "Alias for /plan-mode",
+		description: "Plan mode: start new plan, activate existing, or toggle off. Subcommands: new/resume/review/clear/status/mode/on/off",
 		handler: async (args, ctx) => handlePlanCommand(args, ctx),
 	});
 
@@ -890,8 +952,18 @@ export default function planMode(pi: ExtensionAPI) {
 				return;
 			}
 
-			if (planModeEnabled) {
-				setPlanMode(false, ctx, { notify: false, captureCurrentTools: false });
+			const level = await promptThinkingLevel(
+				"Thinking level for build:",
+				BUILD_THINKING_LEVELS,
+				buildThinkingLevel,
+				ctx,
+			);
+			if (level === null) return;
+			buildThinkingLevel = level;
+			persistState();
+
+			if (planEnabled) {
+				setPlan(false, ctx, { notify: false, captureCurrentTools: false });
 			}
 
 			pi.setThinkingLevel(buildThinkingLevel);
@@ -910,11 +982,11 @@ export default function planMode(pi: ExtensionAPI) {
 
 	pi.registerShortcut(Key.ctrlAlt("p"), {
 		description: "Toggle plan mode",
-		handler: async (ctx) => setPlanMode(!planModeEnabled, ctx),
+		handler: async (ctx) => setPlan(!planEnabled, ctx),
 	});
 
 	pi.on("tool_call", async (event, ctx) => {
-		if (!planModeEnabled) return;
+		if (!planEnabled) return;
 
 		if (isToolCallEventType("edit", event) || isToolCallEventType("write", event)) {
 			const requestedPath = event.input.path;
@@ -950,7 +1022,7 @@ export default function planMode(pi: ExtensionAPI) {
 	});
 
 	pi.on("context", async (event) => {
-		if (planModeEnabled) return;
+		if (planEnabled) return;
 		return {
 			messages: event.messages.filter((message) => {
 				const maybeCustom = message as { customType?: string };
@@ -960,7 +1032,7 @@ export default function planMode(pi: ExtensionAPI) {
 	});
 
 	pi.on("before_agent_start", async () => {
-		if (!planModeEnabled) return;
+		if (!planEnabled) return;
 
 		const activePlanMessage = activePlanDir
 			? `Active plan package: ${activePlanDir}`
@@ -989,10 +1061,12 @@ export default function planMode(pi: ExtensionAPI) {
 	});
 
 	pi.on("session_start", async (_event, ctx) => {
-		let restoredState: PlanModeState | null = null;
+		let restoredState: PlanState | null = null;
 		for (const entry of ctx.sessionManager.getBranch()) {
-			if (entry.type !== "custom" || entry.customType !== STATE_ENTRY) continue;
-			const data = entry.data as Partial<PlanModeState> | undefined;
+			if (entry.type !== "custom") continue;
+			// Support both new and legacy state entry names
+			if (entry.customType !== STATE_ENTRY && entry.customType !== LEGACY_STATE_ENTRY) continue;
+			const data = entry.data as Partial<PlanState> | undefined;
 			if (!data) continue;
 
 			const restoredPlanThinking =
@@ -1023,7 +1097,7 @@ export default function planMode(pi: ExtensionAPI) {
 		}
 
 		if (restoredState) {
-			planModeEnabled = restoredState.enabled;
+			planEnabled = restoredState.enabled;
 			activePlanDir = restoredState.activePlanDir ? path.resolve(restoredState.activePlanDir) : null;
 			previousTools = restoredState.previousTools;
 			planThinkingLevel = restoredState.planThinkingLevel;
@@ -1031,11 +1105,11 @@ export default function planMode(pi: ExtensionAPI) {
 			previousThinkingLevel = restoredState.previousThinkingLevel;
 		}
 
-		if (pi.getFlag("plan-mode") === true) planModeEnabled = true;
+		if (pi.getFlag("plan") === true) planEnabled = true;
 
-		if (planModeEnabled) {
+		if (planEnabled) {
 			if (previousTools.length === 0) previousTools = pi.getActiveTools();
-			setPlanMode(true, ctx, { notify: false, captureCurrentTools: false });
+			setPlan(true, ctx, { notify: false, captureCurrentTools: false });
 		} else {
 			updateStatus(ctx);
 		}

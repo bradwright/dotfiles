@@ -11,8 +11,10 @@ single source of truth for which files get installed and where.
 
 Special install destinations:
 - `ghostty-config` → `~/Library/Application Support/com.mitchellh.ghostty/config`
-- `pi/settings.json` → `~/.pi/agent/settings.json`
-- `pi/themes/*.json` → `~/.pi/agent/themes/*.json`
+- `pi/settings.json` → `~/.pi/agent/settings.json` (merged, not overwritten)
+- `pi/themes/*.json` → `~/.pi/agent/themes/*.json` (symlinked)
+- `pi/extensions/*.ts` → `~/.pi/agent/extensions/*.ts` (symlinked)
+- `pi/skills/*` → `~/.pi/agent/skills/*` (symlinked as directories)
 
 ## Adding a new dotfile
 
@@ -85,6 +87,24 @@ There is no automated test suite. After making changes, verify correctness by:
    bash -n <file>  # for bash-compatible files
    ```
 3. For `Brewfile` changes, validate with `brew bundle check`.
+
+## Pi extensions and skills
+
+Extensions (`pi/extensions/*.ts`) and skills (`pi/skills/*/`) are **symlinked**
+from this repo into `~/.pi/agent/` by `make install`. The installed files are
+symlinks pointing back here, so **edits must be made to the repo source files
+under `pi/`**, not to the installed copies under `~/.pi/agent/`.
+
+- To edit an extension: modify `pi/extensions/<name>.ts` in this repo.
+- To edit a skill: modify files under `pi/skills/<name>/` in this repo.
+- To add a new extension or skill: create it under `pi/extensions/` or
+  `pi/skills/` respectively, then run `make install` to create the symlink.
+- After editing, run `/reload` in pi to pick up changes (no `make install`
+  needed since the symlinks already point here).
+
+Do **not** write directly to `~/.pi/agent/extensions/` or
+`~/.pi/agent/skills/` — those are symlinks and any file created there as a
+regular file will not be tracked by this repo.
 
 ## What not to do
 
