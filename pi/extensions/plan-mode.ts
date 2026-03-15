@@ -14,7 +14,7 @@ const STATUS_KEY = "plan-mode";
 const PLAN_CONTEXT_TYPE = "plan-mode-context";
 
 const PLAN_MODE_USAGE =
-	"/plan — toggle plan mode\n/plan new <slug|github-url>\n/plan use <dir> | review [dir] | clear | status | mode";
+	"/plan — toggle plan mode\n/plan new [context|github-url]\n/plan resume [plan-dir]\n/plan review | clear | status | mode";
 
 const GITHUB_ISSUE_FETCH_TIMEOUT_MS = 15000;
 const GITHUB_ISSUE_BODY_MAX_CHARS = 12000;
@@ -219,6 +219,20 @@ function toDisplayPath(targetPath: string, cwd: string): string {
 
 function requiredFilesMissing(planDir: string): string[] {
 	return REQUIRED_PLAN_FILES.filter((file) => !fs.existsSync(path.join(planDir, file)));
+}
+
+function listAvailablePlanDirs(cwd: string): string[] {
+	const plansRoot = path.join(cwd, ".pi", "plans");
+	if (!fs.existsSync(plansRoot) || !fs.statSync(plansRoot).isDirectory()) return [];
+
+	const dirs = fs
+		.readdirSync(plansRoot, { withFileTypes: true })
+		.filter((entry) => entry.isDirectory())
+		.map((entry) => path.join(plansRoot, entry.name))
+		.filter((dir) => requiredFilesMissing(dir).length === 0)
+		.sort((a, b) => path.basename(b).localeCompare(path.basename(a)));
+
+	return dirs;
 }
 
 function hasApprovedEntry(changelogPath: string): boolean {
@@ -621,14 +635,33 @@ export default function planMode(pi: ExtensionAPI) {
 			return;
 		}
 
-		if (verb === "use") {
-			if (!rest) {
-				usage(ctx);
+		if (verb === "resume" || verb === "use") {
+			let planDir: string | null = null;
+
+			if (rest) {
+				let fromArg = normalizeInputPath(rest, ctx.cwd);
+				if (path.basename(fromArg) === "plan.md") fromArg = path.dirname(fromArg);
+				planDir = fromArg;
+			} else if (ctx.hasUI) {
+				const available = listAvailablePlanDirs(ctx.cwd);
+				if (available.length === 0) {
+					ctx.ui.notify("No plan packages found in ./.pi/plans. Create one with /plan new [context].", "warning");
+					return;
+				}
+
+				const labels = available.map((dir) => toDisplayPath(dir, ctx.cwd));
+				const choice = await ctx.ui.select("Resume which plan?", labels);
+				if (!choice) return;
+
+				const selectedIndex = labels.indexOf(choice);
+				if (selectedIndex < 0) return;
+				planDir = available[selectedIndex] ?? null;
+			} else {
+				ctx.ui.notify("Usage: /plan resume <plan-dir>", "warning");
 				return;
 			}
 
-			let planDir = normalizeInputPath(rest, ctx.cwd);
-			if (path.basename(planDir) === "plan.md") planDir = path.dirname(planDir);
+			if (!planDir) return;
 
 			if (!fs.existsSync(planDir) || !fs.statSync(planDir).isDirectory()) {
 				ctx.ui.notify(`Not a directory: ${toDisplayPath(planDir, ctx.cwd)}`, "error");
@@ -650,31 +683,15 @@ export default function planMode(pi: ExtensionAPI) {
 		}
 
 		if (verb === "review") {
-			let planDir = activePlanDir;
 			if (rest) {
-				let overridePlanDir = normalizeInputPath(rest, ctx.cwd);
-				if (path.basename(overridePlanDir) === "plan.md") overridePlanDir = path.dirname(overridePlanDir);
-
-				if (!fs.existsSync(overridePlanDir) || !fs.statSync(overridePlanDir).isDirectory()) {
-					ctx.ui.notify(`Not a directory: ${toDisplayPath(overridePlanDir, ctx.cwd)}`, "error");
-					return;
-				}
-
-				const missing = requiredFilesMissing(overridePlanDir);
-				if (missing.length > 0) {
-					ctx.ui.notify(
-						`Missing plan files in ${toDisplayPath(overridePlanDir, ctx.cwd)}: ${missing.join(", ")}`,
-						"warning",
-					);
-					return;
-				}
-
-				setActivePlanDir(overridePlanDir, ctx);
-				planDir = overridePlanDir;
+				ctx.ui.notify("Usage: /plan review", "warning");
+				return;
 			}
 
+			const planDir = activePlanDir;
+
 			if (!planDir) {
-				ctx.ui.notify("No active plan package. Use /plan new <slug> or /plan use <plan-dir> first.", "warning");
+				ctx.ui.notify("No active plan package. Use /plan new [context] or /plan resume <plan-dir> first.", "warning");
 				return;
 			}
 
@@ -700,6 +717,7 @@ export default function planMode(pi: ExtensionAPI) {
 
 		if (verb === "new") {
 			let issue: GitHubIssue | null = null;
+			const userContext = rest;
 			let slugInput = rest;
 			const issueRef = rest ? parseGitHubIssueUrl(rest) : null;
 
@@ -765,7 +783,9 @@ export default function planMode(pi: ExtensionAPI) {
 
 			const kickoffPrompt = issue
 				? `/skill:plan-mode Start planning using this existing plan package directory: ${planDir}. Read ${ISSUE_BRIEF_FILE} first for the initial brief.\n\n${formatIssueBrief(issue)}`
-				: `/skill:plan-mode Start planning using this existing plan package directory: ${planDir}`;
+				: userContext
+					? `/skill:plan-mode Start planning using this existing plan package directory: ${planDir}.\n\nUser planning context:\n${userContext}`
+					: `/skill:plan-mode Start planning using this existing plan package directory: ${planDir}`;
 			queueUserPrompt(kickoffPrompt, ctx);
 			return;
 		}
@@ -774,7 +794,7 @@ export default function planMode(pi: ExtensionAPI) {
 	}
 
 	pi.registerCommand("plan-mode", {
-		description: "Plan mode controls: on/off/toggle/status/mode/new/use/review/clear",
+		description: "Plan mode controls: on/off/toggle/status/mode/new/resume/review/clear",
 		handler: async (args, ctx) => handlePlanCommand(args, ctx),
 	});
 
@@ -851,7 +871,7 @@ export default function planMode(pi: ExtensionAPI) {
 			}
 
 			if (!planDir) {
-				ctx.ui.notify("No active plan package. Use /plan new <slug> or /plan use <plan-dir> first.", "warning");
+				ctx.ui.notify("No active plan package. Use /plan new [context] or /plan resume <plan-dir> first.", "warning");
 				return;
 			}
 
@@ -902,7 +922,7 @@ export default function planMode(pi: ExtensionAPI) {
 				return {
 					block: true,
 					reason:
-						"Plan mode only allows edits in an active plan package. Set one with /plan new <slug> or /plan use <plan-dir>.",
+						"Plan mode only allows edits in an active plan package. Set one with /plan new [context] or /plan resume <plan-dir>.",
 				};
 			}
 
@@ -944,7 +964,7 @@ export default function planMode(pi: ExtensionAPI) {
 
 		const activePlanMessage = activePlanDir
 			? `Active plan package: ${activePlanDir}`
-			: "No active plan package selected yet. Ask the user to run /plan new <slug> or /plan use <dir>.";
+			: "No active plan package selected yet. Ask the user to run /plan new [context] or /plan resume <dir>.";
 
 		return {
 			message: {

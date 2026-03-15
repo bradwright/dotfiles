@@ -38,12 +38,13 @@ This directory contains project-local Pi extensions.
 - `plan-mode.ts`
   - Adds `/plan` command (alias: `/plan-mode`) for planning-state controls:
     - `on|off|toggle|status|mode [medium|high|xhigh]`
-    - `new <slug|github-issue-url>` (creates `.pi/plans/<date>-<slug>/` package files and auto-starts `/skill:plan-mode`)
-    - `use <plan-dir>` / `review [plan-dir]` / `clear`
+    - `new [context|github-issue-url]` (creates `.pi/plans/<date>-<slug>/` package files and auto-starts `/skill:plan-mode`)
+    - `resume [plan-dir]` / `review` / `clear`
   - `/plan new <github-issue-url>` fetches issue details via `gh issue view`, saves them to `brief.md`, seeds `feedback.md`, and uses them as the initial planning brief.
+  - `/plan resume` with no args opens a selector of available plan packages under `./.pi/plans`.
   - `/plan mode` shows a thinking-level selector (`medium|high|xhigh`) with `high` as the default.
   - Entering plan mode sets thinking to the selected plan thinking level and restores previous thinking when exiting plan mode.
-  - `/plan review` auto-enables plan mode guardrails (if needed) and queues `/skill:plan-mode review <active-plan-dir>` (or uses an explicit plan dir argument).
+  - `/plan review` auto-enables plan mode guardrails (if needed) and queues `/skill:plan-mode review <active-plan-dir>`.
   - Adds `/build` command to disable plan mode and queue implementation from active `plan.md`.
     - `/build mode` shows a thinking-level selector (`low|medium|high|xhigh`) with `medium` as the default.
     - Sets thinking to the selected build thinking level when starting build.
