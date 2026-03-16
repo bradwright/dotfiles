@@ -1,0 +1,6 @@
+{
+  "name": "bradwright-pi-package",
+  "version": "1.0.0",
+  "description": "Pi extensions, skills, and themes from bradwright's dotfiles",
+  "keywords": ["pi-package"]
+}
