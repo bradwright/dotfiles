@@ -1,0 +1,156 @@
+diff -u -r a/dist/providers/anthropic.js b/dist/providers/anthropic.js
+--- a/dist/providers/anthropic.js	2026-03-16 09:33:06
++++ b/dist/providers/anthropic.js	2026-03-16 09:33:44
+@@ -112,6 +112,83 @@
+     }
+     return merged;
+ }
++function parseNumericHeader(headers, key) {
++    const raw = headers.get(key);
++    if (!raw)
++        return undefined;
++    const value = Number(raw);
++    return Number.isFinite(value) ? value : undefined;
++}
++function parseAnthropicRateLimit(headers) {
++    // Unified rate-limit headers (current Anthropic API)
++    const unified5hUtil = parseNumericHeader(headers, "anthropic-ratelimit-unified-5h-utilization");
++    const unified5hReset = parseNumericHeader(headers, "anthropic-ratelimit-unified-5h-reset");
++    const unified5hStatus = headers.get("anthropic-ratelimit-unified-5h-status") ?? undefined;
++    const unified7dUtil = parseNumericHeader(headers, "anthropic-ratelimit-unified-7d-utilization");
++    const unified7dReset = parseNumericHeader(headers, "anthropic-ratelimit-unified-7d-reset");
++    const unified7dStatus = headers.get("anthropic-ratelimit-unified-7d-status") ?? undefined;
++    const representativeClaim = headers.get("anthropic-ratelimit-unified-representative-claim") ?? undefined;
++    const fiveHour = unified5hUtil !== undefined
++        ? { utilization: unified5hUtil, ...(unified5hReset !== undefined ? { reset: unified5hReset } : {}), ...(unified5hStatus ? { status: unified5hStatus } : {}) }
++        : undefined;
++    const sevenDay = unified7dUtil !== undefined
++        ? { utilization: unified7dUtil, ...(unified7dReset !== undefined ? { reset: unified7dReset } : {}), ...(unified7dStatus ? { status: unified7dStatus } : {}) }
++        : undefined;
++    if (fiveHour || sevenDay) {
++        return {
++            ...(fiveHour ? { fiveHour } : {}),
++            ...(sevenDay ? { sevenDay } : {}),
++            ...(representativeClaim ? { representativeClaim } : {}),
++        };
++    }
++    // Legacy per-request/per-token headers (fallback)
++    const requestLimit = parseNumericHeader(headers, "anthropic-ratelimit-requests-limit");
++    const requestRemaining = parseNumericHeader(headers, "anthropic-ratelimit-requests-remaining");
++    const requestReset = headers.get("anthropic-ratelimit-requests-reset") ?? undefined;
++    const tokenLimit = parseNumericHeader(headers, "anthropic-ratelimit-tokens-limit");
++    const tokenRemaining = parseNumericHeader(headers, "anthropic-ratelimit-tokens-remaining");
++    const tokenReset = headers.get("anthropic-ratelimit-tokens-reset") ?? undefined;
++    const requests = requestLimit !== undefined || requestRemaining !== undefined || requestReset !== undefined
++        ? {
++            ...(requestLimit !== undefined ? { limit: requestLimit } : {}),
++            ...(requestRemaining !== undefined ? { remaining: requestRemaining } : {}),
++            ...(requestReset ? { reset: requestReset } : {}),
++        }
++        : undefined;
++    const tokens = tokenLimit !== undefined || tokenRemaining !== undefined || tokenReset !== undefined
++        ? {
++            ...(tokenLimit !== undefined ? { limit: tokenLimit } : {}),
++            ...(tokenRemaining !== undefined ? { remaining: tokenRemaining } : {}),
++            ...(tokenReset ? { reset: tokenReset } : {}),
++        }
++        : undefined;
++    if (!requests && !tokens) {
++        return undefined;
++    }
++    return {
++        ...(requests ? { requests } : {}),
++        ...(tokens ? { tokens } : {}),
++    };
++}
++function attachResponseMetadata(output, responseHeaders, requestId) {
++    if (requestId) {
++        output.requestId = requestId;
++    }
++    if (!responseHeaders)
++        return;
++    const rateLimit = parseAnthropicRateLimit(responseHeaders);
++    if (rateLimit) {
++        output.rateLimit = rateLimit;
++    }
++}
++function parseHeadersFromError(error) {
++    if (!error || typeof error !== "object")
++        return undefined;
++    const maybeHeaders = error.headers;
++    if (!maybeHeaders || typeof maybeHeaders.get !== "function")
++        return undefined;
++    return maybeHeaders;
++}
+ export const streamAnthropic = (model, context, options) => {
+     const stream = new AssistantMessageEventStream();
+     (async () => {
+@@ -149,6 +226,13 @@
+                 params = nextParams;
+             }
+             const anthropicStream = client.messages.stream({ ...params, stream: true }, { signal: options?.signal });
++            try {
++                const { response, request_id } = await anthropicStream.withResponse();
++                attachResponseMetadata(output, response?.headers, request_id ?? undefined);
++            }
++            catch {
++                // Ignore metadata extraction issues. Streaming and provider errors are handled below.
++            }
+             stream.push({ type: "start", partial: output });
+             const blocks = output.content;
+             for await (const event of anthropicStream) {
+@@ -329,6 +413,13 @@
+         catch (error) {
+             for (const block of output.content)
+                 delete block.index;
++            const errorHeaders = parseHeadersFromError(error);
++            attachResponseMetadata(output, errorHeaders, (error && typeof error === "object" && "requestID" in error && typeof error.requestID === "string"
++                ? error.requestID
++                : undefined) ??
++                (error && typeof error === "object" && "requestId" in error && typeof error.requestId === "string"
++                    ? error.requestId
++                    : undefined));
+             output.stopReason = options?.signal?.aborted ? "aborted" : "error";
+             output.errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+             stream.push({ type: "error", reason: output.stopReason, error: output });
+diff -u -r a/dist/types.d.ts b/dist/types.d.ts
+--- a/dist/types.d.ts	2026-03-16 09:33:06
++++ b/dist/types.d.ts	2026-03-16 09:33:44
+@@ -128,6 +128,37 @@
+     usage: Usage;
+     stopReason: StopReason;
+     errorMessage?: string;
++    /** Provider request-id when available. */
++    requestId?: string;
++    /** Provider rate limit metadata when available. */
++    rateLimit?: {
++        /** Unified 5-hour window (current Anthropic API). */
++        fiveHour?: {
++            utilization?: number;
++            reset?: number;
++            status?: string;
++        };
++        /** Unified 7-day window (current Anthropic API). */
++        sevenDay?: {
++            utilization?: number;
++            reset?: number;
++            status?: string;
++        };
++        /** Which window is the binding constraint (e.g. "five_hour"). */
++        representativeClaim?: string;
++        /** Legacy per-request bucket. */
++        requests?: {
++            limit?: number;
++            remaining?: number;
++            reset?: string;
++        };
++        /** Legacy per-token bucket. */
++        tokens?: {
++            limit?: number;
++            remaining?: number;
++            reset?: string;
++        };
++    };
+     timestamp: number;
+ }
+ export interface ToolResultMessage<TDetails = any> {
