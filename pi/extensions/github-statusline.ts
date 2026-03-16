@@ -1,5 +1,5 @@
 import type { AssistantMessage } from "@mariozechner/pi-ai";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 
 type RepoInfo = {
 	alias: string;
@@ -13,6 +13,16 @@ type PullRequestInfo = {
 type FooterMode = "minimal" | "focus" | "debug";
 type UsageModeEntry = { mode: FooterMode };
 type Segment = { text: string; color: string; linkUrl?: string };
+type UnifiedWindow = { utilization?: number; reset?: number; status?: string };
+type LegacyBucket = { limit?: number; remaining?: number; reset?: string };
+type RateLimitMetadata = {
+	fiveHour?: UnifiedWindow;
+	sevenDay?: UnifiedWindow;
+	representativeClaim?: string;
+	requests?: LegacyBucket;
+	tokens?: LegacyBucket;
+};
+type AssistantMessageWithRateLimit = AssistantMessage & { rateLimit?: RateLimitMetadata };
 
 const COMMAND_TIMEOUT_MS = 5000;
 const PR_CACHE_TTL_MS = 30000;
@@ -47,6 +57,54 @@ function formatTokens(count: number): string {
 	if (count < 1000000) return `${Math.round(count / 1000)}k`;
 	if (count < 10000000) return `${(count / 1000000).toFixed(1)}M`;
 	return `${Math.round(count / 1000000)}M`;
+}
+
+function rateLimitColor(usedPct: number): string {
+	if (usedPct >= 90) return "error";
+	if (usedPct >= 80) return "warning";
+	return "dim";
+}
+
+function formatUnifiedSegment(label: string, utilization: number): string {
+	const pct = Math.round(utilization * 100);
+	return `${label} ${pct}%`;
+}
+
+/** Extract the most relevant unified window info from rate limit metadata. */
+function getUnifiedWindows(rl: RateLimitMetadata): { label: string; utilization: number; reset?: number; status?: string; dedupeKey: string }[] {
+	const windows: { label: string; utilization: number; reset?: number; status?: string; dedupeKey: string }[] = [];
+	if (rl.fiveHour && typeof rl.fiveHour.utilization === "number") {
+		windows.push({
+			label: "5h",
+			utilization: rl.fiveHour.utilization,
+			reset: rl.fiveHour.reset,
+			status: rl.fiveHour.status,
+			dedupeKey: `5h:${rl.fiveHour.reset ?? "no-reset"}`,
+		});
+	}
+	if (rl.sevenDay && typeof rl.sevenDay.utilization === "number") {
+		windows.push({
+			label: "7d",
+			utilization: rl.sevenDay.utilization,
+			reset: rl.sevenDay.reset,
+			status: rl.sevenDay.status,
+			dedupeKey: `7d:${rl.sevenDay.reset ?? "no-reset"}`,
+		});
+	}
+	return windows;
+}
+
+/** Legacy: compute percent used from limit/remaining. */
+function legacyPercentUsed(limit: number | undefined, remaining: number | undefined): number | null {
+	if (typeof limit !== "number" || typeof remaining !== "number") return null;
+	if (!Number.isFinite(limit) || !Number.isFinite(remaining) || limit <= 0) return null;
+	return Math.max(0, Math.min(100, ((limit - remaining) / limit) * 100));
+}
+
+function formatLegacySegment(kind: "req" | "tok", remaining: number, limit: number, usedPct: number): string {
+	const rem = kind === "tok" ? formatTokens(remaining) : remaining.toString();
+	const lim = kind === "tok" ? formatTokens(limit) : limit.toString();
+	return `${kind} ${rem}/${lim} (${Math.round(usedPct)}%)`;
 }
 
 function toHomeRelativePath(path: string): string {
@@ -120,6 +178,8 @@ export default function githubStatusline(pi: ExtensionAPI) {
 	let footerMode: FooterMode = "minimal";
 	let requestFooterRender: (() => void) | null = null;
 	let prCache: { key: string; result: PullRequestInfo | null; timestamp: number } | null = null;
+	let lastReqAlertKey: string | null = null;
+	let lastTokAlertKey: string | null = null;
 
 	const loadRepoInfo = async (): Promise<RepoInfo | null> => {
 		try {
@@ -187,6 +247,48 @@ export default function githubStatusline(pi: ExtensionAPI) {
 		}
 	};
 
+	const checkAndNotifyRateLimits = (
+		message: AssistantMessageWithRateLimit,
+		ctx: ExtensionContext,
+	): void => {
+		const rl = message.rateLimit;
+		if (!rl) return;
+		const modelLabel = `${message.provider}/${message.model}`;
+
+		// Unified windows
+		const windows = getUnifiedWindows(rl);
+		for (const w of windows) {
+			const usedPct = w.utilization * 100;
+			if (usedPct < 80) continue;
+			const dedupeKey = `${message.provider}:${message.model}:unified:${w.dedupeKey}`;
+			if (w.label === "5h") {
+				if (lastReqAlertKey === dedupeKey) continue;
+				lastReqAlertKey = dedupeKey;
+			} else {
+				if (lastTokAlertKey === dedupeKey) continue;
+				lastTokAlertKey = dedupeKey;
+			}
+			ctx.ui.notify(`Rate limit warning (${modelLabel}, ${w.label}): ${formatUnifiedSegment(w.label, w.utilization)}`, "warning");
+		}
+
+		// Legacy buckets (fallback for other providers or old API)
+		for (const [kind, label] of [["requests", "req"], ["tokens", "tok"]] as const) {
+			const bucket = rl[kind];
+			if (!bucket) continue;
+			const usedPct = legacyPercentUsed(bucket.limit, bucket.remaining);
+			if (usedPct === null || usedPct < 80 || typeof bucket.limit !== "number" || typeof bucket.remaining !== "number") continue;
+			const dedupeKey = `${message.provider}:${message.model}:${kind}:${bucket.reset ?? "no-reset"}:${bucket.limit}`;
+			if (kind === "requests") {
+				if (lastReqAlertKey === dedupeKey) continue;
+				lastReqAlertKey = dedupeKey;
+			} else {
+				if (lastTokAlertKey === dedupeKey) continue;
+				lastTokAlertKey = dedupeKey;
+			}
+			ctx.ui.notify(`Rate limit warning (${modelLabel}, ${label}): ${formatLegacySegment(label, bucket.remaining, bucket.limit, usedPct)}`, "warning");
+		}
+	};
+
 	const refresh = async (nextBranch: string | null, requestRender: () => void): Promise<void> => {
 		const run = ++refreshVersion;
 		branch = nextBranch;
@@ -241,6 +343,16 @@ export default function githubStatusline(pi: ExtensionAPI) {
 			requestFooterRender?.();
 			ctx.ui.notify(`Footer mode: ${footerMode}`, "info");
 		},
+	});
+
+	pi.on("message_end", async (event, ctx) => {
+		if (!ctx.hasUI) return;
+		if (event.message.role !== "assistant") return;
+
+		const message = event.message as AssistantMessageWithRateLimit;
+		if (!message.rateLimit) return;
+
+		checkAndNotifyRateLimits(message, ctx);
 	});
 
 	pi.on("session_start", async (_event, ctx) => {
@@ -306,13 +418,15 @@ export default function githubStatusline(pi: ExtensionAPI) {
 					}
 
 					let turnCost = 0;
+					let latestAssistantMessage: AssistantMessageWithRateLimit | null = null;
 					const branchEntries = ctx.sessionManager.getBranch();
 					for (let i = branchEntries.length - 1; i >= 0; i--) {
 						const entry = branchEntries[i];
 						if (!entry) continue;
 						if (entry.type === "message" && entry.message.role === "assistant") {
-							const message = entry.message as AssistantMessage;
+							const message = entry.message as AssistantMessageWithRateLimit;
 							turnCost = message.usage.cost.total;
+							latestAssistantMessage = message;
 							break;
 						}
 					}
@@ -326,6 +440,34 @@ export default function githubStatusline(pi: ExtensionAPI) {
 							: `${contextPercent.toFixed(1)}%/${formatTokens(contextWindow)} (auto)`;
 					const contextSegment: Segment = { text: context, color: contextColor(contextPercent) };
 
+					const debugRateLimitSegments: Segment[] = [];
+					if (footerMode === "debug" && latestAssistantMessage?.rateLimit) {
+						const rl = latestAssistantMessage.rateLimit;
+
+						// Unified windows
+						for (const w of getUnifiedWindows(rl)) {
+							const pct = w.utilization * 100;
+							debugRateLimitSegments.push({
+								text: `• ${formatUnifiedSegment(w.label, w.utilization)} `,
+								color: rateLimitColor(pct),
+							});
+						}
+
+						// Legacy buckets (fallback)
+						if (debugRateLimitSegments.length === 0) {
+							for (const [kind, label] of [["requests", "req"], ["tokens", "tok"]] as const) {
+								const bucket = rl[kind];
+								if (!bucket) continue;
+								const usedPct = legacyPercentUsed(bucket.limit, bucket.remaining);
+								if (usedPct === null || typeof bucket.limit !== "number" || typeof bucket.remaining !== "number") continue;
+								debugRateLimitSegments.push({
+									text: `• ${formatLegacySegment(label, bucket.remaining, bucket.limit, usedPct)} `,
+									color: rateLimitColor(usedPct),
+								});
+							}
+						}
+					}
+
 					const leftSegments: Segment[] =
 						footerMode === "focus"
 							? [
@@ -338,6 +480,7 @@ export default function githubStatusline(pi: ExtensionAPI) {
 											text: `+$${turnCost.toFixed(3)} • $${totalCost.toFixed(3)} • ↑${formatTokens(totalInput)} ↓${formatTokens(totalOutput)} R${formatTokens(totalCacheRead)} W${formatTokens(totalCacheWrite)} `,
 											color: "dim",
 										},
+										...debugRateLimitSegments,
 										contextSegment,
 									]
 								: [contextSegment];
