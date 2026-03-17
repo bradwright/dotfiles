@@ -100,6 +100,9 @@ fi
 # My own aliases
 [[ -r "$HOME/.aliases" ]] && source "$HOME/.aliases"
 
+# Emacs vterm shell integration (directory tracking, prompt marking, etc.)
+[[ -r "$HOME/.config/emacs/.local/straight/repos/emacs-libvterm/etc/emacs-vterm-zsh.sh" ]] && source "$HOME/.config/emacs/.local/straight/repos/emacs-libvterm/etc/emacs-vterm-zsh.sh"
+
 # ZSH plugins
 if [[ -n "$brew_prefix" ]]; then
     ANTIGEN_PATH="$brew_prefix/share/antigen/antigen.zsh"

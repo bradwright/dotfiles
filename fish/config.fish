@@ -73,6 +73,11 @@ if command -q zoxide
     zoxide init fish | source
 end
 
+# Emacs vterm shell integration (directory tracking, prompt marking, etc.)
+if test -f ~/.config/emacs/.local/straight/repos/emacs-libvterm/etc/emacs-vterm.fish
+    source ~/.config/emacs/.local/straight/repos/emacs-libvterm/etc/emacs-vterm.fish
+end
+
 # ---------------------------------------------------------------------------
 # Local overrides (not in repo)
 # ---------------------------------------------------------------------------
