@@ -101,7 +101,7 @@ fi
 [[ -r "$HOME/.aliases" ]] && source "$HOME/.aliases"
 
 # Emacs vterm shell integration (directory tracking, prompt marking, etc.)
-[[ -r "$HOME/.config/emacs/.local/straight/repos/emacs-libvterm/etc/emacs-vterm-zsh.sh" ]] && source "$HOME/.config/emacs/.local/straight/repos/emacs-libvterm/etc/emacs-vterm-zsh.sh"
+[[ "$INSIDE_EMACS" == "vterm" && -n "$EMACS_VTERM_PATH" && -r "$EMACS_VTERM_PATH/etc/emacs-vterm-zsh.sh" ]] && source "$EMACS_VTERM_PATH/etc/emacs-vterm-zsh.sh"
 
 # ZSH plugins
 if [[ -n "$brew_prefix" ]]; then

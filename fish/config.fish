@@ -74,8 +74,8 @@ if command -q zoxide
 end
 
 # Emacs vterm shell integration (directory tracking, prompt marking, etc.)
-if test -f ~/.config/emacs/.local/straight/repos/emacs-libvterm/etc/emacs-vterm.fish
-    source ~/.config/emacs/.local/straight/repos/emacs-libvterm/etc/emacs-vterm.fish
+if test "$INSIDE_EMACS" = vterm; and set -q EMACS_VTERM_PATH; and test -f "$EMACS_VTERM_PATH/etc/emacs-vterm.fish"
+    source "$EMACS_VTERM_PATH/etc/emacs-vterm.fish"
 end
 
 # ---------------------------------------------------------------------------
