@@ -22,6 +22,7 @@ brew 'zsh-completions'
 brew 'starship'
 brew 'tealdeer'
 brew 'zoxide'
+brew 'libvterm'
 
 # ZSH
 brew 'antigen'
