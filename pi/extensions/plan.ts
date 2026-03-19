@@ -768,15 +768,16 @@ export default function plan(pi: ExtensionAPI) {
 			return;
 		}
 
-		// Status bar: compact label
-		const status = `🧭 ${planLabel()}`;
-		ctx.ui.setStatus(STATUS_KEY, ctx.ui.theme.fg("warning", status));
-
 		// Widget: richer info line with plan metadata
 		if (!activePlanDir || !fs.existsSync(activePlanDir)) {
+			// No plan dir to show in widget — fall back to status bar icon
+			ctx.ui.setStatus(STATUS_KEY, ctx.ui.theme.fg("warning", `🧭 ${planLabel()}`));
 			ctx.ui.setWidget(STATUS_KEY, undefined);
 			return;
 		}
+
+		// Widget is active — no need for the status bar icon too
+		ctx.ui.setStatus(STATUS_KEY, undefined);
 
 		ctx.ui.setWidget(STATUS_KEY, (_tui, theme) => {
 			const meta = getPlanMeta(activePlanDir!);
