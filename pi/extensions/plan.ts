@@ -1011,7 +1011,39 @@ export default function plan(pi: ExtensionAPI) {
 				persistState();
 				setPlan(true, ctx);
 			} else {
-				// No active plan — start a new one
+				// No active plan — offer to resume an existing one or start new
+				const available = listAvailablePlanDirs(ctx.cwd);
+				if (available.length > 0 && ctx.hasUI) {
+					const action = await ctx.ui.select("No active plan.", [
+						"Resume existing plan",
+						"Start new plan",
+					]);
+					if (!action) return;
+
+					if (action === "Resume existing plan") {
+						const labels = available.map((dir) => toDisplayPath(dir, ctx.cwd));
+						const choice = await ctx.ui.select("Resume which plan?", labels);
+						if (!choice) return;
+						const selectedIndex = labels.indexOf(choice);
+						if (selectedIndex < 0) return;
+						const planDir = available[selectedIndex];
+						if (!planDir) return;
+						setActivePlanDir(planDir, ctx);
+
+						const level = await promptThinkingLevel(
+							"Thinking level for planning:",
+							PLAN_THINKING_LEVELS,
+							planThinkingLevel,
+							ctx,
+						);
+						if (level === null) return;
+						planThinkingLevel = level;
+						persistState();
+						setPlan(true, ctx);
+						return;
+					}
+				}
+
 				await handlePlanNew("", ctx);
 			}
 			return;
