@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { isToolCallEventType, type ExtensionAPI, type ExtensionContext, type Theme } from "@mariozechner/pi-coding-agent";
+import { isToolCallEventType, type ExtensionAPI, type ExtensionContext, highlightCode, type Theme } from "@mariozechner/pi-coding-agent";
 import { type Focusable, Key, matchesKey, Text, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@mariozechner/pi-tui";
 
 const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write"] as const;
@@ -667,9 +667,10 @@ class PlanViewerComponent implements Focusable {
 		const th = this.theme;
 		const innerW = Math.max(20, width - 4);
 
-		// Re-wrap content for current width
+		// Syntax-highlight as markdown, then wrap for current width
+		const highlighted = highlightCode(this.rawContent, "markdown");
 		this.wrappedLines = [];
-		for (const line of this.rawContent.split("\n")) {
+		for (const line of highlighted) {
 			if (visibleWidth(line) <= innerW) {
 				this.wrappedLines.push(line);
 			} else {
