@@ -1,7 +1,9 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { isToolCallEventType, type ExtensionAPI, type ExtensionContext, highlightCode, type Theme } from "@mariozechner/pi-coding-agent";
+import { execFileSync } from "node:child_process";
+
+import { isToolCallEventType, type ExtensionAPI, type ExtensionContext, type Theme } from "@mariozechner/pi-coding-agent";
 import { type Focusable, Key, matchesKey, Text, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@mariozechner/pi-tui";
 
 const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write"] as const;
@@ -622,13 +624,34 @@ function persistIssueBriefToPlanPackage(planDir: string, issue: GitHubIssue): vo
 // Read-only scrollable text viewer overlay
 // ---------------------------------------------------------------------------
 
+/** Syntax-highlight markdown via bat. Falls back to plain text if bat isn't available. */
+function highlightMarkdown(content: string): string[] {
+	try {
+		const highlighted = execFileSync("bat", [
+			"--language=md",
+			"--color=always",
+			"--style=plain",
+			"--paging=never",
+			"--wrap=never",
+		], {
+			input: content,
+			encoding: "utf8",
+			timeout: 3000,
+			maxBuffer: 5 * 1024 * 1024,
+		});
+		return highlighted.split("\n");
+	} catch {
+		return content.split("\n");
+	}
+}
+
 class PlanViewerComponent implements Focusable {
 	focused = false;
 	private scrollOffset = 0;
 	private wrappedLines: string[] = [];
 	private viewportHeight = 0;
 	private title: string;
-	private rawContent: string;
+	private highlightedLines: string[];
 
 	constructor(
 		private theme: Theme,
@@ -637,7 +660,7 @@ class PlanViewerComponent implements Focusable {
 		content: string,
 	) {
 		this.title = title;
-		this.rawContent = content;
+		this.highlightedLines = highlightMarkdown(content);
 	}
 
 	handleInput(data: string): void {
@@ -667,10 +690,9 @@ class PlanViewerComponent implements Focusable {
 		const th = this.theme;
 		const innerW = Math.max(20, width - 4);
 
-		// Syntax-highlight as markdown, then wrap for current width
-		const highlighted = highlightCode(this.rawContent, "markdown");
+		// Wrap pre-highlighted lines for current width
 		this.wrappedLines = [];
-		for (const line of highlighted) {
+		for (const line of this.highlightedLines) {
 			if (visibleWidth(line) <= innerW) {
 				this.wrappedLines.push(line);
 			} else {
