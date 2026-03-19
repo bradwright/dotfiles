@@ -1162,7 +1162,21 @@ export default function plan(pi: ExtensionAPI) {
 			}
 
 			setActivePlanDir(planDir, ctx);
-			ctx.ui.notify(`Active plan set to ${toDisplayPath(planDir, ctx.cwd)}.`, "info");
+
+			if (!planEnabled) {
+				const level = await promptThinkingLevel(
+					"Thinking level for planning:",
+					PLAN_THINKING_LEVELS,
+					planThinkingLevel,
+					ctx,
+				);
+				if (level === null) return;
+				planThinkingLevel = level;
+				persistState();
+				setPlan(true, ctx);
+			} else {
+				ctx.ui.notify(`Active plan set to ${toDisplayPath(planDir, ctx.cwd)}.`, "info");
+			}
 			return;
 		}
 
