@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { isToolCallEventType, type ExtensionAPI, type ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { Key, Text } from "@mariozechner/pi-tui";
+import { isToolCallEventType, type ExtensionAPI, type ExtensionContext, type Theme } from "@mariozechner/pi-coding-agent";
+import { type Focusable, Key, matchesKey, Text, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@mariozechner/pi-tui";
 
 const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write"] as const;
 const FALLBACK_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls"] as const;
@@ -616,6 +616,117 @@ function persistIssueBriefToPlanPackage(planDir: string, issue: GitHubIssue): vo
 		const suffix = withHeader.endsWith("\n") ? "" : "\n";
 		fs.writeFileSync(feedbackPath, `${withHeader}${suffix}${issueLine}\n`);
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Read-only scrollable text viewer overlay
+// ---------------------------------------------------------------------------
+
+class PlanViewerComponent implements Focusable {
+	focused = false;
+	private scrollOffset = 0;
+	private wrappedLines: string[] = [];
+	private viewportHeight = 0;
+	private title: string;
+	private rawContent: string;
+
+	constructor(
+		private theme: Theme,
+		private done: () => void,
+		title: string,
+		content: string,
+	) {
+		this.title = title;
+		this.rawContent = content;
+	}
+
+	handleInput(data: string): void {
+		if (matchesKey(data, "escape") || matchesKey(data, "q")) {
+			this.done();
+			return;
+		}
+
+		const maxScroll = Math.max(0, this.wrappedLines.length - this.viewportHeight);
+
+		if (matchesKey(data, "up") || matchesKey(data, "k")) {
+			this.scrollOffset = Math.max(0, this.scrollOffset - 1);
+		} else if (matchesKey(data, "down") || matchesKey(data, "j")) {
+			this.scrollOffset = Math.min(maxScroll, this.scrollOffset + 1);
+		} else if (matchesKey(data, "pageup") || matchesKey(data, "ctrl+u")) {
+			this.scrollOffset = Math.max(0, this.scrollOffset - this.viewportHeight);
+		} else if (matchesKey(data, "pagedown") || matchesKey(data, "ctrl+d")) {
+			this.scrollOffset = Math.min(maxScroll, this.scrollOffset + this.viewportHeight);
+		} else if (matchesKey(data, "home") || matchesKey(data, "g")) {
+			this.scrollOffset = 0;
+		} else if (matchesKey(data, "end") || matchesKey(data, "G")) {
+			this.scrollOffset = maxScroll;
+		}
+	}
+
+	render(width: number): string[] {
+		const th = this.theme;
+		const innerW = Math.max(20, width - 4);
+
+		// Re-wrap content for current width
+		this.wrappedLines = [];
+		for (const line of this.rawContent.split("\n")) {
+			if (visibleWidth(line) <= innerW) {
+				this.wrappedLines.push(line);
+			} else {
+				const wrapped = wrapTextWithAnsi(line, innerW);
+				for (const wl of wrapped.split("\n")) {
+					this.wrappedLines.push(wl);
+				}
+			}
+		}
+
+		const lines: string[] = [];
+
+		const pad = (s: string, len: number) => {
+			const vis = visibleWidth(s);
+			return s + " ".repeat(Math.max(0, len - vis));
+		};
+
+		const row = (content: string) =>
+			th.fg("border", "│") + " " + pad(content, innerW) + " " + th.fg("border", "│");
+
+		// Header
+		lines.push(th.fg("border", `╭${"─".repeat(innerW + 2)}╮`));
+		lines.push(row(th.fg("accent", `📋 ${this.title}`)));
+		lines.push(th.fg("border", `├${"─".repeat(innerW + 2)}┤`));
+
+		// Content area — leave room for header (3) + footer (2)
+		this.viewportHeight = Math.max(5, 30);
+		const maxScroll = Math.max(0, this.wrappedLines.length - this.viewportHeight);
+		if (this.scrollOffset > maxScroll) this.scrollOffset = maxScroll;
+
+		const visible = this.wrappedLines.slice(this.scrollOffset, this.scrollOffset + this.viewportHeight);
+		for (const line of visible) {
+			lines.push(row(truncateToWidth(line, innerW)));
+		}
+
+		// Pad if content is shorter than viewport
+		for (let i = visible.length; i < this.viewportHeight; i++) {
+			lines.push(row(""));
+		}
+
+		// Footer with scroll position
+		const total = this.wrappedLines.length;
+		const pos = total > 0
+			? `${this.scrollOffset + 1}–${Math.min(this.scrollOffset + this.viewportHeight, total)}/${total}`
+			: "empty";
+		const hint = th.fg("dim", `↑↓/jk scroll • PgUp/PgDn • g/G top/bottom • q/Esc close`);
+		const posLabel = th.fg("dim", pos);
+
+		lines.push(th.fg("border", `├${"─".repeat(innerW + 2)}┤`));
+		lines.push(row(`${hint}  ${posLabel}`));
+		lines.push(th.fg("border", `╰${"─".repeat(innerW + 2)}╯`));
+
+		return lines;
+	}
+
+	invalidate(): void {}
+	dispose(): void {}
 }
 
 export default function plan(pi: ExtensionAPI) {
@@ -1370,6 +1481,43 @@ export default function plan(pi: ExtensionAPI) {
 	pi.registerShortcut(Key.ctrlAlt("p"), {
 		description: "Toggle plan mode",
 		handler: async (ctx) => setPlan(!planEnabled, ctx),
+	});
+
+	pi.registerShortcut(Key.ctrlShift("p"), {
+		description: "View plan.md in overlay",
+		handler: async (ctx) => {
+			if (!planEnabled || !activePlanDir) {
+				ctx.ui.notify("No active plan. Use /plan to start or resume one.", "info");
+				return;
+			}
+
+			const planFile = path.join(activePlanDir, "plan.md");
+			if (!fs.existsSync(planFile)) {
+				ctx.ui.notify(`plan.md not found in ${toDisplayPath(activePlanDir, ctx.cwd)}`, "warning");
+				return;
+			}
+
+			let content: string;
+			try {
+				content = fs.readFileSync(planFile, "utf8");
+			} catch {
+				ctx.ui.notify("Failed to read plan.md", "error");
+				return;
+			}
+
+			const title = path.basename(activePlanDir);
+			await ctx.ui.custom<void>(
+				(_tui, theme, _kb, done) => new PlanViewerComponent(theme, done, title, content),
+				{
+					overlay: true,
+					overlayOptions: {
+						width: "80%",
+						maxHeight: "80%",
+						anchor: "center",
+					},
+				},
+			);
+		},
 	});
 
 	pi.on("tool_call", async (event, ctx) => {
