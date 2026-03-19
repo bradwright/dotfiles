@@ -674,7 +674,7 @@ class PlanViewerComponent implements Focusable {
 				this.wrappedLines.push(line);
 			} else {
 				const wrapped = wrapTextWithAnsi(line, innerW);
-				for (const wl of wrapped.split("\n")) {
+				for (const wl of wrapped) {
 					this.wrappedLines.push(wl);
 				}
 			}
