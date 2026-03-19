@@ -133,7 +133,9 @@ Prompt must instruct:
 - Do not communicate with other implementers.
 - Modify only in the task worktree.
 - Write `RESULT.md` in the worktree root before committing.
-- Commit all changes (including `RESULT.md`) with message: `build($RUN_ID): <task-id> — <short title>`.
+- Commit all changes (including `RESULT.md`). The commit message doesn't
+  matter — these commits will be squash-merged with a descriptive message
+  by the merge agent.
 
 Required `RESULT.md` format:
 
@@ -182,7 +184,7 @@ LOG_FILE="$TASK_DIR/stdout.log"
 
 ( cd "$WORKTREE_DIR" && "$PI_BIN" -p --no-session --no-skills \
     --append-system-prompt "$PROMPT_FILE" \
-    "Implement the assigned task, write RESULT.md in the repository root, and commit all changes (including RESULT.md) with: build($RUN_ID): <task-id> — <short title>." \
+    "Implement the assigned task, write RESULT.md in the repository root, and commit all changes including RESULT.md." \
 ) > "$LOG_FILE" 2>&1 &
 echo $! > "$TASK_DIR/pid"
 ```
