@@ -762,40 +762,36 @@ export default function plan(pi: ExtensionAPI) {
 	function updateStatus(ctx: ExtensionContext): void {
 		if (!ctx.hasUI) return;
 
-		if (!planEnabled) {
-			ctx.ui.setStatus(STATUS_KEY, undefined);
-			ctx.ui.setWidget(STATUS_KEY, undefined);
-			return;
-		}
-
-		// Widget: richer info line with plan metadata
-		if (!activePlanDir || !fs.existsSync(activePlanDir)) {
-			// No plan dir to show in widget — fall back to status bar icon
-			ctx.ui.setStatus(STATUS_KEY, ctx.ui.theme.fg("warning", `🧭 ${planLabel()}`));
-			ctx.ui.setWidget(STATUS_KEY, undefined);
-			return;
-		}
-
-		// Widget is active — no need for the status bar icon too
+		// Never use the status bar — the widget handles everything
 		ctx.ui.setStatus(STATUS_KEY, undefined);
 
+		if (!planEnabled) {
+			ctx.ui.setWidget(STATUS_KEY, undefined);
+			return;
+		}
+
 		ctx.ui.setWidget(STATUS_KEY, (_tui, theme) => {
+			const parts: string[] = [];
+
+			if (!activePlanDir || !fs.existsSync(activePlanDir)) {
+				// Plan mode on but no plan loaded yet
+				parts.push(theme.fg("warning", "📋 DRAFT"));
+				parts.push(theme.fg("muted", "no plan loaded"));
+				parts.push(theme.fg("dim", `thinking: ${planThinkingLevel}`));
+				return new Text(parts.join(theme.fg("dim", " │ ")), 0, 0);
+			}
+
 			const meta = getPlanMeta(activePlanDir!);
 			const feedbackCount = countFeedbackItems(activePlanDir!);
 			const readiness = computeReadiness(activePlanDir!);
 
-			const parts: string[] = [];
-
-			// Plan name
-			parts.push(theme.fg("accent", `📋 ${planLabel()}`));
-
-			// Draft status
+			// Phase indicator
 			if (meta.isApproved) {
-				parts.push(theme.fg("success", "✓ Approved"));
+				parts.push(theme.fg("success", "📋 APPROVED"));
 			} else if (meta.currentDraft > 0) {
-				parts.push(theme.fg("warning", `Draft ${meta.currentDraft}`));
+				parts.push(theme.fg("warning", `📋 DRAFT ${meta.currentDraft}`));
 			} else {
-				parts.push(theme.fg("muted", "No drafts yet"));
+				parts.push(theme.fg("warning", "📋 DRAFT"));
 			}
 
 			// Review count
@@ -805,19 +801,14 @@ export default function plan(pi: ExtensionAPI) {
 
 			// Feedback items
 			if (feedbackCount > 0) {
-				parts.push(theme.fg("warning", `${feedbackCount} feedback item${feedbackCount > 1 ? "s" : ""}`));
+				parts.push(theme.fg("warning", `${feedbackCount} feedback`));
 			}
 
 			// Readiness score
 			const readinessColor = readiness.score === readiness.total ? "success"
 				: readiness.score >= readiness.total - 1 ? "warning"
 				: "muted";
-			parts.push(theme.fg(readinessColor as Parameters<typeof theme.fg>[0], `readiness: ${readiness.score}/${readiness.total}`));
-
-			// Last model
-			if (meta.lastModel) {
-				parts.push(theme.fg("dim", `model: ${meta.lastModel}`));
-			}
+			parts.push(theme.fg(readinessColor as Parameters<typeof theme.fg>[0], `${readiness.score}/${readiness.total} ready`));
 
 			// Thinking level
 			parts.push(theme.fg("dim", `thinking: ${planThinkingLevel}`));
