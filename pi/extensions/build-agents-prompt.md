@@ -291,13 +291,20 @@ Merge-agent stage handles only tasks with `PASS` or `PASS_WITH_NOTES`.
 
 ### 5a. Merge approved branches in dependency order
 
-```bash
-git merge --no-ff "build/$RUN_ID/<task-id>" \
-  -m "build($RUN_ID): <task-id> — <short title>"
+Use `--squash` to collapse the worker's intermediate commits into a single
+clean commit. Write a descriptive message — not the run-id/task-id boilerplate
+the worker used.
 
-# Remove the task artifact from the merged tree
+```bash
+git merge --squash "build/$RUN_ID/<task-id>"
+
+# Remove the task artifact before committing
 git rm -f --ignore-unmatch RESULT.md
-git diff --cached --quiet || git commit -m "build($RUN_ID): remove RESULT.md from <task-id>"
+
+# Write a descriptive commit message summarising what changed and why
+git commit -m "<component>: <what this task accomplished>
+
+<2-4 line description of the changes, covering key files and behaviour.>"
 ```
 
 If conflict is non-trivial, stop and ask user.
