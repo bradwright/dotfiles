@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { isToolCallEventType, type ExtensionAPI, type ExtensionContext, highlightCode, type Theme } from "@mariozechner/pi-coding-agent";
+import { isToolCallEventType, type ExtensionAPI, type ExtensionContext, type Theme } from "@mariozechner/pi-coding-agent";
 import { type Focusable, Key, matchesKey, Text, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@mariozechner/pi-tui";
 
 const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write"] as const;
@@ -640,6 +640,41 @@ class PlanViewerComponent implements Focusable {
 		this.rawContent = content;
 	}
 
+	/** Apply markdown syntax colouring to a single line using the theme's md* palette. */
+	private styleLine(line: string, inCodeBlock: boolean): string {
+		const th = this.theme;
+
+		if (inCodeBlock) return th.fg("mdCodeBlock", line);
+		if (/^#{1,6}\s/.test(line)) return th.fg("mdHeading", line);
+		if (/^(\s*[-*+]|\s*\d+\.)\s/.test(line)) {
+			const match = line.match(/^(\s*[-*+]|\s*\d+\.)\s/);
+			if (match) {
+				const bullet = match[0];
+				const rest = line.slice(bullet.length);
+				return th.fg("mdListBullet", bullet) + this.styleInline(rest);
+			}
+		}
+		if (/^>\s?/.test(line)) return th.fg("mdQuoteBorder", "> ") + th.fg("mdQuote", line.replace(/^>\s?/, ""));
+		if (/^-{3,}$|^\*{3,}$|^_{3,}$/.test(line.trim())) return th.fg("mdHr", line);
+		if (/^\s*- \[[ x]\]/i.test(line)) {
+			const match = line.match(/^(\s*- \[[ x]\])\s?(.*)/i);
+			if (match) return th.fg("mdListBullet", match[1]) + " " + this.styleInline(match[2] ?? "");
+		}
+
+		return this.styleInline(line);
+	}
+
+	/** Style inline markdown elements: `code`, [links](url), **bold**, *italic*. */
+	private styleInline(text: string): string {
+		const th = this.theme;
+		return text
+			.replace(/`([^`]+)`/g, (_m, code: string) => th.fg("mdCode", `\`${code}\``))
+			.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, label: string, url: string) =>
+				th.fg("mdLink", `[${label}]`) + th.fg("mdLinkUrl", `(${url})`))
+			.replace(/\*\*([^*]+)\*\*/g, (_m, bold: string) => th.fg("mdHeading", `**${bold}**`))
+			.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, (_m, italic: string) => th.fg("mdQuote", `*${italic}*`));
+	}
+
 	handleInput(data: string): void {
 		if (matchesKey(data, "escape") || matchesKey(data, "q")) {
 			this.done();
@@ -667,14 +702,21 @@ class PlanViewerComponent implements Focusable {
 		const th = this.theme;
 		const innerW = Math.max(20, width - 4);
 
-		// Syntax-highlight as markdown, then wrap for current width
-		const highlighted = highlightCode(this.rawContent, "markdown");
+		// Style as markdown and wrap for current width
+		const rawLines = this.rawContent.split("\n");
 		this.wrappedLines = [];
-		for (const line of highlighted) {
-			if (visibleWidth(line) <= innerW) {
-				this.wrappedLines.push(line);
+		let inCodeBlock = false;
+		for (const rawLine of rawLines) {
+			if (/^```/.test(rawLine.trim())) {
+				this.wrappedLines.push(th.fg("mdCodeBlockBorder", rawLine));
+				inCodeBlock = !inCodeBlock;
+				continue;
+			}
+			const styled = this.styleLine(rawLine, inCodeBlock);
+			if (visibleWidth(styled) <= innerW) {
+				this.wrappedLines.push(styled);
 			} else {
-				const wrapped = wrapTextWithAnsi(line, innerW);
+				const wrapped = wrapTextWithAnsi(styled, innerW);
 				for (const wl of wrapped) {
 					this.wrappedLines.push(wl);
 				}
