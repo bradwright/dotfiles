@@ -8,6 +8,7 @@ const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write"] as co
 const FALLBACK_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls"] as const;
 const REQUIRED_PLAN_FILES = ["plan.md", "feedback.md", "changelog.md"] as const;
 const ISSUE_BRIEF_FILE = "brief.md";
+const EVENTS_FILE = "events.jsonl";
 
 const STATE_ENTRY = "plan-state";
 const LEGACY_STATE_ENTRY = "plan-mode-state";
@@ -138,6 +139,208 @@ type GitHubIssue = {
 	author: string;
 	labels: string[];
 };
+
+// ---------------------------------------------------------------------------
+// Structured event log (events.jsonl)
+// ---------------------------------------------------------------------------
+
+type PlanEventType = "created" | "draft" | "edit" | "review" | "approved" | "build_started";
+
+type PlanEvent = {
+	type: PlanEventType;
+	timestamp: string;
+	model?: string;
+	version?: number;
+	summary?: string;
+};
+
+/** Metadata derived from events.jsonl for display in the widget. */
+type PlanMeta = {
+	currentDraft: number;
+	reviewCount: number;
+	isApproved: boolean;
+	lastEvent: PlanEventType | null;
+	lastModel: string | null;
+};
+
+function readPlanEvents(planDir: string): PlanEvent[] {
+	const eventsPath = path.join(planDir, EVENTS_FILE);
+	if (!fs.existsSync(eventsPath)) return [];
+	try {
+		return fs
+			.readFileSync(eventsPath, "utf8")
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => {
+				try {
+					return JSON.parse(line) as PlanEvent;
+				} catch {
+					return null;
+				}
+			})
+			.filter((event): event is PlanEvent => event !== null);
+	} catch {
+		return [];
+	}
+}
+
+function appendPlanEvent(planDir: string, event: PlanEvent): void {
+	const eventsPath = path.join(planDir, EVENTS_FILE);
+	fs.appendFileSync(eventsPath, JSON.stringify(event) + "\n");
+}
+
+function derivePlanMeta(events: PlanEvent[]): PlanMeta {
+	let currentDraft = 0;
+	let reviewCount = 0;
+	let isApproved = false;
+	let lastEvent: PlanEventType | null = null;
+	let lastModel: string | null = null;
+
+	for (const event of events) {
+		lastEvent = event.type;
+		if (event.model) lastModel = event.model;
+
+		if (event.type === "draft") {
+			currentDraft = event.version ?? currentDraft + 1;
+		} else if (event.type === "review") {
+			reviewCount++;
+		} else if (event.type === "approved") {
+			isApproved = true;
+		}
+	}
+
+	return { currentDraft, reviewCount, isApproved, lastEvent, lastModel };
+}
+
+/**
+ * Derive plan metadata by parsing changelog.md.
+ * Works for plans that predate events.jsonl, and supplements event-based metadata.
+ */
+function derivePlanMetaFromChangelog(planDir: string): PlanMeta {
+	const changelogPath = path.join(planDir, "changelog.md");
+	if (!fs.existsSync(changelogPath)) return { currentDraft: 0, reviewCount: 0, isApproved: false, lastEvent: null, lastModel: null };
+
+	try {
+		const content = fs.readFileSync(changelogPath, "utf8");
+		const lines = content.split("\n");
+		let currentDraft = 0;
+		let reviewCount = 0;
+		let isApproved = false;
+		let lastEvent: PlanEventType | null = null;
+		let lastModel: string | null = null;
+
+		for (const line of lines) {
+			const trimmed = line.trim();
+			if (!trimmed.startsWith("-")) continue;
+
+			// Match "- Draft N — YYYY-MM-DD, model-name: ..."
+			const draftMatch = trimmed.match(/^-\s+Draft\s+(\d+)\s+[—-]\s+\d{4}-\d{2}-\d{2},\s+(\S+?):/i);
+			if (draftMatch) {
+				currentDraft = parseInt(draftMatch[1], 10);
+				lastModel = draftMatch[2];
+				lastEvent = "draft";
+				continue;
+			}
+
+			// Match "- Review — YYYY-MM-DD, model-name: ..."
+			const reviewMatch = trimmed.match(/^-\s+Review\s+[—-]\s+\d{4}-\d{2}-\d{2},\s+(\S+?):/i);
+			if (reviewMatch) {
+				reviewCount++;
+				lastModel = reviewMatch[1];
+				lastEvent = "review";
+				continue;
+			}
+
+			// Match "- Edit — YYYY-MM-DD, model-name: ..."
+			const editMatch = trimmed.match(/^-\s+Edit\s+[—-]\s+\d{4}-\d{2}-\d{2},\s+(\S+?):/i);
+			if (editMatch) {
+				lastModel = editMatch[1];
+				lastEvent = "edit";
+				continue;
+			}
+
+			// Match "- Approved — YYYY-MM-DD, user."
+			if (/^-\s+Approved\s+[—-]\s+\d{4}-\d{2}-\d{2},\s+user\./i.test(trimmed)) {
+				isApproved = true;
+				lastEvent = "approved";
+				continue;
+			}
+		}
+
+		return { currentDraft, reviewCount, isApproved, lastEvent, lastModel };
+	} catch {
+		return { currentDraft: 0, reviewCount: 0, isApproved: false, lastEvent: null, lastModel: null };
+	}
+}
+
+/**
+ * Get the best available plan metadata, preferring events.jsonl and falling
+ * back to changelog.md parsing for older plans.
+ */
+function getPlanMeta(planDir: string): PlanMeta {
+	const events = readPlanEvents(planDir);
+	if (events.length > 0) {
+		return derivePlanMeta(events);
+	}
+	return derivePlanMetaFromChangelog(planDir);
+}
+
+/** Count unresolved feedback items (lines starting with "- " under # Feedback). */
+function countFeedbackItems(planDir: string): number {
+	const feedbackPath = path.join(planDir, "feedback.md");
+	if (!fs.existsSync(feedbackPath)) return 0;
+	try {
+		const content = fs.readFileSync(feedbackPath, "utf8");
+		const lines = content.split("\n");
+		let count = 0;
+		for (const line of lines) {
+			if (/^\s*-\s+\S/.test(line)) count++;
+		}
+		return count;
+	} catch {
+		return 0;
+	}
+}
+
+/** Compute readiness score by checking plan.md sections. */
+function computeReadiness(planDir: string): { score: number; total: number } {
+	const planPath = path.join(planDir, "plan.md");
+	if (!fs.existsSync(planPath)) return { score: 0, total: 6 };
+	try {
+		const content = fs.readFileSync(planPath, "utf8");
+		const checks = [
+			// Goal section has content
+			/## Goal\s*\n(?!\s*##)(.+)/s,
+			// Files and Components section has content
+			/## Files and Components to Touch\s*\n(?!\s*##)(.+)/s,
+			// Implementation Plan has numbered steps
+			/## Implementation Plan\s*\n(?!\s*##)[\s\S]*\d+\./s,
+			// Risks section has content
+			/## Risks \/ Edge Cases\s*\n(?!\s*##)(.+)/s,
+			// Validation Checklist has items
+			/## Validation Checklist\s*\n(?!\s*##)(.+)/s,
+			// Open Questions resolved (section empty or absent)
+			(() => {
+				const oqMatch = content.match(/## Open Questions\s*\n([\s\S]*?)(?=\n##|$)/);
+				if (!oqMatch) return true; // no section = resolved
+				const body = oqMatch[1].trim();
+				return body.length === 0 || /^\s*(?:none|n\/a|resolved|—)\s*$/im.test(body);
+			})(),
+		];
+
+		let score = 0;
+		for (const check of checks) {
+			if (typeof check === "boolean") {
+				if (check) score++;
+			} else if (check.test(content)) {
+				score++;
+			}
+		}
+		return { score, total: 6 };
+	} catch {
+		return { score: 0, total: 6 };
+	}
+}
 
 function localIsoDate(now = new Date()): string {
 	const yyyy = now.getFullYear();
@@ -644,6 +847,11 @@ export default function plan(pi: ExtensionAPI) {
 		if (created.length === 0) {
 			ctx.ui.notify(`Using existing plan package: ${displayPlanDir}.`, "info");
 		} else {
+			appendPlanEvent(planDir, {
+				type: "created",
+				timestamp: new Date().toISOString(),
+				summary: title,
+			});
 			ctx.ui.notify(
 				`Created ${displayPlanDir} (${created.join(", ")}) and enabled plan mode.`,
 				"info",
@@ -975,6 +1183,14 @@ export default function plan(pi: ExtensionAPI) {
 				ctx.ui.notify(`Thinking: ${buildThinkingLevel}. Starting build using ${displayPlanFile}.`, "info");
 			}
 
+			if (planDir) {
+				appendPlanEvent(planDir, {
+					type: "build_started",
+					timestamp: new Date().toISOString(),
+					summary: yolo ? "YOLO build" : "build",
+				});
+			}
+
 			const buildPrompt = `Start implementing now using ${planFile} as the guide. Read plan.md first, then execute the implementation steps in order. Keep code changes aligned with the plan and run the Validation Checklist before finishing. Do not modify plan package files unless explicitly asked.`;
 			queueUserPrompt(buildPrompt, ctx);
 		},
@@ -1019,6 +1235,54 @@ export default function plan(pi: ExtensionAPI) {
 				};
 			}
 		}
+	});
+
+	// Detect changelog.md writes and emit structured events to events.jsonl
+	pi.on("tool_result", async (event, ctx) => {
+		if (!planEnabled || !activePlanDir) return;
+		if (event.toolName !== "edit" && event.toolName !== "write") return;
+
+		const input = event.input as { path?: string } | undefined;
+		if (!input?.path) return;
+
+		const resolvedPath = resolvePathForContainment(input.path, activePlanDir);
+		if (path.basename(resolvedPath) !== "changelog.md") return;
+		if (!isWithinDirectory(resolvedPath, activePlanDir)) return;
+
+		// Re-derive metadata from changelog and compare with events.jsonl
+		const changelogMeta = derivePlanMetaFromChangelog(activePlanDir);
+		const eventMeta = derivePlanMeta(readPlanEvents(activePlanDir));
+
+		const timestamp = new Date().toISOString();
+
+		// Emit new draft events
+		if (changelogMeta.currentDraft > eventMeta.currentDraft) {
+			appendPlanEvent(activePlanDir, {
+				type: "draft",
+				timestamp,
+				version: changelogMeta.currentDraft,
+				model: changelogMeta.lastModel ?? undefined,
+			});
+		}
+
+		// Emit new review events
+		if (changelogMeta.reviewCount > eventMeta.reviewCount) {
+			appendPlanEvent(activePlanDir, {
+				type: "review",
+				timestamp,
+				model: changelogMeta.lastModel ?? undefined,
+			});
+		}
+
+		// Emit approval event
+		if (changelogMeta.isApproved && !eventMeta.isApproved) {
+			appendPlanEvent(activePlanDir, {
+				type: "approved",
+				timestamp,
+			});
+		}
+
+		updateStatus(ctx);
 	});
 
 	pi.on("context", async (event) => {
