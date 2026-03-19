@@ -285,6 +285,51 @@ function getPlanMeta(planDir: string): PlanMeta {
 	return derivePlanMetaFromChangelog(planDir);
 }
 
+/** Analyze plan.md complexity and recommend single-agent vs multi-agent build. */
+function recommendBuildMode(planDir: string): "multi" | "single" {
+	const planPath = path.join(planDir, "plan.md");
+	if (!fs.existsSync(planPath)) return "single";
+
+	try {
+		const content = fs.readFileSync(planPath, "utf8");
+		const lines = content.split("\n");
+
+		let inImplementation = false;
+		let inFiles = false;
+		let stepCount = 0;
+		let fileCount = 0;
+
+		for (const line of lines) {
+			if (/^## Implementation Plan/i.test(line)) {
+				inImplementation = true;
+				inFiles = false;
+				continue;
+			}
+			if (/^## Files and Components to Touch/i.test(line)) {
+				inFiles = true;
+				inImplementation = false;
+				continue;
+			}
+			if (/^## /.test(line)) {
+				inImplementation = false;
+				inFiles = false;
+				continue;
+			}
+
+			if (inImplementation && /^\s*\d+\./.test(line)) {
+				stepCount++;
+			}
+			if (inFiles && /^\s*-\s+/.test(line)) {
+				fileCount++;
+			}
+		}
+
+		return stepCount >= 4 && fileCount >= 5 ? "multi" : "single";
+	} catch {
+		return "single";
+	}
+}
+
 /** Count unresolved feedback items (lines starting with "- " under # Feedback). */
 function countFeedbackItems(planDir: string): number {
 	const feedbackPath = path.join(planDir, "feedback.md");
@@ -1219,6 +1264,24 @@ export default function plan(pi: ExtensionAPI) {
 					`Build blocked: no approval entry found in ${toDisplayPath(changelogPath, ctx.cwd)}. Approve the plan first, or run /build --yolo to proceed anyway.`,
 					"warning",
 				);
+				return;
+			}
+
+			// Build mode selection: single-agent vs multi-agent
+			const recommended = recommendBuildMode(planDir);
+			const modeOptions = recommended === "multi"
+				? ["Multi-agent (/build-agents) — recommended", "Single agent"]
+				: ["Single agent — recommended", "Multi-agent (/build-agents)"];
+			const modeChoice = await ctx.ui.select("Build mode:", modeOptions);
+			if (!modeChoice) return;
+
+			if (modeChoice.includes("Multi-agent")) {
+				appendPlanEvent(planDir, {
+					type: "build_started",
+					timestamp: new Date().toISOString(),
+					summary: "multi-agent build",
+				});
+				queueUserPrompt("/build-agents " + planDir, ctx);
 				return;
 			}
 
