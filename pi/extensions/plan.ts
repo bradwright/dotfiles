@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { isToolCallEventType, type ExtensionAPI, type ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { Key } from "@mariozechner/pi-tui";
+import { Key, Text } from "@mariozechner/pi-tui";
 
 const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write"] as const;
 const FALLBACK_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls"] as const;
@@ -598,13 +598,69 @@ export default function plan(pi: ExtensionAPI) {
 	}
 
 	function updateStatus(ctx: ExtensionContext): void {
+		if (!ctx.hasUI) return;
+
 		if (!planEnabled) {
 			ctx.ui.setStatus(STATUS_KEY, undefined);
+			ctx.ui.setWidget(STATUS_KEY, undefined);
 			return;
 		}
 
+		// Status bar: compact label
 		const status = `🧭 ${planLabel()}`;
 		ctx.ui.setStatus(STATUS_KEY, ctx.ui.theme.fg("warning", status));
+
+		// Widget: richer info line with plan metadata
+		if (!activePlanDir || !fs.existsSync(activePlanDir)) {
+			ctx.ui.setWidget(STATUS_KEY, undefined);
+			return;
+		}
+
+		ctx.ui.setWidget(STATUS_KEY, (_tui, theme) => {
+			const meta = getPlanMeta(activePlanDir!);
+			const feedbackCount = countFeedbackItems(activePlanDir!);
+			const readiness = computeReadiness(activePlanDir!);
+
+			const parts: string[] = [];
+
+			// Plan name
+			parts.push(theme.fg("accent", `📋 ${planLabel()}`));
+
+			// Draft status
+			if (meta.isApproved) {
+				parts.push(theme.fg("success", "✓ Approved"));
+			} else if (meta.currentDraft > 0) {
+				parts.push(theme.fg("warning", `Draft ${meta.currentDraft}`));
+			} else {
+				parts.push(theme.fg("muted", "No drafts yet"));
+			}
+
+			// Review count
+			if (meta.reviewCount > 0) {
+				parts.push(theme.fg("muted", `${meta.reviewCount} review${meta.reviewCount > 1 ? "s" : ""}`));
+			}
+
+			// Feedback items
+			if (feedbackCount > 0) {
+				parts.push(theme.fg("warning", `${feedbackCount} feedback item${feedbackCount > 1 ? "s" : ""}`));
+			}
+
+			// Readiness score
+			const readinessColor = readiness.score === readiness.total ? "success"
+				: readiness.score >= readiness.total - 1 ? "warning"
+				: "muted";
+			parts.push(theme.fg(readinessColor as Parameters<typeof theme.fg>[0], `readiness: ${readiness.score}/${readiness.total}`));
+
+			// Last model
+			if (meta.lastModel) {
+				parts.push(theme.fg("dim", `model: ${meta.lastModel}`));
+			}
+
+			// Thinking level
+			parts.push(theme.fg("dim", `thinking: ${planThinkingLevel}`));
+
+			return new Text(parts.join(theme.fg("dim", " │ ")), 0, 0);
+		});
 	}
 
 	function availableToolSet(): Set<string> {
