@@ -38,13 +38,13 @@ This directory contains project-local Pi extensions.
 - `plan.ts`
   - Adds `/plan` command for planning-state controls:
     - `on|off|toggle|status|mode [medium|high|xhigh]`
-    - `new [context|github-issue-url]` (creates `.pi/plans/<date>-<slug>/` package files and auto-starts `/skill:plan`)
+    - `new [context|github-issue-url]` (creates `.pi/plans/<date>-<slug>/` package files and auto-starts `/skill:plan-methodology`)
     - `resume [plan-dir]` / `review` / `clear`
   - `/plan new <github-issue-url>` fetches issue details via `gh issue view`, saves them to `brief.md`, seeds `feedback.md`, and uses them as the initial planning brief.
   - `/plan resume` with no args opens a selector of available plan packages under `./.pi/plans`.
   - `/plan mode` shows a thinking-level selector (`medium|high|xhigh`) with `high` as the default.
   - Entering plan mode sets thinking to the selected plan thinking level and restores previous thinking when exiting plan mode.
-  - `/plan review` auto-enables plan mode guardrails (if needed) and queues `/skill:plan review <active-plan-dir>`.
+  - `/plan review` auto-enables plan mode guardrails (if needed) and queues `/skill:plan-methodology review <active-plan-dir>`.
   - Adds `/build` command to disable plan mode and queue implementation from active `plan.md`.
     - `/build mode` shows a thinking-level selector (`low|medium|high|xhigh`) with `medium` as the default.
     - Sets thinking to the selected build thinking level when starting build.
@@ -57,7 +57,7 @@ This directory contains project-local Pi extensions.
     - Blocks `edit`/`write` outside the active plan package.
     - Allows only read-oriented bash commands.
   - Injects hidden planning context before each turn when plan mode is enabled.
-  - Auto-detects active plan dir from `/skill:plan review <plan-dir>` input.
+  - Auto-detects active plan dir from `/skill:plan-methodology review <plan-dir>` input.
 
 ## Operational notes
 

@@ -72,7 +72,7 @@ mkdir -p "$RUN_DIR/tasks" "$WORKTREE_ROOT"
 
 In this workflow, the planner does **task decomposition only**.
 
-The output of the `/plan` extension (which runs the `plan` skill) is the required input. The planner must consume the approved `plan.md` from the `/plan` run, then break it into implementer-sized units.
+The output of the `/plan` extension (which runs the `plan-methodology` skill) is the required input. The planner must consume the approved `plan.md` from the `/plan` run, then break it into implementer-sized units.
 
 If no approved plan artifact is available, stop and ask the user to run `/plan` first (or provide an explicit path to an existing approved `plan.md`).
 

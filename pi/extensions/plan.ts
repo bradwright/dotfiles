@@ -536,7 +536,7 @@ function isSafeBashCommand(command: string): boolean {
 }
 
 function parsePlanReviewPath(input: string): string | null {
-	const match = input.trim().match(/^\/skill:plan\s+review\s+(.+)$/i);
+	const match = input.trim().match(/^\/skill:plan-methodology\s+review\s+(.+)$/i);
 	if (!match) return null;
 	return match[1].trim();
 }
@@ -1102,10 +1102,10 @@ export default function plan(pi: ExtensionAPI) {
 		}
 
 		const kickoffPrompt = issue
-			? `/skill:plan Start planning using this existing plan package directory: ${planDir}. Read ${ISSUE_BRIEF_FILE} first for the initial brief.\n\n${formatIssueBrief(issue)}`
+			? `/skill:plan-methodology Start planning using this existing plan package directory: ${planDir}. Read ${ISSUE_BRIEF_FILE} first for the initial brief.\n\n${formatIssueBrief(issue)}`
 			: userContext
-				? `/skill:plan Start planning using this existing plan package directory: ${planDir}.\n\nUser planning context:\n${userContext}`
-				: `/skill:plan Start planning using this existing plan package directory: ${planDir}`;
+				? `/skill:plan-methodology Start planning using this existing plan package directory: ${planDir}.\n\nUser planning context:\n${userContext}`
+				: `/skill:plan-methodology Start planning using this existing plan package directory: ${planDir}`;
 		queueUserPrompt(kickoffPrompt, ctx);
 	}
 
@@ -1333,7 +1333,7 @@ export default function plan(pi: ExtensionAPI) {
 				ctx.ui.notify("Plan mode enabled for safe plan review.", "info");
 			}
 
-			const reviewPrompt = `/skill:plan review ${planDir}`;
+			const reviewPrompt = `/skill:plan-methodology review ${planDir}`;
 			queueUserPrompt(reviewPrompt, ctx);
 			ctx.ui.notify(`Queued plan review for ${toDisplayPath(planDir, ctx.cwd)}.`, "info");
 			return;
@@ -1645,7 +1645,7 @@ export default function plan(pi: ExtensionAPI) {
 		return {
 			message: {
 				customType: PLAN_CONTEXT_TYPE,
-				content: `[PLAN MODE ACTIVE]\nTreat this turn as planning-only. Do not implement code changes.\nOnly edit files inside the active plan package (plan.md, feedback.md, changelog.md).\n${activePlanMessage}\n\nWhen planning, follow the plan skill workflow and keep plan state in plan.md, feedback.md, and changelog.md.`,
+				content: `[PLAN MODE ACTIVE]\nTreat this turn as planning-only. Do not implement code changes.\nOnly edit files inside the active plan package (plan.md, feedback.md, changelog.md).\n${activePlanMessage}\n\nWhen planning, follow the plan-methodology skill workflow and keep plan state in plan.md, feedback.md, and changelog.md.`,
 				display: false,
 			},
 		};

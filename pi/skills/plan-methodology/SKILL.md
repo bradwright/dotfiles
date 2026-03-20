@@ -1,5 +1,5 @@
 ---
-name: plan
+name: plan-methodology
 description: Iterative planning workflow for coding tasks. Creates an implementation plan package, then iterates through draft/review cycles with user feedback until the plan is approved.
 compatibility: pi with /model command.
 ---
@@ -71,7 +71,7 @@ If the user reports incorrect attribution, correct existing changelog lines befo
 
 ## Invocation Modes
 
-The `/skill:plan` command may include arguments:
+The `/skill:plan-methodology` command may include arguments:
 
 - No args (or any non-review args): run **planning flow**.
 - `review <plan-dir>`: run **review flow** for an existing plan package directory.
@@ -79,9 +79,9 @@ The `/skill:plan` command may include arguments:
 ### Examples
 
 ```text
-/skill:plan
-/skill:plan plan migration for auth token refresh
-/skill:plan review .pi/plans/2026-03-14-auth-token-refresh
+/skill:plan-methodology
+/skill:plan-methodology plan migration for auth token refresh
+/skill:plan-methodology review .pi/plans/2026-03-14-auth-token-refresh
 ```
 
 Notes:
