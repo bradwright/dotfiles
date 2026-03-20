@@ -22,7 +22,8 @@ vimcmd_symbol = "[❮](green)"
 
 [git_branch]
 format = "[$branch]($style)"
-style = "bright-black"
+# base01 (#586e75) — bright-black is invisible (same as background in solarized dark)
+style = "bright-green"
 
 [git_status]
 format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](blue) ($ahead_behind$stashed)]($style)"
@@ -37,7 +38,7 @@ stashed = "≡"
 
 [git_state]
 format = '\([$state( $progress_current/$progress_total)]($style)\) '
-style = "bright-black"
+style = "bright-green"
 
 [cmd_duration]
 format = "[$duration]($style) "
@@ -45,7 +46,7 @@ style = "yellow"
 
 [python]
 format = "[$virtualenv]($style) "
-style = "bright-black"
+style = "bright-green"
 detect_extensions = []
 detect_files = []
 

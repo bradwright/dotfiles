@@ -37,11 +37,11 @@ clean_shell:
 # --- Ghostty ---
 
 install_ghostty:
-	@mkdir -p ~/Library/Application\ Support/com.mitchellh.ghostty/
-	@ln -sf $(SOURCE)/ghostty-config ~/Library/Application\ Support/com.mitchellh.ghostty/config
+	@mkdir -p $(HOME)/.config/
+	@ln -sf $(SOURCE)/ghostty $(HOME)/.config/ghostty
 
 clean_ghostty:
-	@-unlink ~/Library/Application\ Support/com.mitchellh.ghostty/config
+	@-unlink $(HOME)/.config/ghostty
 
 # --- Starship ---
 

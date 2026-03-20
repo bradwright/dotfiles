@@ -10,7 +10,7 @@ a leading dot prepended) by running `make install`. The `Makefile` is the
 single source of truth for which files get installed and where.
 
 Special install destinations:
-- `ghostty-config` → `~/Library/Application Support/com.mitchellh.ghostty/config`
+- `ghostty-config` → `~/.config/ghostty/config`
 - `pi/settings.json` → `~/.pi/agent/settings.json` (merged, not overwritten)
 - `pi/themes/*.json` → `~/.pi/agent/themes/*.json` (symlinked)
 - `pi/extensions/*.ts` → `~/.pi/agent/extensions/*.ts` (symlinked)

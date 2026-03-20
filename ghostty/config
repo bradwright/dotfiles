@@ -50,7 +50,7 @@
 # resize-overlay-duration = 4s 200ms
 
 # Theme and Fonts
-theme = Solarized Dark Patched
+theme = solarized-dark-custom
 font-family = Inconsolata Nerd Font
 font-size = 18
 font-thicken = true
