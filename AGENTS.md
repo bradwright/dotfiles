@@ -5,24 +5,38 @@ apply to any agent working in this repo.
 
 ## What this repo is
 
-A flat collection of configuration files that are symlinked into `$HOME` (with
-a leading dot prepended) by running `make install`. The `Makefile` is the
-single source of truth for which files get installed and where.
+A collection of configuration files and directories that are symlinked into
+`$HOME` by running `make install`. The `Makefile` is the single source of
+truth for which files get installed and where.
 
-Special install destinations:
-- `ghostty-config` → `~/.config/ghostty/config`
-- `pi/` is a pi package — install it via `pi install pi/` (or `./pi/install.sh`),
-  **not** via `make install`. It contains extensions, skills, themes, and settings.
+The repo contains:
+
+- **Shell dotfiles** (repo root) — symlinked as `~/.<name>` via the `FILES`
+  variable: `aliases`, `local_gitconfig`, `gitignore`, `zshrc`, `zshenv`.
+- **`ghostty/`** — Ghostty terminal config and themes → `~/.config/ghostty`
+  (symlinked as a directory).
+- **`starship.toml`** — Starship prompt config → `~/.config/starship.toml`.
+- **`fish/`** — Fish shell config (`config.fish`, `fish_plugins`) →
+  `~/.config/fish/`.
+- **`nvim/`** — Neovim config (`init.lua`, `ftplugin/gitcommit.lua`) →
+  `~/.config/nvim/`.
+- **`scripts/`** — Helper scripts (e.g. pi patch apply/rollback). Not
+  installed by `make install`; run directly from the repo.
+- **`patches/`** — Patch files for third-party tools. Applied via scripts in
+  `scripts/`.
+- **`pi/`** — A pi package (extensions, skills, themes, settings). Install
+  via `pi install pi/` (or `./pi/install.sh`), **not** via `make install`.
 
 ## Adding a new dotfile
 
 1. Create the file at the **repo root** with no leading dot (e.g. `tmux.conf`,
    not `.tmux.conf`).
 2. Add its name to the `FILES` variable in `Makefile` (space-separated list).
-3. Add a corresponding `unlink` line in the `clean_dotfiles` target.
-4. If the install destination is non-standard (not `~/.<filename>`), add
-   explicit `ln -sf` and `unlink` lines in `install_dotfiles` /
-   `clean_dotfiles` rather than using the loop.
+3. Add a corresponding `unlink` line in the `clean_shell` target.
+4. If the install destination is non-standard (not `~/.<filename>`), add a
+   new Makefile target pair (`install_<name>` / `clean_<name>`) following the
+   pattern used by `install_ghostty`, `install_starship`, etc., and wire it
+   into the aggregate `install` and `clean` targets.
 
 ## Shell file conventions
 
@@ -30,12 +44,15 @@ Special install destinations:
   ```sh
   # -*- mode: sh -*-
   ```
-  For non-sh files use the appropriate mode (e.g. `# -*- mode: ruby -*-` for
-  `Brewfile`, `# -*- mode: conf-unix -*-` for git config files).
-- Shell functions and aliases must be compatible with **both bash and zsh**
-  unless they live in a zsh-specific file (i.e. `zshrc` or `zshenv`).
-- Use guarded sourcing for optional files (e.g. `[[ -r file ]] && source file`)
-  to avoid hard failures when local overrides are missing.
+  For fish files use `# -*- mode: fish -*-`. For non-shell files use the
+  appropriate mode (e.g. `# -*- mode: ruby -*-` for `Brewfile`,
+  `# -*- mode: conf-unix -*-` for git config files).
+- Shell functions and aliases in `aliases` must be compatible with **both
+  bash and zsh**. Zsh-specific code belongs in `zshrc` or `zshenv`.
+  Fish-specific code belongs in `fish/config.fish`.
+- Use guarded sourcing for optional files (e.g. `[[ -r file ]] && source file`
+  in zsh, `test -r file; and source file` in fish) to avoid hard failures
+  when local overrides are missing.
 - In zsh files, prefer native `path` array manipulation (`typeset -U path`) to
   deduplicate entries cleanly.
 - Group related settings with a short comment explaining *why*, not just
@@ -55,6 +72,7 @@ Special install destinations:
 
 - The configured `$EDITOR` / `$VISUAL` is `nvim`.
 - `GIT_EDITOR` is set to `nvim +star` — do not change this.
+- Neovim config lives in `nvim/` and is symlinked to `~/.config/nvim/`.
 - Do not introduce hard dependencies on VS Code, nano, or other editors.
 
 ## Package management
@@ -62,8 +80,13 @@ Special install destinations:
 - Homebrew packages are tracked in `Brewfile`. Add any new CLI tool or cask
   there rather than installing ad-hoc.
 - `brew install <package>` is pre-approved and may be run without asking.
-- Node is managed via **nvm** (lazy-loaded through the `zsh-nvm` antigen
-  plugin). Do not add a hardcoded Node path to `PATH`.
+- Node is managed via **nvm** — lazy-loaded through the `zsh-nvm` antigen
+  plugin in zsh, and `nvm.fish` (via fisher) in fish. Do not add a hardcoded
+  Node path to `PATH`.
+- Fish plugins are managed via **fisher** and declared in
+  `fish/fish_plugins`.
+- The **Starship** prompt is used in both zsh and fish. Its config is
+  `starship.toml` at the repo root.
 
 ## Git hygiene
 
@@ -81,8 +104,9 @@ There is no automated test suite. After making changes, verify correctness by:
    before executing on a live system).
 2. Sourcing the modified file in a subshell to check for syntax errors:
    ```sh
-   zsh -n <file>   # syntax check only
+   zsh -n <file>   # syntax check for zsh files
    bash -n <file>  # for bash-compatible files
+   fish -n <file>  # for fish files
    ```
 3. For `Brewfile` changes, validate with `brew bundle check`.
 
