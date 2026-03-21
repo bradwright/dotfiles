@@ -50,9 +50,16 @@ abbr -a top btm
 # Tool integrations
 # ---------------------------------------------------------------------------
 
-# Starship prompt
+# Starship prompt — use fish-specific config (blue ❯ instead of purple)
+# so you can tell which shell you're in at a glance. Enable transient
+# prompt so previous commands collapse to a minimal "❯ ".
 if command -q starship
+    set -gx STARSHIP_CONFIG ~/.config/fish/starship.toml
+    function starship_transient_prompt_func
+        starship module character
+    end
     starship init fish | source
+    enable_transience
 end
 
 # fzf keybindings and completion

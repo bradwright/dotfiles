@@ -72,6 +72,10 @@ bold-is-bright = false
 # Selection — invert for clear visibility against the muted solarized tones
 selection-invert-fg-bg = true
 
+# Use fish as the default shell inside Ghostty without changing the
+# system login shell (which stays zsh for compatibility).
+command = /opt/homebrew/bin/fish
+
 # Shell Integration
 shell-integration = detect
 shell-integration-features = cursor,sudo,title
