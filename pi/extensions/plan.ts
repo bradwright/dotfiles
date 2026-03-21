@@ -1333,9 +1333,33 @@ export default function plan(pi: ExtensionAPI) {
 				ctx.ui.notify("Plan mode enabled for safe plan review.", "info");
 			}
 
-			const reviewPrompt = `/skill:plan-methodology review ${planDir}`;
-			queueUserPrompt(reviewPrompt, ctx);
-			ctx.ui.notify(`Queued plan review for ${toDisplayPath(planDir, ctx.cwd)}.`, "info");
+			// Check if the subagent tool is available for delegated review
+			const allTools = new Set(pi.getAllTools().map((t) => t.name));
+			if (allTools.has("subagent")) {
+				// Temporarily add subagent to active tools so the supervisor
+				// can delegate this turn. The before_agent_start hook will
+				// re-apply plan mode restrictions on subsequent turns.
+				const currentTools = pi.getActiveTools();
+				if (!currentTools.includes("subagent")) {
+					pi.setActiveTools([...currentTools, "subagent"]);
+				}
+
+				// Delegate review to the plan-reviewer subagent (runs with a
+				// different model for independent perspective)
+				const reviewPrompt = [
+					`Use the subagent tool to run the plan-reviewer agent.`,
+					`Task: "Review the plan package at ${planDir}. Read plan.md and feedback.md, evaluate against readiness criteria, then write findings to feedback.md and a Review entry to changelog.md."`,
+					`Do not pass a model override — let the agent use its default.`,
+					`After the review completes, read ${path.join(planDir, "feedback.md")} and summarise the reviewer's findings for me.`,
+				].join("\n");
+				queueUserPrompt(reviewPrompt, ctx);
+				ctx.ui.notify(`Delegating review to plan-reviewer subagent for ${toDisplayPath(planDir, ctx.cwd)}.`, "info");
+			} else {
+				// Fallback: run review in-session via the skill
+				const reviewPrompt = `/skill:plan-methodology review ${planDir}`;
+				queueUserPrompt(reviewPrompt, ctx);
+				ctx.ui.notify(`Queued plan review for ${toDisplayPath(planDir, ctx.cwd)}.`, "info");
+			}
 			return;
 		}
 
@@ -1569,6 +1593,16 @@ export default function plan(pi: ExtensionAPI) {
 				};
 			}
 		}
+	});
+
+	// Remove subagent from active tools after delegated review completes
+	pi.on("tool_result", async (event, _ctx) => {
+		if (!planEnabled) return;
+		if (event.toolName !== "subagent") return;
+
+		// Re-restrict tools to plan mode set (removes subagent)
+		const tools = computePlanTools();
+		if (tools.length > 0) pi.setActiveTools(tools);
 	});
 
 	// Detect changelog.md writes and emit structured events to events.jsonl
