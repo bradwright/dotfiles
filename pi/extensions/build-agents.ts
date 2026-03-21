@@ -18,9 +18,14 @@ type TaskState = {
 	correctiveRound: number;
 };
 
+type PlanSource =
+	| { type: "file"; path: string }      // a specific file (plan.md, etc.)
+	| { type: "dir"; path: string }        // a plan directory (approved /plan output)
+	| { type: "inline"; text: string };    // text passed directly as args
+
 type BuildRunState = {
 	runId: string;
-	planDir: string;
+	planSource: PlanSource;
 	baseBranch: string;
 	runDir: string;
 	worktreeRoot: string;
@@ -50,7 +55,7 @@ const BUILD_ROOT = ".pi/build";
 const WORKTREE_ROOT_NAME = "worktrees";
 
 const COMMAND_USAGE =
-	"/build-agents — multi-agent build orchestration\n/build-agents [start] [plan-dir]\n/build-agents status\n/build-agents cancel\n/build-agents cleanup";
+	"/build-agents — multi-agent build orchestration\n/build-agents [start] [plan-file|plan-dir|description]\n/build-agents status\n/build-agents cancel\n/build-agents cleanup";
 
 // Auto-resume
 const MAX_AUTO_RESUME_TURNS = 5;
@@ -85,6 +90,30 @@ function toDisplayPath(targetPath: string, cwd: string): string {
 	if (home && resolved.startsWith(home)) return `~${resolved.slice(home.length)}`;
 
 	return resolved;
+}
+
+function planSourceLabel(source: PlanSource, cwd: string): string {
+	switch (source.type) {
+		case "file": return toDisplayPath(source.path, cwd);
+		case "dir": return toDisplayPath(source.path, cwd);
+		case "inline": return `"${source.text.slice(0, 60)}${source.text.length > 60 ? "…" : ""}"`;
+	}
+}
+
+function planSourceForKickoff(source: PlanSource): string {
+	switch (source.type) {
+		case "file": return `Read the plan at ${source.path} and begin orchestrating the multi-agent build.`;
+		case "dir": return `Read the plan at ${path.join(source.path, "plan.md")} and begin orchestrating the multi-agent build.`;
+		case "inline": return `The build goal is:\n\n${source.text}\n\nBegin orchestrating the multi-agent build.`;
+	}
+}
+
+function planSourceSlug(source: PlanSource): string {
+	switch (source.type) {
+		case "file": return slugify(path.basename(source.path, path.extname(source.path)));
+		case "dir": return slugify(path.basename(source.path));
+		case "inline": return slugify(source.text.slice(0, 40));
+	}
 }
 
 function hasApprovedEntry(changelogPath: string): boolean {
@@ -413,40 +442,49 @@ export default function buildAgents(pi: ExtensionAPI) {
 			return;
 		}
 
-		// 5. Find approved plan
-		let planDir: string | null = null;
+		// 5. Resolve plan source — file, directory, inline text, or interactive picker
+		let planSource: PlanSource | null = null;
+
 		if (args.trim()) {
-			const inputDir = path.resolve(ctx.cwd, args.trim());
-			if (fs.existsSync(inputDir) && fs.statSync(inputDir).isDirectory()) {
-				planDir = inputDir;
-			} else {
-				ctx.ui.notify(`Plan directory not found: ${toDisplayPath(inputDir, ctx.cwd)}`, "error");
-				return;
+			const resolved = path.resolve(ctx.cwd, args.trim());
+
+			if (fs.existsSync(resolved)) {
+				const stat = fs.statSync(resolved);
+				if (stat.isFile()) {
+					planSource = { type: "file", path: resolved };
+				} else if (stat.isDirectory()) {
+					planSource = { type: "dir", path: resolved };
+				}
+			}
+
+			// If it didn't resolve to a file/dir, treat as inline text
+			if (!planSource) {
+				planSource = { type: "inline", text: args.trim() };
 			}
 		} else {
+			// Interactive picker: approved plans + ad-hoc option
 			const approved = listApprovedPlanDirs(ctx.cwd);
-			if (approved.length === 0) {
-				ctx.ui.notify("No approved plans found in .pi/plans/. Create and approve a plan first.", "warning");
-				return;
-			}
+			const INLINE_LABEL = "⌨ Describe what to build (inline)";
+			const labels = [
+				...approved.map((dir) => toDisplayPath(dir, ctx.cwd)),
+				INLINE_LABEL,
+			];
 
-			const labels = approved.map((dir) => toDisplayPath(dir, ctx.cwd));
-			const choice = await ctx.ui.select("Select plan:", labels);
+			const choice = await ctx.ui.select("Plan source:", labels);
 			if (!choice) return;
 
-			const selectedIndex = labels.indexOf(choice);
-			if (selectedIndex < 0) return;
-			planDir = approved[selectedIndex] ?? null;
+			if (choice === INLINE_LABEL) {
+				const text = await ctx.ui.prompt("What should be built?");
+				if (!text?.trim()) return;
+				planSource = { type: "inline", text: text.trim() };
+			} else {
+				const selectedIndex = labels.indexOf(choice);
+				if (selectedIndex < 0 || !approved[selectedIndex]) return;
+				planSource = { type: "dir", path: approved[selectedIndex] };
+			}
 		}
 
-		if (!planDir) return;
-
-		// Verify approval
-		const changelogPath = path.join(planDir, "changelog.md");
-		if (!hasApprovedEntry(changelogPath)) {
-			ctx.ui.notify(`Plan not approved: ${toDisplayPath(planDir, ctx.cwd)}`, "warning");
-			return;
-		}
+		if (!planSource) return;
 
 		// 6. Model override picker
 		// Agent definitions in .pi/agents/ have per-role defaults:
@@ -479,7 +517,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		}
 
 		// 9. Create run directory
-		const planSlug = slugify(path.basename(planDir));
+		const planSlug = planSourceSlug(planSource);
 		const runId = `${localIsoDate()}-${planSlug}`;
 		const runDir = path.join(ctx.cwd, BUILD_ROOT, runId);
 		const tasksDir = path.join(runDir, "tasks");
@@ -497,13 +535,13 @@ export default function buildAgents(pi: ExtensionAPI) {
 		appendBuildEvent(runDir, {
 			type: "run_started",
 			timestamp: new Date().toISOString(),
-			detail: `Plan: ${planDir}, Model: ${modelOverride ?? "agent-defaults"}`,
+			detail: `Plan: ${planSourceLabel(planSource, ctx.cwd)}, Model: ${modelOverride ?? "agent-defaults"}`,
 		});
 
 		// 12. Persist BuildRunState
 		activeRun = {
 			runId,
-			planDir,
+			planSource,
 			baseBranch,
 			runDir,
 			worktreeRoot,
@@ -526,12 +564,12 @@ export default function buildAgents(pi: ExtensionAPI) {
 			`Multi-agent build started.`,
 			`Run ID: ${runId}`,
 			`Run directory: ${runDir}`,
-			`Plan directory: ${planDir}`,
+			`Plan source: ${planSourceLabel(planSource, ctx.cwd)}`,
 			`Worktree root: ${worktreeRoot}`,
 			`Base branch: ${baseBranch}`,
 			modelLine,
 			``,
-			`Read the plan at ${path.join(planDir, "plan.md")} and begin orchestrating the multi-agent build.`,
+			planSourceForKickoff(planSource),
 			`Create task subdirectories under ${tasksDir}/ for each implementation task.`,
 			``,
 			`Use the \`subagent\` tool for all subprocess work:`,
@@ -577,7 +615,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		const lines = [
 			`Run: ${run.runId}`,
 			`Phase: ${phase}`,
-			`Plan: ${toDisplayPath(run.planDir, ctx.cwd)}`,
+			`Plan: ${planSourceLabel(run.planSource, ctx.cwd)}`,
 			`Model: ${run.modelOverride ?? "agent defaults"}`,
 			`Tasks: ${run.tasks.length} total, ${done} done, ${running} running, ${failed} failed, ${crashed} crashed`,
 			`Started: ${run.startedAt}`,
@@ -747,7 +785,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			`RUN_DIR: ${run.runDir}`,
 			`WORKTREE_ROOT: ${run.worktreeRoot}`,
 			`BASE_BRANCH: ${run.baseBranch}`,
-			`PLAN_DIR: ${run.planDir}`,
+			`PLAN_SOURCE: ${planSourceLabel(run.planSource, ctx.cwd)}`,
 			...modelInstructions,
 			"",
 			"Use the `subagent` tool for all subprocess work.",
@@ -817,7 +855,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 
 		const run = activeRun;
 		let resumeMsg = `Build context limit reached. Resume orchestrating the multi-agent build.`;
-		resumeMsg += ` Run dir: ${run.runDir}. Plan: ${run.planDir}.`;
+		resumeMsg += ` Run dir: ${run.runDir}.`;
 		resumeMsg += ` Check task status in ${path.join(run.runDir, "tasks")}/ and continue the build workflow.`;
 
 		pi.sendUserMessage(resumeMsg);
@@ -835,14 +873,19 @@ export default function buildAgents(pi: ExtensionAPI) {
 			const data = entry.data as Partial<BuildRunState> | undefined;
 			if (!data || !data.runId) continue;
 
+			// Backward compat: old sessions stored planDir as a string
+			const oldData = data as any;
+			const planSource: PlanSource = data.planSource
+				?? (oldData.planDir ? { type: "dir", path: oldData.planDir } : { type: "inline", text: "(unknown)" });
+
 			activeRun = {
 				runId: data.runId,
-				planDir: data.planDir ?? "",
+				planSource,
 				baseBranch: data.baseBranch ?? "main",
 				runDir: data.runDir ?? "",
 				worktreeRoot: data.worktreeRoot ?? "",
 				tasks: Array.isArray(data.tasks) ? data.tasks : [],
-				modelOverride: data.modelOverride ?? (data as any).modelSpec ?? null,
+				modelOverride: data.modelOverride ?? oldData.modelSpec ?? null,
 				startedAt: data.startedAt ?? "",
 			};
 		}
@@ -857,7 +900,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 				if (!activeRun || activeRun.runDir !== recentRunDir) {
 					activeRun = activeRun ?? {
 						runId: path.basename(recentRunDir),
-						planDir: "",
+						planSource: { type: "inline", text: "(restored from filesystem)" },
 						baseBranch: "main",
 						runDir: recentRunDir,
 						worktreeRoot: path.join(path.dirname(recentRunDir), WORKTREE_ROOT_NAME),
@@ -870,7 +913,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 					if (startEvent?.detail) {
 						const planMatch = startEvent.detail.match(/Plan:\s*(.+?),/);
 						const modelMatch = startEvent.detail.match(/Model:\s*(.+)/);
-						if (planMatch) activeRun.planDir = planMatch[1].trim();
+						if (planMatch) activeRun.planSource = { type: "dir", path: planMatch[1].trim() };
 						if (modelMatch) {
 							const model = modelMatch[1].trim();
 							activeRun.modelOverride = model === "agent-defaults" ? null : model;

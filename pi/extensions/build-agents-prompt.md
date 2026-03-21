@@ -44,8 +44,8 @@ agent use its frontmatter default.
 
 Before starting, verify all of these. Stop if any fail.
 
-**Plan mode check:** If the current session is in plan mode, STOP
-immediately. Tell the user to exit plan mode first.
+**Plan mode check:** If the current session is in plan mode (tools
+restricted), STOP immediately. Tell the user to exit plan mode first.
 
 ```bash
 git diff --quiet && git diff --cached --quiet
@@ -68,20 +68,23 @@ mkdir -p "$RUN_DIR/tasks" "$WORKTREE_ROOT"
 
 ## 1) Planner — Create implementer-ready `PLAN.md`
 
-If no approved plan artifact is available, stop and ask the user to run
-`/plan` first.
+The plan source is provided in the Run Context as `PLAN_SOURCE`. It may be:
+
+- **A directory** — an approved `/plan` output. Read `plan.md` inside it.
+- **A file** — a standalone plan or spec file. Read it directly.
+- **Inline text** — a description of what to build.
 
 Delegate task decomposition to the `build-planner` agent via the `subagent`
-tool:
+tool. Pass the plan source in the task description:
 
 ```json
 {
   "agent": "build-planner",
-  "task": "Decompose the approved plan at $PLAN_DIR/plan.md into implementer-ready tasks. Base branch: $BASE_BRANCH. Run ID: $RUN_ID. Write PLAN.md to $RUN_DIR/PLAN.md."
+  "task": "Decompose the following plan into implementer-ready tasks. Base branch: $BASE_BRANCH. Run ID: $RUN_ID. Write PLAN.md to $RUN_DIR/PLAN.md.\n\n<plan source content or path>"
 }
 ```
 
-The `build-planner` agent will read the approved plan, explore the codebase,
+The `build-planner` agent will read the plan, explore the codebase,
 and write `$RUN_DIR/PLAN.md` with task decomposition.
 
 Present `PLAN.md` to the user and wait for approval.
