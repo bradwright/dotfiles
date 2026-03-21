@@ -520,7 +520,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		// 13. Send kickoff message
 		const modelLine = modelOverride
 			? `Model override: ${modelOverride} (applies to all agents)`
-			: `Model: per-agent defaults (implementer=sonnet:medium, reviewer=sonnet:high, merger=sonnet:low)`;
+			: `Model: per-agent defaults (planner=sonnet:high, implementer=sonnet:medium, reviewer=sonnet:high, merger=sonnet:low)`;
 
 		const kickoffMsg = [
 			`Multi-agent build started.`,
@@ -535,6 +535,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			`Create task subdirectories under ${tasksDir}/ for each implementation task.`,
 			``,
 			`Use the \`subagent\` tool for all subprocess work:`,
+			`- Task decomposition: use single mode with the \`build-planner\` agent`,
 			`- Parallel implementers: use parallel mode with \`cwd\` set to each worktree`,
 			`- Reviews: use single mode with the \`reviewer\` agent`,
 			`- Merge: use single mode with the \`merger\` agent`,
@@ -731,9 +732,10 @@ export default function buildAgents(pi: ExtensionAPI) {
 				"MODEL_OVERRIDE: none (using per-agent defaults)",
 				"",
 				"Per-agent defaults are active:",
-				"  implementer: claude-sonnet-4-6:medium (code generation — speed + volume)",
-				"  reviewer:    claude-sonnet-4-6:high   (critical analysis — deep reasoning)",
-				"  merger:      claude-sonnet-4-6:low    (mechanical git ops — fast + cheap)",
+				"  build-planner: claude-sonnet-4-6:high   (task decomposition — dependency analysis)",
+				"  implementer:   claude-sonnet-4-6:medium (code generation — speed + volume)",
+				"  reviewer:      claude-sonnet-4-6:high   (critical analysis — deep reasoning)",
+				"  merger:        claude-sonnet-4-6:low    (mechanical git ops — fast + cheap)",
 				"",
 				"Do NOT pass a `model` field in subagent task items — let agent frontmatter defaults apply.",
 			];

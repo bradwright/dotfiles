@@ -18,6 +18,7 @@ Run Context specifies a MODEL_OVERRIDE.
 
 | Agent | Model | Thinking | Rationale |
 |-------|-------|----------|-----------|
+| build-planner | claude-sonnet-4-6 | high | Task decomposition — dependency analysis needs deep reasoning |
 | implementer | claude-sonnet-4-6 | medium | Code generation — balance of speed and reasoning |
 | reviewer | claude-sonnet-4-6 | high | Critical analysis — deep reasoning catches subtle bugs |
 | merger | claude-sonnet-4-6 | low | Mechanical git ops — fast and cheap |
@@ -67,36 +68,21 @@ mkdir -p "$RUN_DIR/tasks" "$WORKTREE_ROOT"
 
 ## 1) Planner — Create implementer-ready `PLAN.md`
 
-Consume the approved `plan.md` from a previous `/plan` run and decompose it
-into implementer-sized units. If no approved plan artifact is available, stop
-and ask the user to run `/plan` first.
+If no approved plan artifact is available, stop and ask the user to run
+`/plan` first.
 
-### Planner output (`$RUN_DIR/PLAN.md`)
+Delegate task decomposition to the `build-planner` agent via the `subagent`
+tool:
 
-```markdown
-# Build Plan
-
-Source: <path to approved plan.md>
-Base branch: <branch>
-Run ID: <run-id>
-
-## Tasks
-
-### task-1: <short title>
-- Description: ...
-- Files: ...
-- Acceptance: ...
-- Dependencies: none | task-N
-- Plan step mapping: <which section from the /plan output this implements>
-
-### task-2: ...
+```json
+{
+  "agent": "build-planner",
+  "task": "Decompose the approved plan at $PLAN_DIR/plan.md into implementer-ready tasks. Base branch: $BASE_BRANCH. Run ID: $RUN_ID. Write PLAN.md to $RUN_DIR/PLAN.md."
+}
 ```
 
-Requirements:
-- Prefer disjoint file sets.
-- If overlap is unavoidable, document dependencies explicitly.
-- Keep tasks small and independently reviewable.
-- Every task must map back to an explicit part of the `/plan` input.
+The `build-planner` agent will read the approved plan, explore the codebase,
+and write `$RUN_DIR/PLAN.md` with task decomposition.
 
 Present `PLAN.md` to the user and wait for approval.
 
