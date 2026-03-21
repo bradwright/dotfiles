@@ -1,6 +1,5 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { execFileSync } from "node:child_process";
 
 import { type ExtensionAPI, type ExtensionContext, getAgentDir } from "@mariozechner/pi-coding-agent";
 import { Key, Text } from "@mariozechner/pi-tui";
@@ -15,8 +14,6 @@ type TaskState = {
 	id: string;
 	title: string;
 	status: TaskStatus;
-	pid: number | null;
-	pidAlive: boolean | null;
 	reviewVerdict: string | null;
 	correctiveRound: number;
 };
@@ -29,7 +26,6 @@ type BuildRunState = {
 	worktreeRoot: string;
 	tasks: TaskState[];
 	modelSpec: string;
-	piBin: string;
 	startedAt: string;
 };
 
@@ -91,29 +87,6 @@ function toDisplayPath(targetPath: string, cwd: string): string {
 	return resolved;
 }
 
-/**
- * Resolve the full path to the `pi` binary. Backgrounded subshells from the
- * bash tool lose the parent's PATH, so bare `pi` fails with exit 127. The
- * supervisor prompt must use this absolute path for all `pi -p` invocations.
- */
-function resolvePiBinary(): string {
-	// First, check if we're running from a known nix store path
-	const selfBin = process.argv[0];
-	if (selfBin && fs.existsSync(selfBin)) {
-		// pi's own binary — resolve to the canonical path
-		const dir = path.dirname(selfBin);
-		const candidate = path.join(dir, "pi");
-		if (fs.existsSync(candidate)) return candidate;
-	}
-
-	// Fall back to `which pi`
-	try {
-		return execFileSync("which", ["pi"], { encoding: "utf8" }).trim();
-	} catch {
-		return "pi"; // last resort — bare name, may fail in subshells
-	}
-}
-
 function hasApprovedEntry(changelogPath: string): boolean {
 	if (!fs.existsSync(changelogPath) || !fs.statSync(changelogPath).isFile()) return false;
 	const content = fs.readFileSync(changelogPath, "utf8");
@@ -166,22 +139,18 @@ function appendBuildEvent(runDir: string, event: BuildEvent): void {
 }
 
 function deriveRunPhase(events: BuildEvent[], tasks: TaskState[]): DerivedRunPhase {
-	// Check events for terminal states
 	for (const event of events) {
 		if (event.type === "run_canceled") return "canceled";
 		if (event.type === "run_completed") return "completed";
 		if (event.type === "run_failed") return "failed";
 	}
 
-	// Check if canceling is in progress
 	for (const event of events) {
 		if (event.type === "run_canceling") return "canceling";
 	}
 
-	// If no tasks yet, still preparing
 	if (tasks.length === 0) return "preparing";
 
-	// Check if all tasks are in terminal states
 	const terminalStatuses: TaskStatus[] = ["passed", "failed", "crashed", "merged"];
 	const allTerminal = tasks.length > 0 && tasks.every((t) => terminalStatuses.includes(t.status));
 	if (allTerminal) {
@@ -197,7 +166,7 @@ function isTerminalPhase(phase: DerivedRunPhase): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Task artifact scanning
+// Task artifact scanning (file-based status detection)
 // ---------------------------------------------------------------------------
 
 function scanTaskArtifacts(runDir: string, tasks: TaskState[]): { updated: TaskState[]; newStatuses: Map<string, TaskStatus> } {
@@ -224,8 +193,6 @@ function scanTaskArtifacts(runDir: string, tasks: TaskState[]): { updated: TaskS
 				id: taskId,
 				title: taskId,
 				status: "pending",
-				pid: null,
-				pidAlive: null,
 				reviewVerdict: null,
 				correctiveRound: 0,
 			};
@@ -234,19 +201,8 @@ function scanTaskArtifacts(runDir: string, tasks: TaskState[]): { updated: TaskS
 
 		const oldStatus = task.status;
 
-		// Read PID if present
-		const pidFile = path.join(taskDir, "pid");
-		if (fs.existsSync(pidFile)) {
-			try {
-				const pidStr = fs.readFileSync(pidFile, "utf8").trim();
-				const pid = parseInt(pidStr, 10);
-				if (!isNaN(pid)) task.pid = pid;
-			} catch { /* ignore */ }
-		}
-
 		// Determine status from artifacts
 		const hasResult = fs.existsSync(path.join(taskDir, "RESULT.md"));
-		const hasReviewStdout = fs.existsSync(path.join(taskDir, "review-stdout.log"));
 		const hasReview = fs.existsSync(path.join(taskDir, "REVIEW.md"));
 
 		if (hasReview) {
@@ -260,12 +216,8 @@ function scanTaskArtifacts(runDir: string, tasks: TaskState[]): { updated: TaskS
 					task.reviewVerdict = "FAIL";
 				}
 			} catch { /* ignore */ }
-		} else if (hasReviewStdout && !hasReview) {
-			task.status = "reviewing";
-		} else if (hasResult && !hasReviewStdout && !hasReview) {
+		} else if (hasResult) {
 			task.status = "completed";
-		} else if (task.pid !== null && !hasResult) {
-			task.status = "spawned";
 		}
 
 		if (task.status !== oldStatus) {
@@ -274,15 +226,6 @@ function scanTaskArtifacts(runDir: string, tasks: TaskState[]): { updated: TaskS
 	}
 
 	return { updated: Array.from(taskMap.values()), newStatuses };
-}
-
-function checkPidAlive(pid: number): boolean {
-	try {
-		process.kill(pid, 0);
-		return true;
-	} catch {
-		return false;
-	}
 }
 
 // ---------------------------------------------------------------------------
@@ -385,7 +328,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			const lines: string[] = [];
 			lines.push(theme.fg("accent", `🏗️ build: ${run.runId}`));
 			lines.push(`  Phase: ${phase}`);
-			lines.push(`  ${"#".padEnd(4)}${"task".padEnd(20)}${"status".padEnd(14)}${"review".padEnd(10)}${"alive".padEnd(6)}`);
+			lines.push(`  ${"#".padEnd(4)}${"task".padEnd(20)}${"status".padEnd(14)}${"review".padEnd(10)}`);
 
 			for (let i = 0; i < tasks.length; i++) {
 				const t = tasks[i];
@@ -412,12 +355,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 				}
 
 				const review = (t.reviewVerdict ?? "—").padEnd(10);
-				let alive: string;
-				if (t.pidAlive === true) alive = theme.fg("success", "✓");
-				else if (t.pidAlive === false) alive = theme.fg("error", "✗");
-				else alive = "—";
-
-				lines.push(`  ${num}${name}${statusIcon}${review}${alive}`);
+				lines.push(`  ${num}${name}${statusIcon}${review}`);
 			}
 
 			return new Text(lines.join("\n"), 0, 0);
@@ -439,7 +377,6 @@ export default function buildAgents(pi: ExtensionAPI) {
 				ctx.ui.notify("Aborted. Existing run is still active.", "info");
 				return;
 			}
-			// Cancel existing runs
 			for (const runDir of activeRunDirs) {
 				appendBuildEvent(runDir, {
 					type: "run_canceled",
@@ -449,7 +386,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			}
 		}
 
-		// 2. Plan mode gate — ensure we're NOT in plan mode (bash and write must be available)
+		// 2. Plan mode gate
 		const activeTools = pi.getActiveTools();
 		if (!activeTools.includes("bash") || !activeTools.includes("write")) {
 			ctx.ui.notify(
@@ -459,7 +396,16 @@ export default function buildAgents(pi: ExtensionAPI) {
 			return;
 		}
 
-		// 3. Validate clean git
+		// 3. Verify subagent tool is available
+		if (!activeTools.includes("subagent")) {
+			ctx.ui.notify(
+				"Build requires the subagent tool (pi-subagents extension). Install with: pi install npm:pi-subagents",
+				"warning",
+			);
+			return;
+		}
+
+		// 4. Validate clean git
 		const diffResult = await pi.exec("git", ["diff", "--quiet"]);
 		const diffCachedResult = await pi.exec("git", ["diff", "--cached", "--quiet"]);
 		if (diffResult.code !== 0 || diffCachedResult.code !== 0) {
@@ -467,7 +413,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			return;
 		}
 
-		// 4. Find approved plan
+		// 5. Find approved plan
 		let planDir: string | null = null;
 		if (args.trim()) {
 			const inputDir = path.resolve(ctx.cwd, args.trim());
@@ -502,7 +448,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			return;
 		}
 
-		// 5. Model picker
+		// 6. Model picker
 		let models: string[] = [];
 		try {
 			const settingsPath = path.join(getAgentDir(), "settings.json");
@@ -517,25 +463,25 @@ export default function buildAgents(pi: ExtensionAPI) {
 			models = ["current session model"];
 		}
 
-		const selectedModel = await ctx.ui.select("Model for subprocesses:", models);
+		const selectedModel = await ctx.ui.select("Model for subagents:", models);
 		if (!selectedModel) return;
 
-		// 6. Thinking level picker
+		// 7. Thinking level picker
 		const thinkingLevels = ["medium", "low", "high"];
 		const selectedThinking = await ctx.ui.select("Thinking level:", thinkingLevels);
 		if (!selectedThinking) return;
 
-		// 7. Combine into modelSpec
+		// 8. Combine into modelSpec
 		const modelSpec = `${selectedModel}:${selectedThinking}`;
 
-		// 8. Create run directory
+		// 9. Create run directory
 		const planSlug = slugify(path.basename(planDir));
 		const runId = `${localIsoDate()}-${planSlug}`;
 		const runDir = path.join(ctx.cwd, BUILD_ROOT, runId);
 		const tasksDir = path.join(runDir, "tasks");
 		fs.mkdirSync(tasksDir, { recursive: true });
 
-		// 9. Create worktree root
+		// 10. Create worktree root
 		const worktreeRoot = path.join(ctx.cwd, BUILD_ROOT, WORKTREE_ROOT_NAME);
 		fs.mkdirSync(worktreeRoot, { recursive: true });
 
@@ -543,15 +489,12 @@ export default function buildAgents(pi: ExtensionAPI) {
 		const branchResult = await pi.exec("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
 		const baseBranch = (branchResult.stdout || "main").trim();
 
-		// 10. Write initial events.jsonl
+		// 11. Write initial event
 		appendBuildEvent(runDir, {
 			type: "run_started",
 			timestamp: new Date().toISOString(),
 			detail: `Plan: ${planDir}, Model: ${modelSpec}`,
 		});
-
-		// 11. Resolve pi binary path (backgrounded subshells lose PATH)
-		const piBin = resolvePiBinary();
 
 		// 12. Persist BuildRunState
 		activeRun = {
@@ -562,7 +505,6 @@ export default function buildAgents(pi: ExtensionAPI) {
 			worktreeRoot,
 			tasks: [],
 			modelSpec,
-			piBin,
 			startedAt: new Date().toISOString(),
 		};
 		persistState();
@@ -580,12 +522,16 @@ export default function buildAgents(pi: ExtensionAPI) {
 			`Worktree root: ${worktreeRoot}`,
 			`Base branch: ${baseBranch}`,
 			`Model spec: ${modelSpec}`,
-			`Pi binary: ${piBin}`,
 			``,
 			`Read the plan at ${path.join(planDir, "plan.md")} and begin orchestrating the multi-agent build.`,
 			`Create task subdirectories under ${tasksDir}/ for each implementation task.`,
-			`**IMPORTANT:** Use \`"${piBin}"\` (not bare \`pi\`) in all \`pi -p\` commands — backgrounded subshells lose PATH.`,
-			`Add \`--model ${modelSpec}\` to every subprocess.`,
+			``,
+			`Use the \`subagent\` tool for all subprocess work:`,
+			`- Parallel implementers: use parallel mode with \`cwd\` set to each worktree`,
+			`- Reviews: use single mode with the \`reviewer\` agent`,
+			`- Merge: use single mode with the \`merger\` agent`,
+			``,
+			`Pass \`--model ${modelSpec}\` via the model field in subagent task items.`,
 		].join("\n");
 
 		pi.sendUserMessage(kickoffMsg);
@@ -594,7 +540,6 @@ export default function buildAgents(pi: ExtensionAPI) {
 
 	async function handleStatus(ctx: ExtensionContext): Promise<void> {
 		if (!activeRun) {
-			// Try to find most recent run
 			const recentRunDir = findMostRecentRunDir(ctx.cwd);
 			if (!recentRunDir) {
 				ctx.ui.notify("No build runs found.", "info");
@@ -628,7 +573,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		];
 
 		for (const task of run.tasks) {
-			lines.push(`  ${task.id}: ${task.status}${task.reviewVerdict ? ` (${task.reviewVerdict})` : ""}${task.pidAlive === false ? " [dead]" : ""}`);
+			lines.push(`  ${task.id}: ${task.status}${task.reviewVerdict ? ` (${task.reviewVerdict})` : ""}`);
 		}
 
 		ctx.ui.notify(lines.join("\n"), "info");
@@ -641,23 +586,6 @@ export default function buildAgents(pi: ExtensionAPI) {
 		}
 
 		const run = activeRun;
-		const tasksDir = path.join(run.runDir, "tasks");
-
-		// Kill task processes
-		if (fs.existsSync(tasksDir)) {
-			try {
-				const taskDirs = fs.readdirSync(tasksDir, { withFileTypes: true }).filter((e) => e.isDirectory());
-				for (const taskEntry of taskDirs) {
-					const pidFile = path.join(tasksDir, taskEntry.name, "pid");
-					if (fs.existsSync(pidFile)) {
-						try {
-							const pid = fs.readFileSync(pidFile, "utf8").trim();
-							await pi.exec("kill", [pid]);
-						} catch { /* ignore */ }
-					}
-				}
-			} catch { /* ignore */ }
-		}
 
 		// Append cancel event
 		appendBuildEvent(run.runDir, {
@@ -792,22 +720,10 @@ export default function buildAgents(pi: ExtensionAPI) {
 			`BASE_BRANCH: ${run.baseBranch}`,
 			`PLAN_DIR: ${run.planDir}`,
 			`MODEL_SPEC: ${run.modelSpec}`,
-			`PI_BIN: ${run.piBin}`,
 			"",
-			"**CRITICAL — use full pi path in subshells:**",
-			"Backgrounded subshells (`&`) from bash tool calls lose the parent PATH.",
-			`Always use \`"${run.piBin}"\` instead of bare \`pi\` in all \`pi -p\` commands.`,
-			"",
-			"Correct pattern:",
-			"```bash",
-			`( cd "$WORKTREE_DIR" && "${run.piBin}" -p --no-session --no-skills --model ${run.modelSpec} \\`,
-			`    --append-system-prompt "$PROMPT_FILE" \\`,
-			`    "..." \\`,
-			`) > "$LOG_FILE" 2>&1 &`,
-			"```",
-			"",
-			`Add \`--model ${run.modelSpec}\` to every \`pi -p\` command you spawn.`,
-			"This applies to both implementer and reviewer subprocesses.",
+			"Use the `subagent` tool for all subprocess work.",
+			"Pass `model: \"" + run.modelSpec + "\"` in each subagent task item.",
+			"Set `cwd` to the appropriate worktree directory for each task.",
 		].join("\n");
 
 		return {
@@ -816,7 +732,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 	});
 
 	// ------------------------------------------------------------------
-	// tool_result hook — artifact scanning + PID health
+	// tool_result hook — artifact scanning
 	// ------------------------------------------------------------------
 
 	pi.on("tool_result", async (_event, ctx) => {
@@ -824,7 +740,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 
 		const run = activeRun;
 
-		// Scan task artifacts
+		// Scan task artifacts for status changes
 		const { updated, newStatuses } = scanTaskArtifacts(run.runDir, run.tasks);
 		run.tasks = updated;
 
@@ -839,32 +755,6 @@ export default function buildAgents(pi: ExtensionAPI) {
 					status: newStatus,
 				});
 				lastKnownStatuses.set(taskId, newStatus);
-			}
-		}
-
-		// PID health monitoring
-		for (const task of run.tasks) {
-			if (task.status === "spawned" && task.pid !== null) {
-				const alive = checkPidAlive(task.pid);
-				task.pidAlive = alive;
-
-				if (!alive) {
-					const taskDir = path.join(run.runDir, "tasks", task.id);
-					const hasResult = fs.existsSync(path.join(taskDir, "RESULT.md"));
-					if (!hasResult) {
-						task.status = "crashed";
-						task.pidAlive = false;
-						appendBuildEvent(run.runDir, {
-							type: "task_crashed",
-							timestamp: new Date().toISOString(),
-							taskId: task.id,
-							status: "crashed",
-							detail: `PID ${task.pid} died without producing RESULT.md`,
-						});
-						lastKnownStatuses.set(task.id, "crashed");
-						ctx.ui.notify(`💥 Task ${task.id} crashed (PID ${task.pid} died)`, "error");
-					}
-				}
 			}
 		}
 
@@ -925,7 +815,6 @@ export default function buildAgents(pi: ExtensionAPI) {
 				worktreeRoot: data.worktreeRoot ?? "",
 				tasks: Array.isArray(data.tasks) ? data.tasks : [],
 				modelSpec: data.modelSpec ?? "",
-				piBin: typeof data.piBin === "string" && data.piBin ? data.piBin : resolvePiBinary(),
 				startedAt: data.startedAt ?? "",
 			};
 		}
@@ -937,9 +826,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			const phase = deriveRunPhase(events, activeRun?.tasks ?? []);
 
 			if (!isTerminalPhase(phase)) {
-				// Re-enable widget for active run
 				if (!activeRun || activeRun.runDir !== recentRunDir) {
-					// Reconstruct minimal state from filesystem
 					activeRun = activeRun ?? {
 						runId: path.basename(recentRunDir),
 						planDir: "",
@@ -948,11 +835,9 @@ export default function buildAgents(pi: ExtensionAPI) {
 						worktreeRoot: path.join(path.dirname(recentRunDir), WORKTREE_ROOT_NAME),
 						tasks: [],
 						modelSpec: "",
-						piBin: resolvePiBinary(),
 						startedAt: "",
 					};
 
-					// Extract info from run_started event if available
 					const startEvent = events.find((e) => e.type === "run_started");
 					if (startEvent?.detail) {
 						const planMatch = startEvent.detail.match(/Plan:\s*(.+?),/);

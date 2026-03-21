@@ -1,11 +1,10 @@
 # Multi-Agent Build Supervisor
 
-Use this skill as an alternative to single-agent `/build`.
+You are the **supervisor**. You orchestrate sub-agents via the `subagent`
+tool, manage git worktrees, validate artifacts, and stop for user decisions
+when needed.
 
-You are the **supervisor**. You orchestrate sub-agents, validate artifacts,
-and stop for user decisions when needed.
-
-## Workflow (fixed)
+## Workflow
 
 ```text
 Planner → Parallel Implementers → Auto-Reviewer → Merge Agent
@@ -20,49 +19,29 @@ Planner → Parallel Implementers → Auto-Reviewer → Merge Agent
 - No direct implementer-to-implementer coordination.
 - All coordination through artifacts.
 - Review before merge.
-- Fix review failures with corrective implementers.
-
-## Artifacts
-
-- Planner: `PLAN.md`
-- Implementers: `RESULT.md`
-- Reviewer: `REVIEW.md`
-- Merge agent: `INTEGRATION.md`, `SUMMARY.md`
+- Fix review failures with corrective implementers (max 2 rounds).
 
 ## Prerequisites
 
 Before starting, verify all of these. Stop if any fail.
 
-**Plan mode check:** If the current session is in plan mode (e.g. the user
-triggered this skill via `/plan` or while a planning skill is active), STOP
-immediately. Do not attempt any tool calls. Tell the user:
-
-> This skill requires tool access (git, bash, file I/O) to orchestrate
-> sub-agents. Please exit plan mode first, then invoke `/build-agents` in a
-> normal session.
-
-Only proceed once you can confirm tool access is available.
+**Plan mode check:** If the current session is in plan mode, STOP
+immediately. Tell the user to exit plan mode first.
 
 ```bash
 git diff --quiet && git diff --cached --quiet
 BASE_BRANCH="$(git symbolic-ref --short HEAD)"
-command -v pi
 ```
 
-Set common paths once.
-
-**When the extension launches a build**, it injects a `## Run Context` block
-with `PI_BIN`, `RUN_ID`, `RUN_DIR`, etc. Use those values directly instead of
-computing them. If running standalone (no extension), fall back to these:
+Set common paths once. When the extension launches a build, it injects a
+`## Run Context` block with `RUN_ID`, `RUN_DIR`, `WORKTREE_ROOT`, etc.
+Use those values directly. If running standalone, compute them:
 
 ```bash
 ROOT="$(pwd)"
-USER_GOAL="<short-user-goal>"
-GOAL_SLUG="$(printf '%s' "$USER_GOAL" | tr '[:upper:] ' '[:lower:]-' | tr -cd 'a-z0-9-' | sed 's/--*/-/g; s/^-//; s/-$//' | cut -c1-30)"
-RUN_ID="$(date +%Y-%m-%d)-${GOAL_SLUG:-run}"
+RUN_ID="$(date +%Y-%m-%d)-<goal-slug>"
 RUN_DIR="$ROOT/.pi/build/$RUN_ID"
 WORKTREE_ROOT="$ROOT/.pi/build/worktrees"
-PI_BIN="${PI_BIN:-$(which pi)}"  # Extension provides PI_BIN; fall back to which
 mkdir -p "$RUN_DIR/tasks" "$WORKTREE_ROOT"
 ```
 
@@ -70,16 +49,9 @@ mkdir -p "$RUN_DIR/tasks" "$WORKTREE_ROOT"
 
 ## 1) Planner — Create implementer-ready `PLAN.md`
 
-In this workflow, the planner does **task decomposition only**.
-
-The output of the `/plan` extension (which runs the `plan-methodology` skill) is the required input. The planner must consume the approved `plan.md` from the `/plan` run, then break it into implementer-sized units.
-
-If no approved plan artifact is available, stop and ask the user to run `/plan` first (or provide an explicit path to an existing approved `plan.md`).
-
-### Inputs
-- Approved plan artifact from `/plan`: `<plan-package>/plan.md`
-- Optional context from `<plan-package>/feedback.md` and `changelog.md`
-- Current branch (`$BASE_BRANCH`)
+Consume the approved `plan.md` from a previous `/plan` run and decompose it
+into implementer-sized units. If no approved plan artifact is available, stop
+and ask the user to run `/plan` first.
 
 ### Planner output (`$RUN_DIR/PLAN.md`)
 
@@ -97,13 +69,12 @@ Run ID: <run-id>
 - Files: ...
 - Acceptance: ...
 - Dependencies: none | task-N
-- Plan step mapping: <which section/step from the /plan output this implements>
+- Plan step mapping: <which section from the /plan output this implements>
 
 ### task-2: ...
 ```
 
-Task decomposition requirements:
-- Decompose only the already-approved `/plan` work.
+Requirements:
 - Prefer disjoint file sets.
 - If overlap is unavoidable, document dependencies explicitly.
 - Keep tasks small and independently reviewable.
@@ -113,112 +84,49 @@ Present `PLAN.md` to the user and wait for approval.
 
 ---
 
-## 2) Parallel Implementers — Spawn one per task
+## 2) Parallel Implementers — Spawn via `subagent` tool
 
-For each task in `PLAN.md`:
-
-### 2a. Create one branch/worktree per implementer
+### 2a. Create one branch/worktree per task
 
 ```bash
 git worktree add "$WORKTREE_ROOT/<task-id>" -b "build/$RUN_ID/<task-id>"
 ```
 
-### 2b. Write implementer prompt artifact
+### 2b. Write implementer prompt
 
-Write to:
-`$RUN_DIR/tasks/<task-id>/prompt.md`
+Write task-specific instructions to `$RUN_DIR/tasks/<task-id>/prompt.md`.
 
-Prompt must instruct:
-- Implement only that task.
-- Do not communicate with other implementers.
-- Modify only in the task worktree.
-- Write `RESULT.md` in the worktree root before committing.
-- Commit all changes (including `RESULT.md`). The commit message doesn't
-  matter — these commits will be squash-merged with a descriptive message
-  by the merge agent.
+### 2c. Spawn implementers using the `subagent` tool
 
-Required `RESULT.md` format:
+Use the `subagent` tool in **parallel mode** to run all independent tasks
+concurrently. Each task uses the `implementer` agent with a per-task `cwd`
+set to its worktree directory.
 
-```markdown
-## Completed
+Example subagent tool call:
 
-## Files Changed
-- `path` — summary
-
-## Tests
-
-## Notes
+```json
+{
+  "tasks": [
+    {
+      "agent": "implementer",
+      "task": "Implement task-1: <description>. See prompt at $RUN_DIR/tasks/task-1/prompt.md for full details.",
+      "cwd": "$WORKTREE_ROOT/task-1"
+    },
+    {
+      "agent": "implementer",
+      "task": "Implement task-2: <description>. See prompt at $RUN_DIR/tasks/task-2/prompt.md for full details.",
+      "cwd": "$WORKTREE_ROOT/task-2"
+    }
+  ]
+}
 ```
 
-### 2c. Spawn implementers in parallel (from each worktree)
+For tasks with dependencies, wait for prerequisites to complete before
+spawning the dependent tasks in a second parallel batch.
 
-Use file-based PID tracking per task to remain POSIX compatible.
+### 2d. Collect results
 
-**CRITICAL — variable scoping with `&`:**
-
-When a command is backgrounded with `&`, bash backgrounds the entire
-preceding compound command — including any `&&`-chained assignments.
-Those assignments then happen in the subshell, NOT the current shell,
-so subsequent lines see empty variables (e.g. `$TASK_DIR` → empty →
-`"$TASK_DIR/pid"` → `"/pid"` → "Read-only file system").
-
-Rules:
-1. Variable assignments MUST use `;` or newlines — NEVER `&&` or `\` continuations.
-2. The redirect `> "$LOG_FILE"` is part of the backgrounded command, so
-   `$LOG_FILE` must already be set in the current shell BEFORE that line.
-3. When spawning multiple tasks, use unique variable names (or a loop) and
-   capture `$!` immediately after each `&`.
-
-Correct pattern for each task (copy exactly):
-
-**CRITICAL — use `$PI_BIN` not bare `pi`:**
-Backgrounded subshells (`&`) from bash tool calls lose the parent PATH.
-The extension injects `PI_BIN` in the Run Context block — always use it.
-
-```bash
-TASK_ID="<task-id>"
-TASK_DIR="$RUN_DIR/tasks/$TASK_ID"
-WORKTREE_DIR="$WORKTREE_ROOT/$TASK_ID"
-PROMPT_FILE="$TASK_DIR/prompt.md"
-LOG_FILE="$TASK_DIR/stdout.log"
-
-( cd "$WORKTREE_DIR" && "$PI_BIN" -p --no-session --no-skills \
-    --append-system-prompt "$PROMPT_FILE" \
-    "Implement the assigned task, write RESULT.md in the repository root, and commit all changes including RESULT.md." \
-) > "$LOG_FILE" 2>&1 &
-echo $! > "$TASK_DIR/pid"
-```
-
-Never emit this pattern (it is WRONG):
-```bash
-# WRONG — && chains assignments into the backgrounded group
-TASK_DIR="..." && \
-WORKTREE_DIR="..." && \
-( ... ) > "$LOG_FILE" 2>&1 &
-```
-
-Launch all dependency-free tasks this way. For dependent tasks, wait until prerequisites are approved.
-
-### 2d. Wait and record per-task exit status
-
-```bash
-for TASK_DIR in "$RUN_DIR/tasks"/*; do
-  [ -f "$TASK_DIR/pid" ] || continue
-  TASK_ID="$(basename "$TASK_DIR")"
-  PID="$(cat "$TASK_DIR/pid")"
-  
-  if wait "$PID"; then
-    EXIT_CODE=0
-  else
-    EXIT_CODE=$?
-  fi
-  printf "%s\n" "$EXIT_CODE" > "$TASK_DIR/exit_code.txt"
-done
-```
-
-### 2e. Collect `RESULT.md` and diffs
-
-For each task:
+After the subagent tool returns, collect `RESULT.md` and diffs for each task:
 
 ```bash
 TASK_ID="<task-id>"
@@ -229,40 +137,26 @@ cp "$WORKTREE_DIR/RESULT.md" "$TASK_DIR/RESULT.md"
 git -C "$WORKTREE_DIR" diff "$BASE_BRANCH" -- . > "$TASK_DIR/diff.patch"
 ```
 
-If implementer failed or `RESULT.md` is missing, keep `stdout.log` and mark task as failed for corrective handling.
+If a task failed or `RESULT.md` is missing, mark it for corrective handling.
 
 ---
 
-## 3) Auto-Reviewer — Produce `REVIEW.md`
+## 3) Auto-Reviewer — Validate each task
 
-For each task, create reviewer prompt with:
-- Task description + acceptance criteria from `PLAN.md`
-- `RESULT.md`
-- `diff.patch`
+For each completed task, use the `subagent` tool with the `reviewer` agent.
+Include the task description, acceptance criteria, `RESULT.md`, and
+`diff.patch` in the task prompt.
 
-Reviewer must output:
-
-```markdown
-## Verdict
-PASS | PASS_WITH_NOTES | FAIL
-
-## Findings
-- ...
-
-## Required fixes (if FAIL)
-- ...
+```json
+{
+  "agent": "reviewer",
+  "task": "Review task-1 implementation. Task: <description>. Acceptance: <criteria>.\n\nRESULT.md:\n<contents>\n\nDiff:\n<diff contents>",
+  "cwd": "$WORKTREE_ROOT/task-1"
+}
 ```
 
-Spawn reviewer subprocess:
-
-```bash
-"$PI_BIN" -p --no-session --no-skills \
-  --append-system-prompt "$RUN_DIR/tasks/<task-id>/review-prompt.md" \
-  "Review this task implementation against acceptance criteria."
-```
-
-Save raw output to `review-stdout.log`, then normalize into:
-`$RUN_DIR/tasks/<task-id>/REVIEW.md`.
+You can run reviews in parallel for independent tasks. Save each review
+output as `$RUN_DIR/tasks/<task-id>/REVIEW.md`.
 
 Do not merge any task without a review verdict.
 
@@ -270,75 +164,31 @@ Do not merge any task without a review verdict.
 
 ## 4) Corrective implementers for review failures
 
-For each task with `FAIL`:
+For each task with `FAIL` verdict:
 
-1. Write corrective prompt with:
-   - original task
-   - reviewer findings
-   - required fixes
-2. Re-run implementer in the **same worktree/branch**.
-3. Re-run auto-reviewer.
+1. Write a corrective prompt including the original task, reviewer findings,
+   and required fixes.
+2. Re-run the `implementer` agent in the **same worktree** (same `cwd`).
+3. Re-run the `reviewer` agent.
 4. Max 2 corrective rounds.
 
-If still failing after round 2:
-- mark task as not approved
-- do not merge it
-- report to user and wait for decision
+If still failing after round 2, mark as not approved, do not merge, report
+to user and wait for decision.
 
 ---
 
-## 5) Merge Agent — Merge approved work and integrate artifacts
+## 5) Merge Agent — Merge approved work
 
-Merge-agent stage handles only tasks with `PASS` or `PASS_WITH_NOTES`.
+Use the `merger` agent to handle squash-merging of approved branches.
+Pass it the list of approved task IDs, the run directory, worktree root,
+and base branch.
 
-### 5a. Merge approved branches in dependency order
-
-Use `--squash` to collapse the worker's intermediate commits into a single
-clean commit. Write a descriptive message — not the run-id/task-id boilerplate
-the worker used.
-
-```bash
-git merge --squash "build/$RUN_ID/<task-id>"
-
-# Remove the task artifact before committing
-git rm -f --ignore-unmatch RESULT.md
-
-# Write a descriptive commit message summarising what changed and why
-git commit -m "<component>: <what this task accomplished>
-
-<2-4 line description of the changes, covering key files and behaviour.>"
-```
-
-If conflict is non-trivial, stop and ask user.
-
-### 5b. Write `INTEGRATION.md`
-
-Path: `$RUN_DIR/INTEGRATION.md`
-
-Include:
-- run id
-- base branch
-- merged tasks
-- not merged tasks + reason
-- conflict notes/resolutions
-
-### 5c. Write `SUMMARY.md`
-
-Path: `$RUN_DIR/SUMMARY.md`
-
-Include:
-- counts: total / merged / failed
-- high-level changes
-- files modified
-- verification checklist
-- failed tasks and blockers
-
-### 5d. Cleanup worktrees/branches
-
-```bash
-git worktree remove "$WORKTREE_ROOT/<task-id>" --force
-git branch -d "build/$RUN_ID/<task-id>"
-rmdir "$WORKTREE_ROOT" 2>/dev/null || true
+```json
+{
+  "agent": "merger",
+  "task": "Merge approved tasks into $BASE_BRANCH. Run dir: $RUN_DIR. Worktree root: $WORKTREE_ROOT. Approved tasks: task-1, task-3. Failed tasks: task-2 (FAIL after 2 rounds).",
+  "cwd": "$ROOT"
+}
 ```
 
 ---
@@ -346,12 +196,12 @@ rmdir "$WORKTREE_ROOT" 2>/dev/null || true
 ## Execution order (must follow exactly)
 
 1. Create `PLAN.md`
-2. Spawn parallel implementers
-3. Collect `RESULT.md`
-4. Review diffs and artifacts
+2. Create worktrees, spawn parallel implementers via `subagent` tool
+3. Collect `RESULT.md` and diffs
+4. Review via `subagent` tool
 5. If needed, spawn corrective implementers
-6. Merge approved work
-7. Produce `SUMMARY.md`
+6. Merge approved work via `subagent` tool
+7. Verify `SUMMARY.md` produced
 
 ## Coordination policy
 
