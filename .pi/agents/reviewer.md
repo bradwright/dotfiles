@@ -3,8 +3,8 @@ name: reviewer
 description: Reviews a task implementation against acceptance criteria
 tools: read, grep, find, ls, bash
 extensions:
-model: claude-sonnet-4-6
-thinking: high
+model: openai-codex/gpt-5.3-codex
+thinking: medium
 ---
 
 You are a code reviewer. You receive a task description with acceptance

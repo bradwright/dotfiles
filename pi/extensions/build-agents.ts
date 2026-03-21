@@ -520,7 +520,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		// 13. Send kickoff message
 		const modelLine = modelOverride
 			? `Model override: ${modelOverride} (applies to all agents)`
-			: `Model: per-agent defaults (planner=sonnet:high, implementer=sonnet:medium, reviewer=sonnet:high, merger=sonnet:low)`;
+			: `Model: per-agent defaults (planner=sonnet:high, implementer=sonnet:medium, reviewer=codex:medium, merger=sonnet:low)`;
 
 		const kickoffMsg = [
 			`Multi-agent build started.`,
@@ -734,7 +734,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 				"Per-agent defaults are active:",
 				"  build-planner: claude-sonnet-4-6:high   (task decomposition — dependency analysis)",
 				"  implementer:   claude-sonnet-4-6:medium (code generation — speed + volume)",
-				"  reviewer:      claude-sonnet-4-6:high   (critical analysis — deep reasoning)",
+				"  reviewer:      gpt-5.3-codex:medium     (code-native review — spotting issues)",
 				"  merger:        claude-sonnet-4-6:low    (mechanical git ops — fast + cheap)",
 				"",
 				"Do NOT pass a `model` field in subagent task items — let agent frontmatter defaults apply.",

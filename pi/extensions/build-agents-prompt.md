@@ -20,7 +20,7 @@ Run Context specifies a MODEL_OVERRIDE.
 |-------|-------|----------|-----------|
 | build-planner | claude-sonnet-4-6 | high | Task decomposition — dependency analysis needs deep reasoning |
 | implementer | claude-sonnet-4-6 | medium | Code generation — balance of speed and reasoning |
-| reviewer | claude-sonnet-4-6 | high | Critical analysis — deep reasoning catches subtle bugs |
+| reviewer | gpt-5.3-codex | medium | Code-native model — strong at spotting implementation issues |
 | merger | claude-sonnet-4-6 | low | Mechanical git ops — fast and cheap |
 
 **When MODEL_OVERRIDE is set:** pass `model: "<override>"` in every subagent
