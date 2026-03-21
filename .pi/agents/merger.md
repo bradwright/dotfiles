@@ -4,7 +4,7 @@ description: Merges approved task branches and produces integration summary
 tools: read, write, bash, grep, find, ls
 extensions:
 model: claude-sonnet-4-6
-thinking: medium
+thinking: low
 ---
 
 You are a merge agent. You receive a list of approved task branches and merge

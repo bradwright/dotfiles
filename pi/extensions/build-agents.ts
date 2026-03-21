@@ -25,7 +25,7 @@ type BuildRunState = {
 	runDir: string;
 	worktreeRoot: string;
 	tasks: TaskState[];
-	modelSpec: string;
+	modelOverride: string | null; // null = use per-agent defaults from .pi/agents/
 	startedAt: string;
 };
 
@@ -319,7 +319,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 					theme.fg("warning", `${running} running`),
 					failed > 0 ? theme.fg("error", `${failed} failed`) : theme.fg("muted", "0 failed"),
 					crashed > 0 ? theme.fg("error", `${crashed} crashed`) : theme.fg("muted", "0 crashed"),
-					theme.fg("dim", `model: ${run.modelSpec}`),
+					theme.fg("dim", `model: ${run.modelOverride ?? "agent defaults"}`),
 				];
 				return new Text(parts.join(theme.fg("dim", " │ ")), 0, 0);
 			}
@@ -448,31 +448,35 @@ export default function buildAgents(pi: ExtensionAPI) {
 			return;
 		}
 
-		// 6. Model picker
-		let models: string[] = [];
+		// 6. Model override picker
+		// Agent definitions in .pi/agents/ have per-role defaults:
+		//   implementer: claude-sonnet-4-6:medium  (code generation)
+		//   reviewer:    claude-sonnet-4-6:high     (deep analysis)
+		//   merger:      claude-sonnet-4-6:low      (mechanical git ops)
+		// The user can override all agents to a single model, or use defaults.
+		const AGENT_DEFAULTS_LABEL = "Use agent defaults (recommended)";
+		let modelChoices: string[] = [AGENT_DEFAULTS_LABEL];
 		try {
 			const settingsPath = path.join(getAgentDir(), "settings.json");
 			if (fs.existsSync(settingsPath)) {
 				const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
 				if (Array.isArray(settings.enabledModels) && settings.enabledModels.length > 0) {
-					models = settings.enabledModels;
+					modelChoices = modelChoices.concat(settings.enabledModels);
 				}
 			}
 		} catch { /* ignore */ }
-		if (models.length === 0) {
-			models = ["current session model"];
-		}
 
-		const selectedModel = await ctx.ui.select("Model for subagents:", models);
+		const selectedModel = await ctx.ui.select("Model for subagents:", modelChoices);
 		if (!selectedModel) return;
 
-		// 7. Thinking level picker
-		const thinkingLevels = ["medium", "low", "high"];
-		const selectedThinking = await ctx.ui.select("Thinking level:", thinkingLevels);
-		if (!selectedThinking) return;
-
-		// 8. Combine into modelSpec
-		const modelSpec = `${selectedModel}:${selectedThinking}`;
+		let modelOverride: string | null = null;
+		if (selectedModel !== AGENT_DEFAULTS_LABEL) {
+			// When overriding, pick a thinking level for the override
+			const thinkingLevels = ["medium", "low", "high"];
+			const selectedThinking = await ctx.ui.select("Thinking level (for override):", thinkingLevels);
+			if (!selectedThinking) return;
+			modelOverride = `${selectedModel}:${selectedThinking}`;
+		}
 
 		// 9. Create run directory
 		const planSlug = slugify(path.basename(planDir));
@@ -493,7 +497,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		appendBuildEvent(runDir, {
 			type: "run_started",
 			timestamp: new Date().toISOString(),
-			detail: `Plan: ${planDir}, Model: ${modelSpec}`,
+			detail: `Plan: ${planDir}, Model: ${modelOverride ?? "agent-defaults"}`,
 		});
 
 		// 12. Persist BuildRunState
@@ -504,7 +508,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			runDir,
 			worktreeRoot,
 			tasks: [],
-			modelSpec,
+			modelOverride,
 			startedAt: new Date().toISOString(),
 		};
 		persistState();
@@ -514,6 +518,10 @@ export default function buildAgents(pi: ExtensionAPI) {
 		turnsThisSession = 0;
 
 		// 13. Send kickoff message
+		const modelLine = modelOverride
+			? `Model override: ${modelOverride} (applies to all agents)`
+			: `Model: per-agent defaults (implementer=sonnet:medium, reviewer=sonnet:high, merger=sonnet:low)`;
+
 		const kickoffMsg = [
 			`Multi-agent build started.`,
 			`Run ID: ${runId}`,
@@ -521,7 +529,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			`Plan directory: ${planDir}`,
 			`Worktree root: ${worktreeRoot}`,
 			`Base branch: ${baseBranch}`,
-			`Model spec: ${modelSpec}`,
+			modelLine,
 			``,
 			`Read the plan at ${path.join(planDir, "plan.md")} and begin orchestrating the multi-agent build.`,
 			`Create task subdirectories under ${tasksDir}/ for each implementation task.`,
@@ -531,7 +539,9 @@ export default function buildAgents(pi: ExtensionAPI) {
 			`- Reviews: use single mode with the \`reviewer\` agent`,
 			`- Merge: use single mode with the \`merger\` agent`,
 			``,
-			`Pass \`--model ${modelSpec}\` via the model field in subagent task items.`,
+			...(modelOverride
+				? [`Pass \`model: "${modelOverride}"\` in each subagent task item to override agent defaults.`]
+				: [`Do NOT pass a \`model\` field in subagent task items — let each agent use its own default model and thinking level.`]),
 		].join("\n");
 
 		pi.sendUserMessage(kickoffMsg);
@@ -567,7 +577,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			`Run: ${run.runId}`,
 			`Phase: ${phase}`,
 			`Plan: ${toDisplayPath(run.planDir, ctx.cwd)}`,
-			`Model: ${run.modelSpec}`,
+			`Model: ${run.modelOverride ?? "agent defaults"}`,
 			`Tasks: ${run.tasks.length} total, ${done} done, ${running} running, ${failed} failed, ${crashed} crashed`,
 			`Started: ${run.startedAt}`,
 		];
@@ -711,6 +721,23 @@ export default function buildAgents(pi: ExtensionAPI) {
 		}
 
 		const run = activeRun;
+		const modelInstructions = run.modelOverride
+			? [
+				`MODEL_OVERRIDE: ${run.modelOverride}`,
+				"",
+				"A model override is active. Pass `model: \"" + run.modelOverride + "\"` in each subagent task item.",
+			]
+			: [
+				"MODEL_OVERRIDE: none (using per-agent defaults)",
+				"",
+				"Per-agent defaults are active:",
+				"  implementer: claude-sonnet-4-6:medium (code generation — speed + volume)",
+				"  reviewer:    claude-sonnet-4-6:high   (critical analysis — deep reasoning)",
+				"  merger:      claude-sonnet-4-6:low    (mechanical git ops — fast + cheap)",
+				"",
+				"Do NOT pass a `model` field in subagent task items — let agent frontmatter defaults apply.",
+			];
+
 		const runContext = [
 			"## Run Context (injected by extension — do not edit)",
 			"",
@@ -719,10 +746,9 @@ export default function buildAgents(pi: ExtensionAPI) {
 			`WORKTREE_ROOT: ${run.worktreeRoot}`,
 			`BASE_BRANCH: ${run.baseBranch}`,
 			`PLAN_DIR: ${run.planDir}`,
-			`MODEL_SPEC: ${run.modelSpec}`,
+			...modelInstructions,
 			"",
 			"Use the `subagent` tool for all subprocess work.",
-			"Pass `model: \"" + run.modelSpec + "\"` in each subagent task item.",
 			"Set `cwd` to the appropriate worktree directory for each task.",
 		].join("\n");
 
@@ -814,7 +840,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 				runDir: data.runDir ?? "",
 				worktreeRoot: data.worktreeRoot ?? "",
 				tasks: Array.isArray(data.tasks) ? data.tasks : [],
-				modelSpec: data.modelSpec ?? "",
+				modelOverride: data.modelOverride ?? (data as any).modelSpec ?? null,
 				startedAt: data.startedAt ?? "",
 			};
 		}
@@ -834,7 +860,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 						runDir: recentRunDir,
 						worktreeRoot: path.join(path.dirname(recentRunDir), WORKTREE_ROOT_NAME),
 						tasks: [],
-						modelSpec: "",
+						modelOverride: null,
 						startedAt: "",
 					};
 
@@ -843,7 +869,10 @@ export default function buildAgents(pi: ExtensionAPI) {
 						const planMatch = startEvent.detail.match(/Plan:\s*(.+?),/);
 						const modelMatch = startEvent.detail.match(/Model:\s*(.+)/);
 						if (planMatch) activeRun.planDir = planMatch[1].trim();
-						if (modelMatch) activeRun.modelSpec = modelMatch[1].trim();
+						if (modelMatch) {
+							const model = modelMatch[1].trim();
+							activeRun.modelOverride = model === "agent-defaults" ? null : model;
+						}
 					}
 				}
 

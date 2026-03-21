@@ -10,6 +10,24 @@ when needed.
 Planner → Parallel Implementers → Auto-Reviewer → Merge Agent
 ```
 
+## Agent model defaults
+
+Each agent has a model and thinking level tuned to its role. These are
+defined in `.pi/agents/` frontmatter and apply automatically unless the
+Run Context specifies a MODEL_OVERRIDE.
+
+| Agent | Model | Thinking | Rationale |
+|-------|-------|----------|-----------|
+| implementer | claude-sonnet-4-6 | medium | Code generation — balance of speed and reasoning |
+| reviewer | claude-sonnet-4-6 | high | Critical analysis — deep reasoning catches subtle bugs |
+| merger | claude-sonnet-4-6 | low | Mechanical git ops — fast and cheap |
+
+**When MODEL_OVERRIDE is set:** pass `model: "<override>"` in every subagent
+task item. This overrides all agent defaults uniformly.
+
+**When MODEL_OVERRIDE is "none":** do NOT pass a `model` field — let each
+agent use its frontmatter default.
+
 ## Non-negotiable rules
 
 - Plan before coding.
