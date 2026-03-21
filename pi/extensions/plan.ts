@@ -1015,6 +1015,23 @@ export default function plan(pi: ExtensionAPI) {
 		return levels.includes(selected) ? selected : null;
 	}
 
+	function resolveProjectAgentModel(cwd: string, agentName: string): string | null {
+		const agentPath = path.join(cwd, ".pi", "agents", `${agentName}.md`);
+		if (!fs.existsSync(agentPath)) return null;
+
+		try {
+			const content = fs.readFileSync(agentPath, "utf8");
+			const frontmatter = content.match(/^---\s*\n([\s\S]*?)\n---/);
+			if (!frontmatter) return null;
+			const modelMatch = frontmatter[1].match(/^model:\s*(.+)$/m);
+			if (!modelMatch) return null;
+			const model = modelMatch[1].trim();
+			return model.length > 0 ? model : null;
+		} catch {
+			return null;
+		}
+	}
+
 	async function handlePlanNew(rest: string, ctx: ExtensionContext): Promise<void> {
 		let issue: GitHubIssue | null = null;
 		let userContext = rest;
@@ -1352,10 +1369,20 @@ export default function plan(pi: ExtensionAPI) {
 				if (thinkingChoice === null) return;
 
 				// Build the /run command — pi-subagents handles execution,
-				// progress display, and injects results into conversation
-				const inlineConfig = thinkingChoice !== "medium"
-					? `[thinking=${thinkingChoice}]`
-					: "";
+				// progress display, and injects results into conversation.
+				// /run supports [model=...] inline config (not [thinking=...]).
+				let inlineConfig = "";
+				if (thinkingChoice !== "medium") {
+					const agentModel = resolveProjectAgentModel(ctx.cwd, agentChoice);
+					if (agentModel) {
+						inlineConfig = `[model=${agentModel}:${thinkingChoice}]`;
+					} else {
+						ctx.ui.notify(
+							`Could not resolve model for ${agentChoice}; using agent default thinking.`,
+							"warning",
+						);
+					}
+				}
 				const task = `Review the plan package at ${planDir}. Read plan.md and feedback.md, evaluate against the readiness criteria, then write findings to feedback.md and a Review entry to changelog.md.`;
 				queueUserPrompt(`/run ${agentChoice}${inlineConfig} ${task}`, ctx);
 				ctx.ui.notify(`Starting ${agentChoice} review of ${toDisplayPath(planDir, ctx.cwd)}...`, "info");
