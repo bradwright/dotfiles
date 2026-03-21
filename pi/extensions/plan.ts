@@ -3,7 +3,7 @@ import * as path from "node:path";
 
 import { execFileSync } from "node:child_process";
 
-import { isToolCallEventType, type ExtensionAPI, type ExtensionContext, type Theme } from "@mariozechner/pi-coding-agent";
+import { getAgentDir, isToolCallEventType, type ExtensionAPI, type ExtensionContext, type Theme } from "@mariozechner/pi-coding-agent";
 import { type Focusable, Key, matchesKey, Text, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@mariozechner/pi-tui";
 
 const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write"] as const;
@@ -1032,6 +1032,24 @@ export default function plan(pi: ExtensionAPI) {
 		}
 	}
 
+	function listAvailableAgentNames(cwd: string): string[] {
+		const names = new Set<string>();
+		const roots = [
+			path.join(cwd, ".pi", "agents"),
+			path.join(getAgentDir(), "agents"),
+		];
+
+		for (const root of roots) {
+			if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) continue;
+			for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+				if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
+				names.add(path.basename(entry.name, ".md"));
+			}
+		}
+
+		return Array.from(names).sort();
+	}
+
 	async function handlePlanNew(rest: string, ctx: ExtensionContext): Promise<void> {
 		let issue: GitHubIssue | null = null;
 		let userContext = rest;
@@ -1353,9 +1371,20 @@ export default function plan(pi: ExtensionAPI) {
 			// Check if pi-subagents is installed (provides /run command)
 			const allTools = new Set(pi.getAllTools().map((t) => t.name));
 			if (allTools.has("subagent")) {
-				// Pick reviewer agent
-				const REVIEW_AGENTS = ["plan-reviewer", "reviewer", "scout"];
-				const agentChoice = await ctx.ui.select("Review agent:", REVIEW_AGENTS);
+				// Pick reviewer agent from currently available agents.
+				const preferredReviewAgents = ["plan-reviewer", "reviewer", "scout"];
+				const availableAgents = new Set(listAvailableAgentNames(ctx.cwd));
+				const reviewAgents = preferredReviewAgents.filter((name) => availableAgents.has(name));
+				if (reviewAgents.length === 0) {
+					ctx.ui.notify(
+						"No review agents found (expected one of: plan-reviewer, reviewer, scout). Falling back to in-session review.",
+						"warning",
+					);
+					const reviewPrompt = `/skill:plan-methodology review ${planDir}`;
+					queueUserPrompt(reviewPrompt, ctx);
+					return;
+				}
+				const agentChoice = await ctx.ui.select("Review agent:", reviewAgents);
 				if (!agentChoice) return;
 
 				// Pick thinking level
