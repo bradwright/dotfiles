@@ -1333,27 +1333,32 @@ export default function plan(pi: ExtensionAPI) {
 				ctx.ui.notify("Plan mode enabled for safe plan review.", "info");
 			}
 
-			// Check if the subagent tool is available for delegated review
+			// Check if pi-subagents is installed (provides /run command)
 			const allTools = new Set(pi.getAllTools().map((t) => t.name));
 			if (allTools.has("subagent")) {
-				// Temporarily add subagent to active tools so the supervisor
-				// can delegate this turn. The before_agent_start hook will
-				// re-apply plan mode restrictions on subsequent turns.
-				const currentTools = pi.getActiveTools();
-				if (!currentTools.includes("subagent")) {
-					pi.setActiveTools([...currentTools, "subagent"]);
-				}
+				// Pick reviewer agent
+				const REVIEW_AGENTS = ["plan-reviewer", "reviewer", "scout"];
+				const agentChoice = await ctx.ui.select("Review agent:", REVIEW_AGENTS);
+				if (!agentChoice) return;
 
-				// Delegate review to the plan-reviewer subagent (runs with a
-				// different model for independent perspective)
-				const reviewPrompt = [
-					`Use the subagent tool to run the plan-reviewer agent.`,
-					`Task: "Review the plan package at ${planDir}. Read plan.md and feedback.md, evaluate against readiness criteria, then write findings to feedback.md and a Review entry to changelog.md."`,
-					`Do not pass a model override — let the agent use its default.`,
-					`After the review completes, read ${path.join(planDir, "feedback.md")} and summarise the reviewer's findings for me.`,
-				].join("\n");
-				queueUserPrompt(reviewPrompt, ctx);
-				ctx.ui.notify(`Delegating review to plan-reviewer subagent for ${toDisplayPath(planDir, ctx.cwd)}.`, "info");
+				// Pick thinking level
+				const REVIEW_THINKING: ThinkingLevel[] = ["medium", "high", "low"];
+				const thinkingChoice = await promptThinkingLevel(
+					"Thinking level for review:",
+					REVIEW_THINKING,
+					"medium",
+					ctx,
+				);
+				if (thinkingChoice === null) return;
+
+				// Build the /run command — pi-subagents handles execution,
+				// progress display, and injects results into conversation
+				const inlineConfig = thinkingChoice !== "medium"
+					? `[thinking=${thinkingChoice}]`
+					: "";
+				const task = `Review the plan package at ${planDir}. Read plan.md and feedback.md, evaluate against the readiness criteria, then write findings to feedback.md and a Review entry to changelog.md.`;
+				queueUserPrompt(`/run ${agentChoice}${inlineConfig} ${task}`, ctx);
+				ctx.ui.notify(`Starting ${agentChoice} review of ${toDisplayPath(planDir, ctx.cwd)}...`, "info");
 			} else {
 				// Fallback: run review in-session via the skill
 				const reviewPrompt = `/skill:plan-methodology review ${planDir}`;
@@ -1593,16 +1598,6 @@ export default function plan(pi: ExtensionAPI) {
 				};
 			}
 		}
-	});
-
-	// Remove subagent from active tools after delegated review completes
-	pi.on("tool_result", async (event, _ctx) => {
-		if (!planEnabled) return;
-		if (event.toolName !== "subagent") return;
-
-		// Re-restrict tools to plan mode set (removes subagent)
-		const tools = computePlanTools();
-		if (tools.length > 0) pi.setActiveTools(tools);
 	});
 
 	// Detect changelog.md writes and emit structured events to events.jsonl
