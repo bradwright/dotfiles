@@ -837,10 +837,12 @@ export default function buildAgents(pi: ExtensionAPI) {
 
 		turnsThisSession++;
 
-		const promptPath = path.join(getAgentDir(), "extensions", "build-agents-prompt.md");
+		// Resolve prompt relative to this extension file so it works
+		// regardless of where the package is installed.
+		const promptPath = path.join(__dirname, "build-agents-prompt.md");
 		if (!fs.existsSync(promptPath)) {
 			ctx.ui.notify(
-				`⚠️ build-agents-prompt.md not found at ${promptPath}. Run \`make install\` to set up prompts.`,
+				`⚠️ build-agents-prompt.md not found at ${promptPath}. Ensure it is co-located with the extension.`,
 				"warning",
 			);
 			return;
