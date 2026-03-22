@@ -620,7 +620,26 @@ export default function buildAgents(pi: ExtensionAPI) {
 
 		// Get base branch
 		const branchResult = await pi.exec("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
-		const baseBranch = (branchResult.stdout || "main").trim();
+		let baseBranch = (branchResult.stdout || "main").trim();
+
+		// Guard against building directly on main/master
+		if (baseBranch === "main" || baseBranch === "master") {
+			const branchName = await ctx.ui.input(
+				`You're on ${baseBranch}. Create a new branch as the base? (leave empty to cancel)`,
+				`build/${planSlug}`,
+			);
+			if (!branchName?.trim()) {
+				ctx.ui.notify("Build canceled — create a branch first.", "info");
+				return;
+			}
+			const checkoutResult = await pi.exec("git", ["checkout", "-b", branchName.trim()]);
+			if (checkoutResult.code !== 0) {
+				ctx.ui.notify(`Failed to create branch: ${(checkoutResult.stderr || checkoutResult.stdout).trim()}`, "error");
+				return;
+			}
+			baseBranch = branchName.trim();
+			ctx.ui.notify(`Created and switched to branch ${baseBranch}.`, "info");
+		}
 
 		// 11. Write initial event
 		appendJsonlEvent(path.join(runDir, EVENTS_FILE), {
