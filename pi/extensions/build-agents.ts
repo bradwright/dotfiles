@@ -3,6 +3,15 @@ import * as path from "node:path";
 
 import { type ExtensionAPI, type ExtensionContext, getAgentDir } from "@mariozechner/pi-coding-agent";
 import { Key, Text } from "@mariozechner/pi-tui";
+import {
+	localIsoDate,
+	slugify,
+	toDisplayPath,
+	hasApprovedEntry,
+	listApprovedPlanDirs,
+	readJsonlEvents,
+	appendJsonlEvent,
+} from "./shared.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -65,33 +74,6 @@ const AUTO_RESUME_COOLDOWN_MS = 60 * 1000;
 // Helpers
 // ---------------------------------------------------------------------------
 
-function localIsoDate(now = new Date()): string {
-	const yyyy = now.getFullYear();
-	const mm = `${now.getMonth() + 1}`.padStart(2, "0");
-	const dd = `${now.getDate()}`.padStart(2, "0");
-	return `${yyyy}-${mm}-${dd}`;
-}
-
-function slugify(input: string): string {
-	return input
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-+|-+$/g, "")
-		.replace(/-{2,}/g, "-")
-		.slice(0, 60);
-}
-
-function toDisplayPath(targetPath: string, cwd: string): string {
-	const resolved = path.resolve(targetPath);
-	const fromCwd = path.relative(cwd, resolved);
-	if (!fromCwd.startsWith("..") && !path.isAbsolute(fromCwd)) return `./${fromCwd}`;
-
-	const home = process.env.HOME || process.env.USERPROFILE;
-	if (home && resolved.startsWith(home)) return `~${resolved.slice(home.length)}`;
-
-	return resolved;
-}
-
 function planSourceLabel(source: PlanSource, cwd: string): string {
 	switch (source.type) {
 		case "file": return toDisplayPath(source.path, cwd);
@@ -116,56 +98,9 @@ function planSourceSlug(source: PlanSource): string {
 	}
 }
 
-function hasApprovedEntry(changelogPath: string): boolean {
-	if (!fs.existsSync(changelogPath) || !fs.statSync(changelogPath).isFile()) return false;
-	const content = fs.readFileSync(changelogPath, "utf8");
-	return /^\s*-\s*Approved\s+[—-]\s+\d{4}-\d{2}-\d{2},\s+user\./m.test(content);
-}
-
-function listApprovedPlanDirs(cwd: string): string[] {
-	const plansRoot = path.join(cwd, ".pi", "plans");
-	if (!fs.existsSync(plansRoot) || !fs.statSync(plansRoot).isDirectory()) return [];
-
-	return fs
-		.readdirSync(plansRoot, { withFileTypes: true })
-		.filter((entry) => entry.isDirectory())
-		.map((entry) => path.join(plansRoot, entry.name))
-		.filter((dir) => {
-			const changelogPath = path.join(dir, "changelog.md");
-			return hasApprovedEntry(changelogPath);
-		})
-		.sort((a, b) => path.basename(b).localeCompare(path.basename(a)));
-}
-
 // ---------------------------------------------------------------------------
 // Event log helpers
 // ---------------------------------------------------------------------------
-
-function readBuildEvents(runDir: string): BuildEvent[] {
-	const eventsPath = path.join(runDir, EVENTS_FILE);
-	if (!fs.existsSync(eventsPath)) return [];
-	try {
-		return fs
-			.readFileSync(eventsPath, "utf8")
-			.split("\n")
-			.filter(Boolean)
-			.map((line) => {
-				try {
-					return JSON.parse(line) as BuildEvent;
-				} catch {
-					return null;
-				}
-			})
-			.filter((e): e is BuildEvent => e !== null);
-	} catch {
-		return [];
-	}
-}
-
-function appendBuildEvent(runDir: string, event: BuildEvent): void {
-	const eventsPath = path.join(runDir, EVENTS_FILE);
-	fs.appendFileSync(eventsPath, JSON.stringify(event) + "\n");
-}
 
 function deriveRunPhase(events: BuildEvent[], tasks: TaskState[]): DerivedRunPhase {
 	for (const event of events) {
@@ -290,7 +225,7 @@ function findActiveRunDirs(cwd: string): string[] {
 			.map((e) => path.join(buildRoot, e.name))
 			.filter((dir) => {
 				if (!fs.existsSync(path.join(dir, EVENTS_FILE))) return false;
-				const events = readBuildEvents(dir);
+				const events = readJsonlEvents<BuildEvent>(path.join(dir, EVENTS_FILE));
 				const phase = deriveRunPhase(events, []);
 				return !isTerminalPhase(phase);
 			});
@@ -332,7 +267,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 
 		ctx.ui.setWidget(STATUS_KEY, (_tui, theme) => {
 			const tasks = run.tasks;
-			const events = readBuildEvents(run.runDir);
+			const events = readJsonlEvents<BuildEvent>(path.join(run.runDir, EVENTS_FILE));
 			const phase = deriveRunPhase(events, tasks);
 
 			const done = tasks.filter((t) => t.status === "passed" || t.status === "merged").length;
@@ -407,7 +342,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 				return;
 			}
 			for (const runDir of activeRunDirs) {
-				appendBuildEvent(runDir, {
+				appendJsonlEvent(path.join(runDir, EVENTS_FILE), {
 					type: "run_canceled",
 					timestamp: new Date().toISOString(),
 					detail: "Canceled for new run",
@@ -532,7 +467,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		const baseBranch = (branchResult.stdout || "main").trim();
 
 		// 11. Write initial event
-		appendBuildEvent(runDir, {
+		appendJsonlEvent(path.join(runDir, EVENTS_FILE), {
 			type: "run_started",
 			timestamp: new Date().toISOString(),
 			detail: `Plan: ${planSourceLabel(planSource, ctx.cwd)}, Model: ${modelOverride ?? "agent-defaults"}`,
@@ -595,7 +530,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 				return;
 			}
 
-			const events = readBuildEvents(recentRunDir);
+			const events = readJsonlEvents<BuildEvent>(path.join(recentRunDir, EVENTS_FILE));
 			const phase = deriveRunPhase(events, []);
 			ctx.ui.notify(
 				`Last run: ${path.basename(recentRunDir)}\nPhase: ${phase}\nDir: ${toDisplayPath(recentRunDir, ctx.cwd)}`,
@@ -605,7 +540,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		}
 
 		const run = activeRun;
-		const events = readBuildEvents(run.runDir);
+		const events = readJsonlEvents<BuildEvent>(path.join(run.runDir, EVENTS_FILE));
 		const phase = deriveRunPhase(events, run.tasks);
 		const done = run.tasks.filter((t) => t.status === "passed" || t.status === "merged").length;
 		const running = run.tasks.filter((t) => t.status === "spawned" || t.status === "reviewing" || t.status === "corrective").length;
@@ -637,7 +572,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		const run = activeRun;
 
 		// Append cancel event
-		appendBuildEvent(run.runDir, {
+		appendJsonlEvent(path.join(run.runDir, EVENTS_FILE), {
 			type: "run_canceled",
 			timestamp: new Date().toISOString(),
 			detail: "Canceled by user",
@@ -814,7 +749,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		for (const [taskId, newStatus] of newStatuses) {
 			const lastKnown = lastKnownStatuses.get(taskId);
 			if (lastKnown !== newStatus) {
-				appendBuildEvent(run.runDir, {
+				appendJsonlEvent(path.join(run.runDir, EVENTS_FILE), {
 					type: `task_${newStatus}`,
 					timestamp: new Date().toISOString(),
 					taskId,
@@ -836,7 +771,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		if (!activeRun) return;
 		if (turnsThisSession === 0) return;
 
-		const events = readBuildEvents(activeRun.runDir);
+		const events = readJsonlEvents<BuildEvent>(path.join(activeRun.runDir, EVENTS_FILE));
 		const phase = deriveRunPhase(events, activeRun.tasks);
 		if (isTerminalPhase(phase)) return;
 
@@ -893,7 +828,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		// Also scan filesystem for most recent run
 		const recentRunDir = findMostRecentRunDir(ctx.cwd);
 		if (recentRunDir) {
-			const events = readBuildEvents(recentRunDir);
+			const events = readJsonlEvents<BuildEvent>(path.join(recentRunDir, EVENTS_FILE));
 			const phase = deriveRunPhase(events, activeRun?.tasks ?? []);
 
 			if (!isTerminalPhase(phase)) {
