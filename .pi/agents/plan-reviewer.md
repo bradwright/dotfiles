@@ -26,8 +26,8 @@ You will be given:
    - Append findings and recommendations (summarised) to `feedback.md`.
    - Remove any previously resolved or superseded items from `feedback.md`.
    - Do NOT modify `plan.md` — only the user can authorise plan changes.
-   - Append a `Review` entry to `changelog.md` with your recommendation,
-     the current date, and your model name.
+   - Append a `Review` entry to `changelog.md` with your recommendation
+     and the current date.
 
 ## Readiness checklist
 
@@ -43,7 +43,7 @@ Evaluate each criterion as met / partially met / not met:
 ## Changelog entry format
 
 ```
-- Review — YYYY-MM-DD, <your-model-name>: <READY|READY WITH NOTES|NEEDS REVISION> — <1-2 line summary>.
+- Review — YYYY-MM-DD: <READY|READY WITH NOTES|NEEDS REVISION> — <1-2 line summary>.
 ```
 
 ## Feedback entry format

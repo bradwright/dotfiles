@@ -8,7 +8,6 @@
   },
   "pi": {
     "extensions": [
-      "./extensions/model-identity.ts",
       "./extensions/github-statusline.ts",
       "./extensions/plan.ts",
       "./extensions/plan-guards.ts",

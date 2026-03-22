@@ -21,7 +21,7 @@ import {
 	truncateText,
 } from "./shared.js";
 
-const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write"] as const;
+const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write", "subagent"] as const;
 const FALLBACK_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls"] as const;
 const ISSUE_BRIEF_FILE = "brief.md";
 const EVENTS_FILE = "events.jsonl";
@@ -145,28 +145,28 @@ function derivePlanMetaFromChangelog(planDir: string): PlanMeta {
 			const trimmed = line.trim();
 			if (!trimmed.startsWith("-")) continue;
 
-			// Match "- Draft N — YYYY-MM-DD, model-name: ..."
-			const draftMatch = trimmed.match(/^-\s+Draft\s+(\d+)\s+[—-]\s+\d{4}-\d{2}-\d{2},\s+(\S+?):/i);
+			// Match "- Draft N — YYYY-MM-DD: ..." (model suffix optional)
+			const draftMatch = trimmed.match(/^-\s+Draft\s+(\d+)\s+[—-]\s+\d{4}-\d{2}-\d{2}(?:,\s+([^:]+?))?:/i);
 			if (draftMatch) {
 				currentDraft = parseInt(draftMatch[1], 10);
-				lastModel = draftMatch[2];
+				if (draftMatch[2] && draftMatch[2].trim().length > 0) lastModel = draftMatch[2].trim();
 				lastEvent = "draft";
 				continue;
 			}
 
-			// Match "- Review — YYYY-MM-DD, model-name: ..."
-			const reviewMatch = trimmed.match(/^-\s+Review\s+[—-]\s+\d{4}-\d{2}-\d{2},\s+(\S+?):/i);
+			// Match "- Review — YYYY-MM-DD: ..." (model suffix optional)
+			const reviewMatch = trimmed.match(/^-\s+Review\s+[—-]\s+\d{4}-\d{2}-\d{2}(?:,\s+([^:]+?))?:/i);
 			if (reviewMatch) {
 				reviewCount++;
-				lastModel = reviewMatch[1];
+				if (reviewMatch[1] && reviewMatch[1].trim().length > 0) lastModel = reviewMatch[1].trim();
 				lastEvent = "review";
 				continue;
 			}
 
-			// Match "- Edit — YYYY-MM-DD, model-name: ..."
-			const editMatch = trimmed.match(/^-\s+Edit\s+[—-]\s+\d{4}-\d{2}-\d{2},\s+(\S+?):/i);
+			// Match "- Edit — YYYY-MM-DD: ..." (model suffix optional)
+			const editMatch = trimmed.match(/^-\s+Edit\s+[—-]\s+\d{4}-\d{2}-\d{2}(?:,\s+([^:]+?))?:/i);
 			if (editMatch) {
-				lastModel = editMatch[1];
+				if (editMatch[1] && editMatch[1].trim().length > 0) lastModel = editMatch[1].trim();
 				lastEvent = "edit";
 				continue;
 			}

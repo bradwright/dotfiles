@@ -32,8 +32,6 @@ This directory contains project-local Pi extensions.
     - Uses `gh pr list` by branch.
     - Includes a short in-memory cache (TTL 30s) to reduce repeated lookups.
 
-- `model-identity.ts`
-  - Appends active model id to system prompt for model self-identification tasks.
 
 - `shared.ts`
   - Utility module shared by `plan.ts` and `plan-guards.ts`. Not an extension entry point — not listed in `pi/package.json`.
@@ -53,7 +51,7 @@ This directory contains project-local Pi extensions.
   - `/plan resume` with no args opens a selector of available plan packages under `./.pi/plans`.
   - `/plan mode` shows a thinking-level selector (`medium|high|xhigh`) with `high` as the default.
   - Entering plan mode sets thinking to the selected plan thinking level and restores previous thinking when exiting plan mode.
-  - `/plan review` auto-enables plan mode guardrails (if needed) and queues `/skill:plan-methodology review <active-plan-dir>`.
+  - `/plan review` auto-enables plan mode guardrails (if needed) and dispatches review to a subagent (plan-reviewer, reviewer, or scout) via `/run` when pi-subagents is installed, falling back to in-session `/skill:plan-methodology review` otherwise.
   - Adds `/build` command to disable plan mode and queue implementation from active `plan.md`.
     - `/build mode` shows a thinking-level selector (`low|medium|high|xhigh`) with `medium` as the default.
     - Sets thinking to the selected build thinking level when starting build.
@@ -62,9 +60,10 @@ This directory contains project-local Pi extensions.
   - Persists mode state (`enabled`, active plan path, previous tool set) in session entry `plan-state`.
   - Shows active plan slug in footer status while plan mode is enabled.
   - Restricts tool usage in plan mode:
-    - Active tool set includes `edit`/`write` for plan docs.
+    - Active tool set includes `edit`/`write` for plan docs and `subagent` for delegation.
     - Blocks `edit`/`write` outside the active plan package.
     - Allows only read-oriented bash commands.
+  - The `subagent` tool is included in plan mode tools so the LLM can delegate scouting and drafting to subagents (scout, worker) per the plan-methodology skill, keeping the primary agent's context window small.
   - Injects hidden planning context before each turn when plan mode is enabled.
   - Auto-detects active plan dir from `/skill:plan-methodology review <plan-dir>` input.
 
