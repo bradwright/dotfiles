@@ -56,7 +56,11 @@ abbr -a top btm
 if command -q starship
     set -gx STARSHIP_CONFIG ~/.config/fish/starship.toml
     function starship_transient_prompt_func
-        starship module character
+        # Green breadcrumb for previous commands — visually distinct
+        # from the active purple ❯ so you can spot where you are.
+        set_color green
+        printf '❯ '
+        set_color normal
     end
     starship init fish | source
     enable_transience
