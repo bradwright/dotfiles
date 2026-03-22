@@ -16,6 +16,7 @@ fi
 export EDITOR="nvim"
 export VISUAL="nvim"
 export GIT_EDITOR="nvim +star"
+export BAT_THEME="ansi"
 
 if [[ -d "$HOME/.config/doom" ]]; then
     [[ -d "$HOME/.config/emacs/bin" ]] && path=("$HOME/.config/emacs/bin" $path)
