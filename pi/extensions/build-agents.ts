@@ -128,11 +128,111 @@ function isTerminalPhase(phase: DerivedRunPhase): boolean {
 	return phase === "completed" || phase === "failed" || phase === "canceled";
 }
 
+function isDoneStatus(status: TaskStatus): boolean {
+	return status === "completed" || status === "passed" || status === "merged";
+}
+
+const TASK_STATUSES: TaskStatus[] = [
+	"pending",
+	"spawned",
+	"completed",
+	"reviewing",
+	"passed",
+	"failed",
+	"crashed",
+	"corrective",
+	"merged",
+];
+
+function parseTaskStatusFromEvent(event: BuildEvent): TaskStatus | null {
+	if (event.status && TASK_STATUSES.includes(event.status as TaskStatus)) {
+		return event.status as TaskStatus;
+	}
+
+	const match = event.type.match(/^task_(pending|spawned|completed|reviewing|passed|failed|crashed|corrective|merged)$/);
+	if (!match) return null;
+	return match[1] as TaskStatus;
+}
+
+function taskSlugFromId(taskId: string): string {
+	return taskId.replace(/^task-\d+-/, "");
+}
+
+function syncMissingTaskArtifactsFromWorktrees(taskDir: string, taskId: string, worktreeRoot: string): void {
+	if (!fs.existsSync(worktreeRoot)) return;
+
+	const needsResult = !fs.existsSync(path.join(taskDir, "RESULT.md"));
+	const needsReview = !fs.existsSync(path.join(taskDir, "REVIEW.md"));
+	if (!needsResult && !needsReview) return;
+
+	let worktrees: fs.Dirent[] = [];
+	try {
+		worktrees = fs.readdirSync(worktreeRoot, { withFileTypes: true }).filter((e) => e.isDirectory());
+	} catch {
+		return;
+	}
+
+	const slug = taskSlugFromId(taskId).toLowerCase();
+	let candidates = worktrees
+		.map((entry) => ({ name: entry.name.toLowerCase(), fullPath: path.join(worktreeRoot, entry.name) }))
+		.filter(({ name }) => name.includes(taskId.toLowerCase()) || (slug.length > 0 && name.includes(slug)));
+
+	// If no obvious name match is found, fall back to scanning all worktrees.
+	if (candidates.length === 0) {
+		candidates = worktrees.map((entry) => ({ name: entry.name.toLowerCase(), fullPath: path.join(worktreeRoot, entry.name) }));
+	}
+
+	function newestExisting(paths: string[]): string | null {
+		let bestPath: string | null = null;
+		let bestMtime = -1;
+		for (const p of paths) {
+			if (!fs.existsSync(p)) continue;
+			try {
+				const stat = fs.statSync(p);
+				if (!stat.isFile()) continue;
+				if (stat.mtimeMs > bestMtime) {
+					bestMtime = stat.mtimeMs;
+					bestPath = p;
+				}
+			} catch { /* ignore */ }
+		}
+		return bestPath;
+	}
+
+	for (const candidate of candidates) {
+		if (needsResult) {
+			const resultSource = newestExisting([
+				path.join(candidate.fullPath, "RESULT.md"),
+				path.join(candidate.fullPath, taskId, "RESULT.md"),
+				path.join(candidate.fullPath, "tasks", taskId, "RESULT.md"),
+			]);
+			if (resultSource && !fs.existsSync(path.join(taskDir, "RESULT.md"))) {
+				try {
+					fs.copyFileSync(resultSource, path.join(taskDir, "RESULT.md"));
+				} catch { /* ignore */ }
+			}
+		}
+
+		if (needsReview) {
+			const reviewSource = newestExisting([
+				path.join(candidate.fullPath, "REVIEW.md"),
+				path.join(candidate.fullPath, taskId, "REVIEW.md"),
+				path.join(candidate.fullPath, "tasks", taskId, "REVIEW.md"),
+			]);
+			if (reviewSource && !fs.existsSync(path.join(taskDir, "REVIEW.md"))) {
+				try {
+					fs.copyFileSync(reviewSource, path.join(taskDir, "REVIEW.md"));
+				} catch { /* ignore */ }
+			}
+		}
+	}
+}
+
 // ---------------------------------------------------------------------------
-// Task artifact scanning (file-based status detection)
+// Task status scanning (artifact-first, events fallback)
 // ---------------------------------------------------------------------------
 
-function scanTaskArtifacts(runDir: string, tasks: TaskState[]): { updated: TaskState[]; newStatuses: Map<string, TaskStatus> } {
+function scanTaskArtifacts(runDir: string, tasks: TaskState[], events: BuildEvent[] = [], worktreeRoot?: string): { updated: TaskState[]; newStatuses: Map<string, TaskStatus> } {
 	const tasksDir = path.join(runDir, "tasks");
 	if (!fs.existsSync(tasksDir)) return { updated: tasks, newStatuses: new Map() };
 
@@ -164,6 +264,12 @@ function scanTaskArtifacts(runDir: string, tasks: TaskState[]): { updated: TaskS
 
 		const oldStatus = task.status;
 
+		// Ensure RESULT/REVIEW artifacts are mirrored from matching worktrees
+		// when they were generated there but not copied into run/tasks/<task-id>/.
+		if (worktreeRoot) {
+			syncMissingTaskArtifactsFromWorktrees(taskDir, taskId, worktreeRoot);
+		}
+
 		// Determine status from artifacts
 		const hasResult = fs.existsSync(path.join(taskDir, "RESULT.md"));
 		const hasReview = fs.existsSync(path.join(taskDir, "REVIEW.md"));
@@ -185,6 +291,51 @@ function scanTaskArtifacts(runDir: string, tasks: TaskState[]): { updated: TaskS
 
 		if (task.status !== oldStatus) {
 			newStatuses.set(taskId, task.status);
+		}
+	}
+
+	// Fallback: infer status from structured task events when artifact files
+	// are missing (common in manually resumed orchestration flows).
+	let hasPerTaskEventStatus = false;
+	for (const event of events) {
+		if (!event.taskId) continue;
+		const parsedStatus = parseTaskStatusFromEvent(event);
+		if (!parsedStatus) continue;
+		hasPerTaskEventStatus = true;
+
+		let task = taskMap.get(event.taskId);
+		if (!task) {
+			task = {
+				id: event.taskId,
+				title: event.taskId,
+				status: "pending",
+				reviewVerdict: null,
+				correctiveRound: 0,
+			};
+			taskMap.set(event.taskId, task);
+		}
+
+		const oldStatus = task.status;
+		task.status = parsedStatus;
+		if (parsedStatus === "passed" && !task.reviewVerdict) task.reviewVerdict = "PASS";
+		if (parsedStatus === "failed") task.reviewVerdict = "FAIL";
+
+		if (task.status !== oldStatus) {
+			newStatuses.set(task.id, task.status);
+		}
+	}
+
+	// Final fallback: if run is marked completed but no per-task status signals
+	// exist and every discovered task is still pending, mark them merged.
+	const runCompleted = events.some((e) => e.type === "run_completed");
+	if (runCompleted && !hasPerTaskEventStatus) {
+		const discoveredTasks = Array.from(taskMap.values());
+		const allStillPending = discoveredTasks.length > 0 && discoveredTasks.every((t) => t.status === "pending");
+		if (allStillPending) {
+			for (const task of discoveredTasks) {
+				task.status = "merged";
+				newStatuses.set(task.id, task.status);
+			}
 		}
 	}
 
@@ -269,7 +420,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			const events = readJsonlEvents<BuildEvent>(path.join(run.runDir, EVENTS_FILE));
 			const phase = deriveRunPhase(events, tasks);
 
-			const done = tasks.filter((t) => t.status === "passed" || t.status === "merged").length;
+			const done = tasks.filter((t) => isDoneStatus(t.status)).length;
 			const running = tasks.filter((t) => t.status === "spawned" || t.status === "reviewing" || t.status === "corrective").length;
 			const failed = tasks.filter((t) => t.status === "failed").length;
 			const crashed = tasks.filter((t) => t.status === "crashed").length;
@@ -540,8 +691,13 @@ export default function buildAgents(pi: ExtensionAPI) {
 
 		const run = activeRun;
 		const events = readJsonlEvents<BuildEvent>(path.join(run.runDir, EVENTS_FILE));
+		const { updated } = scanTaskArtifacts(run.runDir, run.tasks, events, run.worktreeRoot);
+		run.tasks = updated;
+		persistState();
+		updateWidget(ctx);
+
 		const phase = deriveRunPhase(events, run.tasks);
-		const done = run.tasks.filter((t) => t.status === "passed" || t.status === "merged").length;
+		const done = run.tasks.filter((t) => isDoneStatus(t.status)).length;
 		const running = run.tasks.filter((t) => t.status === "spawned" || t.status === "reviewing" || t.status === "corrective").length;
 		const failed = run.tasks.filter((t) => t.status === "failed").length;
 		const crashed = run.tasks.filter((t) => t.status === "crashed").length;
@@ -740,8 +896,9 @@ export default function buildAgents(pi: ExtensionAPI) {
 
 		const run = activeRun;
 
-		// Scan task artifacts for status changes
-		const { updated, newStatuses } = scanTaskArtifacts(run.runDir, run.tasks);
+		// Scan task artifacts for status changes (with events fallback)
+		const events = readJsonlEvents<BuildEvent>(path.join(run.runDir, EVENTS_FILE));
+		const { updated, newStatuses } = scanTaskArtifacts(run.runDir, run.tasks, events, run.worktreeRoot);
 		run.tasks = updated;
 
 		// Emit events for new status transitions
@@ -855,8 +1012,8 @@ export default function buildAgents(pi: ExtensionAPI) {
 					}
 				}
 
-				// Scan artifacts to rebuild task state
-				const { updated } = scanTaskArtifacts(activeRun.runDir, activeRun.tasks);
+				// Scan artifacts to rebuild task state (with events fallback)
+				const { updated } = scanTaskArtifacts(activeRun.runDir, activeRun.tasks, events, activeRun.worktreeRoot);
 				activeRun.tasks = updated;
 
 				// Rebuild lastKnownStatuses

@@ -68,6 +68,11 @@ This directory contains project-local Pi extensions.
   - Injects hidden planning context before each turn when plan mode is enabled.
   - Auto-detects active plan dir from `/skill:plan-methodology review <plan-dir>` input.
 
+- `build-agents.ts`
+  - Adds `/build-agents` for multi-agent implementation orchestration.
+  - Task status detection is artifact-first (`tasks/<id>/RESULT.md`, `tasks/<id>/REVIEW.md`) with fallback to structured `events.jsonl` task events when artifacts are missing.
+  - During scans, missing task `RESULT.md` / `REVIEW.md` files are mirrored from matching worktrees when available.
+
 ## Operational notes
 
 - After changes, run `/reload` in Pi to apply extension updates.
