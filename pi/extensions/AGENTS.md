@@ -35,6 +35,15 @@ This directory contains project-local Pi extensions.
 - `model-identity.ts`
   - Appends active model id to system prompt for model self-identification tasks.
 
+- `shared.ts`
+  - Utility module shared by `plan.ts` and `plan-guards.ts`. Not an extension entry point — not listed in `pi/package.json`.
+  - Exports common helpers (e.g. plan-state reading/writing, session entry key, path utilities) used across plan-related extensions.
+
+- `plan-guards.ts`
+  - Plan-mode guard sub-extension that listens to the `plan:state-changed` event.
+  - Enforces tool restrictions when plan mode is active: allows only read-oriented bash commands and limits `edit`/`write` to the active plan package directory.
+  - Registered in `pi/package.json` after `plan.ts`.
+
 - `plan.ts`
   - Adds `/plan` command for planning-state controls:
     - `on|off|toggle|status|mode [medium|high|xhigh]`
