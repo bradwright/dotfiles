@@ -5,5 +5,15 @@
   "keywords": ["pi-package"],
   "scripts": {
     "install": "./install.sh"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/model-identity.ts",
+      "./extensions/github-statusline.ts",
+      "./extensions/plan.ts",
+      "./extensions/build-agents.ts"
+    ],
+    "skills": ["./skills"],
+    "themes": ["./themes"]
   }
 }

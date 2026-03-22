@@ -65,3 +65,11 @@ This directory contains project-local Pi extensions.
 - Dotfiles install symlinks this directory into `~/.pi/agent/extensions/` via `make install_pi`.
 - Keep footer rendering lightweight: avoid expensive per-render shell commands.
 - Prefer branch-change-triggered refresh + cached metadata for git/GitHub info.
+
+## Package manifest (`pi/package.json`)
+
+The `pi` field in `package.json` explicitly declares extensions, skills, and
+themes. **Once a `pi` manifest exists, convention-based auto-discovery is
+disabled** — pi only loads what is listed. If you add a new extension, skill
+directory, or theme file, you must also add it to the corresponding array in
+the manifest or it will not be loaded.
