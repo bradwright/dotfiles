@@ -6,9 +6,23 @@ import { execFileSync } from "node:child_process";
 import { getAgentDir, isToolCallEventType, type ExtensionAPI, type ExtensionContext, type Theme } from "@mariozechner/pi-coding-agent";
 import { type Focusable, Key, matchesKey, Text, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@mariozechner/pi-tui";
 
+import {
+	appendJsonlEvent,
+	hasApprovedEntry,
+	isWithinDirectory,
+	localIsoDate,
+	normalizeInputPath,
+	readJsonlEvents,
+	requiredFilesMissing,
+	resolvePathForContainment,
+	slugify,
+	toDisplayPath,
+	toTitleCase,
+	truncateText,
+} from "./shared.js";
+
 const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write"] as const;
 const FALLBACK_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls"] as const;
-const REQUIRED_PLAN_FILES = ["plan.md", "feedback.md", "changelog.md"] as const;
 const ISSUE_BRIEF_FILE = "brief.md";
 const EVENTS_FILE = "events.jsonl";
 
@@ -22,92 +36,6 @@ const PLAN_USAGE =
 
 const GITHUB_ISSUE_FETCH_TIMEOUT_MS = 15000;
 const GITHUB_ISSUE_BODY_MAX_CHARS = 12000;
-
-const SAFE_BASH_PATTERNS = [
-	/^\s*cat\b/i,
-	/^\s*head\b/i,
-	/^\s*tail\b/i,
-	/^\s*less\b/i,
-	/^\s*more\b/i,
-	/^\s*grep\b/i,
-	/^\s*find\b/i,
-	/^\s*ls\b/i,
-	/^\s*pwd\b/i,
-	/^\s*echo\b/i,
-	/^\s*printf\b/i,
-	/^\s*wc\b/i,
-	/^\s*sort\b/i,
-	/^\s*uniq\b/i,
-	/^\s*diff\b/i,
-	/^\s*file\b/i,
-	/^\s*stat\b/i,
-	/^\s*du\b/i,
-	/^\s*df\b/i,
-	/^\s*tree\b/i,
-	/^\s*which\b/i,
-	/^\s*whereis\b/i,
-	/^\s*type\b/i,
-	/^\s*env\b/i,
-	/^\s*printenv\b/i,
-	/^\s*uname\b/i,
-	/^\s*whoami\b/i,
-	/^\s*id\b/i,
-	/^\s*date\b/i,
-	/^\s*uptime\b/i,
-	/^\s*ps\b/i,
-	/^\s*top\b/i,
-	/^\s*htop\b/i,
-	/^\s*git\s+(status|log|diff|show|branch|remote|rev-parse|config\s+--get)\b/i,
-	/^\s*git\s+ls-\S+\b/i,
-	/^\s*npm\s+(list|ls|view|info|search|outdated|audit)\b/i,
-	/^\s*yarn\s+(list|info|why|audit)\b/i,
-	/^\s*pnpm\s+(list|ls|view|info|search|outdated|audit)\b/i,
-	/^\s*node\s+--version\b/i,
-	/^\s*python\s+--version\b/i,
-	/^\s*python3\s+--version\b/i,
-	/^\s*curl\b/i,
-	/^\s*wget\s+-O\s*-\b/i,
-	/^\s*jq\b/i,
-	/^\s*sed\s+-n\b/i,
-	/^\s*awk\b/i,
-	/^\s*rg\b/i,
-	/^\s*fd\b/i,
-	/^\s*bat\b/i,
-] as const;
-
-const BLOCKED_BASH_PATTERNS = [
-	/\brm\b/i,
-	/\brmdir\b/i,
-	/\bmv\b/i,
-	/\bcp\b/i,
-	/\bmkdir\b/i,
-	/\btouch\b/i,
-	/\bchmod\b/i,
-	/\bchown\b/i,
-	/\bln\b/i,
-	/\btee\b/i,
-	/\btruncate\b/i,
-	/\bdd\b/i,
-	/(^|[^<])>(?!>)/,
-	/>>/,
-	/\bxargs\b/i,
-	/\bnpm\s+(install|uninstall|update|ci|link|publish)\b/i,
-	/\byarn\s+(add|remove|install|publish)\b/i,
-	/\bpnpm\s+(add|remove|install|publish)\b/i,
-	/\bpip\s+(install|uninstall)\b/i,
-	/\bapt(-get)?\s+(install|remove|purge|update|upgrade)\b/i,
-	/\bbrew\s+(install|uninstall|upgrade)\b/i,
-	/\bgit\s+(add|commit|push|pull|merge|rebase|reset|checkout|stash|cherry-pick|revert|tag|init|clone)\b/i,
-	/\bsudo\b/i,
-	/\bsu\b/i,
-	/\bkill\b/i,
-	/\bpkill\b/i,
-	/\bkillall\b/i,
-	/\breboot\b/i,
-	/\bshutdown\b/i,
-	/\b(vim?|nano|emacs|code|subl)\b/i,
-	/\b(bash|sh|zsh)\b\s+-c\b/i,
-] as const;
 
 type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
 
@@ -166,29 +94,11 @@ type PlanMeta = {
 };
 
 function readPlanEvents(planDir: string): PlanEvent[] {
-	const eventsPath = path.join(planDir, EVENTS_FILE);
-	if (!fs.existsSync(eventsPath)) return [];
-	try {
-		return fs
-			.readFileSync(eventsPath, "utf8")
-			.split("\n")
-			.filter(Boolean)
-			.map((line) => {
-				try {
-					return JSON.parse(line) as PlanEvent;
-				} catch {
-					return null;
-				}
-			})
-			.filter((event): event is PlanEvent => event !== null);
-	} catch {
-		return [];
-	}
+	return readJsonlEvents<PlanEvent>(path.join(planDir, EVENTS_FILE));
 }
 
 function appendPlanEvent(planDir: string, event: PlanEvent): void {
-	const eventsPath = path.join(planDir, EVENTS_FILE);
-	fs.appendFileSync(eventsPath, JSON.stringify(event) + "\n");
+	appendJsonlEvent<PlanEvent>(path.join(planDir, EVENTS_FILE), event);
 }
 
 function derivePlanMeta(events: PlanEvent[]): PlanMeta {
@@ -389,109 +299,6 @@ function computeReadiness(planDir: string): { score: number; total: number } {
 	}
 }
 
-function localIsoDate(now = new Date()): string {
-	const yyyy = now.getFullYear();
-	const mm = `${now.getMonth() + 1}`.padStart(2, "0");
-	const dd = `${now.getDate()}`.padStart(2, "0");
-	return `${yyyy}-${mm}-${dd}`;
-}
-
-function slugify(input: string): string {
-	return input
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-+|-+$/g, "")
-		.replace(/-{2,}/g, "-")
-		.slice(0, 60);
-}
-
-function toTitleCase(value: string): string {
-	return value
-		.split(/[-\s]+/)
-		.filter(Boolean)
-		.map((part) => part[0].toUpperCase() + part.slice(1))
-		.join(" ");
-}
-
-function stripMatchingQuotes(value: string): string {
-	if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-		return value.slice(1, -1);
-	}
-	return value;
-}
-
-function expandHome(inputPath: string): string {
-	const home = process.env.HOME || process.env.USERPROFILE;
-	if (!home) return inputPath;
-	if (inputPath === "~") return home;
-	if (inputPath.startsWith("~/") || inputPath.startsWith("~\\")) {
-		return path.join(home, inputPath.slice(2));
-	}
-	return inputPath;
-}
-
-function normalizeInputPath(inputPath: string, cwd: string): string {
-	const trimmed = stripMatchingQuotes(inputPath.trim()).replace(/^@/, "");
-	const expanded = expandHome(trimmed);
-	return path.resolve(cwd, expanded);
-}
-
-function resolvePathForContainment(inputPath: string, cwd: string): string {
-	const normalized = normalizeInputPath(inputPath, cwd);
-
-	try {
-		return fs.realpathSync(normalized);
-	} catch {
-		const parent = path.dirname(normalized);
-		try {
-			const realParent = fs.realpathSync(parent);
-			return path.join(realParent, path.basename(normalized));
-		} catch {
-			return normalized;
-		}
-	}
-}
-
-function isWithinDirectory(targetPath: string, directoryPath: string): boolean {
-	const rel = path.relative(path.resolve(directoryPath), path.resolve(targetPath));
-	return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
-}
-
-function toDisplayPath(targetPath: string, cwd: string): string {
-	const resolved = path.resolve(targetPath);
-	const fromCwd = path.relative(cwd, resolved);
-	if (!fromCwd.startsWith("..") && !path.isAbsolute(fromCwd)) return `./${fromCwd}`;
-
-	const home = process.env.HOME || process.env.USERPROFILE;
-	if (home && resolved.startsWith(home)) return `~${resolved.slice(home.length)}`;
-
-	return resolved;
-}
-
-function requiredFilesMissing(planDir: string): string[] {
-	return REQUIRED_PLAN_FILES.filter((file) => !fs.existsSync(path.join(planDir, file)));
-}
-
-function listAvailablePlanDirs(cwd: string): string[] {
-	const plansRoot = path.join(cwd, ".pi", "plans");
-	if (!fs.existsSync(plansRoot) || !fs.statSync(plansRoot).isDirectory()) return [];
-
-	const dirs = fs
-		.readdirSync(plansRoot, { withFileTypes: true })
-		.filter((entry) => entry.isDirectory())
-		.map((entry) => path.join(plansRoot, entry.name))
-		.filter((dir) => requiredFilesMissing(dir).length === 0)
-		.sort((a, b) => path.basename(b).localeCompare(path.basename(a)));
-
-	return dirs;
-}
-
-function hasApprovedEntry(changelogPath: string): boolean {
-	if (!fs.existsSync(changelogPath) || !fs.statSync(changelogPath).isFile()) return false;
-	const content = fs.readFileSync(changelogPath, "utf8");
-	return /^\s*-\s*Approved\s+[—-]\s+\d{4}-\d{2}-\d{2},\s+user\./m.test(content);
-}
-
 function planTemplate(title: string): string {
 	return `# Plan: ${title}\n\n## Goal\n\n## Context and Constraints\n\n## Files and Components to Touch\n\n## Implementation Plan\n1.\n\n## Risks / Edge Cases\n\n## Validation Checklist\n\n## Open Questions\n`;
 }
@@ -529,10 +336,18 @@ function ensurePlanPackage(planDir: string, title: string): string[] {
 	return created;
 }
 
-function isSafeBashCommand(command: string): boolean {
-	const blocked = BLOCKED_BASH_PATTERNS.some((pattern) => pattern.test(command));
-	const allowed = SAFE_BASH_PATTERNS.some((pattern) => pattern.test(command));
-	return !blocked && allowed;
+function listAvailablePlanDirs(cwd: string): string[] {
+	const plansRoot = path.join(cwd, ".pi", "plans");
+	if (!fs.existsSync(plansRoot) || !fs.statSync(plansRoot).isDirectory()) return [];
+
+	const dirs = fs
+		.readdirSync(plansRoot, { withFileTypes: true })
+		.filter((entry) => entry.isDirectory())
+		.map((entry) => path.join(plansRoot, entry.name))
+		.filter((dir) => requiredFilesMissing(dir).length === 0)
+		.sort((a, b) => path.basename(b).localeCompare(path.basename(a)));
+
+	return dirs;
 }
 
 function parsePlanReviewPath(input: string): string | null {
@@ -542,7 +357,7 @@ function parsePlanReviewPath(input: string): string | null {
 }
 
 function parseGitHubIssueUrl(input: string): GitHubIssueRef | null {
-	const value = stripMatchingQuotes(input.trim());
+	const value = input.trim().replace(/^["']|["']$/g, "");
 	let parsed: URL;
 	try {
 		parsed = new URL(value);
@@ -566,14 +381,6 @@ function parseGitHubIssueUrl(input: string): GitHubIssueRef | null {
 		repo,
 		number,
 		url: `https://github.com/${owner}/${repo}/issues/${number}`,
-	};
-}
-
-function truncateText(text: string, maxChars: number): { text: string; truncated: boolean } {
-	if (text.length <= maxChars) return { text, truncated: false };
-	return {
-		text: `${text.slice(0, Math.max(0, maxChars - 14)).trimEnd()}\n\n[...truncated]`,
-		truncated: true,
 	};
 }
 
@@ -777,6 +584,10 @@ export default function plan(pi: ExtensionAPI) {
 		});
 	}
 
+	function emitStateChanged(): void {
+		pi.events.emit("plan:state-changed", { enabled: planEnabled, activePlanDir });
+	}
+
 	function planLabel(): string {
 		if (!activePlanDir) return "no plan";
 		return path.basename(activePlanDir);
@@ -799,7 +610,7 @@ export default function plan(pi: ExtensionAPI) {
 			if (!activePlanDir || !fs.existsSync(activePlanDir)) {
 				// Plan mode on but no plan loaded yet
 				parts.push(theme.fg("warning", "📋 DRAFT"));
-				parts.push(theme.fg("muted", "no plan loaded"));
+				parts.push(theme.fg("muted", planLabel()));
 				parts.push(theme.fg("dim", `thinking: ${planThinkingLevel}`));
 				return new Text(parts.join(theme.fg("dim", " │ ")), 0, 0);
 			}
@@ -816,6 +627,9 @@ export default function plan(pi: ExtensionAPI) {
 			} else {
 				parts.push(theme.fg("warning", "📋 DRAFT"));
 			}
+
+			// Plan label (directory name)
+			parts.push(theme.fg("muted", planLabel()));
 
 			// Review count
 			if (meta.reviewCount > 0) {
@@ -894,6 +708,7 @@ export default function plan(pi: ExtensionAPI) {
 
 		updateStatus(ctx);
 		persistState();
+		emitStateChanged();
 	}
 
 	function formatStatusSummary(ctx: ExtensionContext): string {
@@ -908,13 +723,7 @@ export default function plan(pi: ExtensionAPI) {
 		activePlanDir = nextPlanDir ? path.resolve(nextPlanDir) : null;
 		updateStatus(ctx);
 		persistState();
-	}
-
-	function canWriteToActivePlan(rawPath: string, cwd: string): boolean {
-		if (!activePlanDir) return false;
-		const planRoot = resolvePathForContainment(activePlanDir, cwd);
-		const target = resolvePathForContainment(rawPath, cwd);
-		return isWithinDirectory(target, planRoot);
+		emitStateChanged();
 	}
 
 	function usage(ctx: ExtensionContext): void {
@@ -1620,42 +1429,6 @@ export default function plan(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.on("tool_call", async (event, ctx) => {
-		if (!planEnabled) return;
-
-		if (isToolCallEventType("edit", event) || isToolCallEventType("write", event)) {
-			const requestedPath = event.input.path;
-			if (!activePlanDir) {
-				return {
-					block: true,
-					reason:
-						"Plan mode only allows edits in an active plan package. Set one with /plan new [context] or /plan resume <plan-dir>.",
-				};
-			}
-
-			if (!canWriteToActivePlan(requestedPath, ctx.cwd)) {
-				return {
-					block: true,
-					reason: `Plan mode only allows edits inside the active plan package (${toDisplayPath(activePlanDir, ctx.cwd)}).\nBlocked path: ${toDisplayPath(
-						normalizeInputPath(requestedPath, ctx.cwd),
-						ctx.cwd,
-					)}`,
-				};
-			}
-			return;
-		}
-
-		if (isToolCallEventType("bash", event)) {
-			const command = event.input.command ?? "";
-			if (!isSafeBashCommand(command)) {
-				return {
-					block: true,
-					reason: `Plan mode only allows read-only bash commands.\nBlocked command: ${command}`,
-				};
-			}
-		}
-	});
-
 	// Detect changelog.md writes and emit structured events to events.jsonl
 	pi.on("tool_result", async (event, ctx) => {
 		if (!planEnabled || !activePlanDir) return;
@@ -1841,5 +1614,8 @@ export default function plan(pi: ExtensionAPI) {
 		} else {
 			updateStatus(ctx);
 		}
+
+		// Emit state-changed so plan-guards.ts syncs on session restore
+		emitStateChanged();
 	});
 }
