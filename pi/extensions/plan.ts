@@ -611,7 +611,7 @@ export default function plan(pi: ExtensionAPI) {
 				// Plan mode on but no plan loaded yet
 				parts.push(theme.fg("warning", "📋 DRAFT"));
 				parts.push(theme.fg("muted", planLabel()));
-				parts.push(theme.fg("dim", `thinking: ${planThinkingLevel}`));
+				parts.push(theme.fg("dim", `thinking: ${pi.getThinkingLevel()}`));
 				return new Text(parts.join(theme.fg("dim", " │ ")), 0, 0);
 			}
 
@@ -648,7 +648,7 @@ export default function plan(pi: ExtensionAPI) {
 			parts.push(theme.fg(readinessColor as Parameters<typeof theme.fg>[0], `${readiness.score}/${readiness.total} ready`));
 
 			// Thinking level
-			parts.push(theme.fg("dim", `thinking: ${planThinkingLevel}`));
+			parts.push(theme.fg("dim", `thinking: ${pi.getThinkingLevel()}`));
 
 			return new Text(parts.join(theme.fg("dim", " │ ")), 0, 0);
 		});

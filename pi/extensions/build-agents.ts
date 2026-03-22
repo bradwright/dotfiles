@@ -420,8 +420,10 @@ export default function buildAgents(pi: ExtensionAPI) {
 		ctx.ui.setStatus(STATUS_KEY, ctx.ui.theme.fg("accent", `🏗️ ${run.runId}`));
 
 		ctx.ui.setWidget(STATUS_KEY, (_tui, theme) => {
-			const tasks = run.tasks;
 			const events = readJsonlEvents<BuildEvent>(path.join(run.runDir, EVENTS_FILE));
+			const { updated } = scanTaskArtifacts(run.runDir, run.tasks, events, run.worktreeRoot);
+			run.tasks = updated;
+			const tasks = run.tasks;
 			const phase = deriveRunPhase(events, tasks);
 
 			const done = tasks.filter((t) => isDoneStatus(t.status)).length;
