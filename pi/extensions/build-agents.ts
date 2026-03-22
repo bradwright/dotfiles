@@ -417,7 +417,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		}
 
 		const run = activeRun;
-		ctx.ui.setStatus(STATUS_KEY, ctx.ui.theme.fg("accent", `🏗️ ${run.runId}`));
+		ctx.ui.setStatus(STATUS_KEY, undefined);
 
 		ctx.ui.setWidget(STATUS_KEY, (_tui, theme) => {
 			const events = readJsonlEvents<BuildEvent>(path.join(run.runDir, EVENTS_FILE));
