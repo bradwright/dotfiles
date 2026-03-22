@@ -622,23 +622,25 @@ export default function buildAgents(pi: ExtensionAPI) {
 		const branchResult = await pi.exec("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
 		let baseBranch = (branchResult.stdout || "main").trim();
 
-		// Guard against building directly on main/master
+		// Offer to create a branch when on main/master
 		if (baseBranch === "main" || baseBranch === "master") {
-			const branchName = await ctx.ui.input(
-				`You're on ${baseBranch}. Create a new branch as the base? (leave empty to cancel)`,
-				`build/${planSlug}`,
+			const action = await ctx.ui.select(
+				`You're on ${baseBranch}. Create a new branch?`,
+				["Create new branch", `Stay on ${baseBranch}`],
 			);
-			if (!branchName?.trim()) {
-				ctx.ui.notify("Build canceled — create a branch first.", "info");
-				return;
+			if (!action) return;
+
+			if (action === "Create new branch") {
+				const branchName = await ctx.ui.input("Branch name:", `build/${planSlug}`);
+				if (!branchName?.trim()) return;
+				const checkoutResult = await pi.exec("git", ["checkout", "-b", branchName.trim()]);
+				if (checkoutResult.code !== 0) {
+					ctx.ui.notify(`Failed to create branch: ${(checkoutResult.stderr || checkoutResult.stdout).trim()}`, "error");
+					return;
+				}
+				baseBranch = branchName.trim();
+				ctx.ui.notify(`Created and switched to branch ${baseBranch}.`, "info");
 			}
-			const checkoutResult = await pi.exec("git", ["checkout", "-b", branchName.trim()]);
-			if (checkoutResult.code !== 0) {
-				ctx.ui.notify(`Failed to create branch: ${(checkoutResult.stderr || checkoutResult.stdout).trim()}`, "error");
-				return;
-			}
-			baseBranch = branchName.trim();
-			ctx.ui.notify(`Created and switched to branch ${baseBranch}.`, "info");
 		}
 
 		// 11. Write initial event
