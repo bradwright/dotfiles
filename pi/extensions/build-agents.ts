@@ -923,6 +923,17 @@ export default function buildAgents(pi: ExtensionAPI) {
 			}
 		}
 
+		// Check if the run reached a terminal phase
+		const freshEvents = readJsonlEvents<BuildEvent>(path.join(run.runDir, EVENTS_FILE));
+		const phase = deriveRunPhase(freshEvents, run.tasks);
+		if (isTerminalPhase(phase)) {
+			const done = run.tasks.filter((t) => isDoneStatus(t.status)).length;
+			const failed = run.tasks.filter((t) => t.status === "failed" || t.status === "crashed").length;
+			const summary = `Build ${run.runId} ${phase}: ${done}/${run.tasks.length} done, ${failed} failed.`;
+			ctx.ui.notify(summary, phase === "completed" ? "success" : "warning");
+			activeRun = null;
+		}
+
 		persistState();
 		updateWidget(ctx);
 	});
