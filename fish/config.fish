@@ -1,13 +1,7 @@
 # -*- mode: fish -*-
 
-# Bail out early for non-interactive shells (scripts, scp, etc.)
-status is-interactive; or return
-
-# Suppress fish's startup greeting for a cleaner prompt
-set -g fish_greeting
-
 # ---------------------------------------------------------------------------
-# PATH
+# PATH — set for all shells (interactive and non-interactive)
 # ---------------------------------------------------------------------------
 
 # Homebrew (Apple Silicon first, then Intel fallback)
@@ -23,6 +17,12 @@ fish_add_path --prepend ~/bin ~/.local/bin
 if test -d ~/.config/doom
     fish_add_path --prepend ~/.config/emacs/bin /Applications/Emacs.app/Contents/MacOS
 end
+
+# Bail out early for non-interactive shells (scripts, scp, etc.)
+status is-interactive; or return
+
+# Suppress fish's startup greeting for a cleaner prompt
+set -g fish_greeting
 
 # ---------------------------------------------------------------------------
 # Environment
