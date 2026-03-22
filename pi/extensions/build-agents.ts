@@ -410,14 +410,14 @@ export default function buildAgents(pi: ExtensionAPI) {
 	function updateWidget(ctx: ExtensionContext): void {
 		if (!ctx.hasUI) return;
 
+		ctx.ui.setStatus(STATUS_KEY, undefined);
+
 		if (!activeRun) {
-			ctx.ui.setStatus(STATUS_KEY, undefined);
 			ctx.ui.setWidget(STATUS_KEY, undefined);
 			return;
 		}
 
 		const run = activeRun;
-		ctx.ui.setStatus(STATUS_KEY, undefined);
 
 		ctx.ui.setWidget(STATUS_KEY, (_tui, theme) => {
 			const events = readJsonlEvents<BuildEvent>(path.join(run.runDir, EVENTS_FILE));
