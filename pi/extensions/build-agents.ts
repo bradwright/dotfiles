@@ -7,7 +7,6 @@ import {
 	localIsoDate,
 	slugify,
 	toDisplayPath,
-	hasApprovedEntry,
 	listApprovedPlanDirs,
 	readJsonlEvents,
 	appendJsonlEvent,
