@@ -315,6 +315,10 @@ function scanTaskArtifacts(runDir: string, tasks: TaskState[], events: BuildEven
 			taskMap.set(event.taskId, task);
 		}
 
+		// Only apply event-based status if artifacts didn't already set it.
+		// Artifact detection is authoritative; events are a fallback.
+		if (task.status !== "pending") continue;
+
 		const oldStatus = task.status;
 		task.status = parsedStatus;
 		if (parsedStatus === "passed" && !task.reviewVerdict) task.reviewVerdict = "PASS";
