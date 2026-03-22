@@ -578,7 +578,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		// 6. Model override picker
 		// Agent definitions in .pi/agents/ have per-role defaults:
 		//   implementer: claude-sonnet-4-6:medium  (code generation)
-		//   reviewer:    claude-sonnet-4-6:high     (deep analysis)
+		//   build-reviewer: claude-sonnet-4-6:high  (deep analysis)
 		//   merger:      claude-sonnet-4-6:low      (mechanical git ops)
 		// The user can override all agents to a single model, or use defaults.
 		const AGENT_DEFAULTS_LABEL = "Use agent defaults (recommended)";
@@ -647,7 +647,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		// 13. Send kickoff message
 		const modelLine = modelOverride
 			? `Model override: ${modelOverride} (applies to all agents)`
-			: `Model: per-agent defaults (planner=sonnet:high, implementer=sonnet:medium, reviewer=codex:medium, merger=sonnet:low)`;
+			: `Model: per-agent defaults (planner=sonnet:high, implementer=sonnet:medium, build-reviewer=codex:medium, merger=sonnet:low)`;
 
 		const kickoffMsg = [
 			`Multi-agent build started.`,
@@ -664,7 +664,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			`Use the \`subagent\` tool for all subprocess work:`,
 			`- Task decomposition: use single mode with the \`build-planner\` agent`,
 			`- Parallel implementers: use parallel mode with \`cwd\` set to each worktree`,
-			`- Reviews: use single mode with the \`reviewer\` agent`,
+			`- Reviews: use single mode with the \`build-reviewer\` agent`,
 			`- Merge: use single mode with the \`merger\` agent`,
 			``,
 			...(modelOverride
@@ -868,7 +868,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 				"Per-agent defaults are active:",
 				"  build-planner: claude-sonnet-4-6:high   (task decomposition — dependency analysis)",
 				"  implementer:   claude-sonnet-4-6:medium (code generation — speed + volume)",
-				"  reviewer:      gpt-5.3-codex:medium     (code-native review — spotting issues)",
+				"  build-reviewer: gpt-5.3-codex:medium    (code-native review — spotting issues)",
 				"  merger:        claude-sonnet-4-6:low    (mechanical git ops — fast + cheap)",
 				"",
 				"Do NOT pass a `model` field in subagent task items — let agent frontmatter defaults apply.",

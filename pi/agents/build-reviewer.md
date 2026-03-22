@@ -1,6 +1,7 @@
 ---
-name: reviewer
-description: Reviews a task implementation against acceptance criteria
+name: build-reviewer
+description: Reviews a build task implementation against acceptance criteria
+scope: user
 tools: read, grep, find, ls, bash
 extensions:
 model: openai-codex/gpt-5.3-codex

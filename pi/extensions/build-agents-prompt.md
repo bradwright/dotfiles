@@ -20,7 +20,7 @@ Run Context specifies a MODEL_OVERRIDE.
 |-------|-------|----------|-----------|
 | build-planner | claude-sonnet-4-6 | high | Task decomposition — dependency analysis needs deep reasoning |
 | implementer | claude-sonnet-4-6 | medium | Code generation — balance of speed and reasoning |
-| reviewer | gpt-5.3-codex | medium | Code-native model — strong at spotting implementation issues |
+| build-reviewer | gpt-5.3-codex | medium | Code-native model — strong at spotting implementation issues |
 | merger | claude-sonnet-4-6 | low | Mechanical git ops — fast and cheap |
 
 **When MODEL_OVERRIDE is set:** pass `model: "<override>"` in every subagent
@@ -150,13 +150,13 @@ If a task failed or `RESULT.md` is missing, mark it for corrective handling.
 
 ## 3) Auto-Reviewer — Validate each task
 
-For each completed task, use the `subagent` tool with the `reviewer` agent.
+For each completed task, use the `subagent` tool with the `build-reviewer` agent.
 Include the task description, acceptance criteria, `RESULT.md`, and
 `diff.patch` in the task prompt.
 
 ```json
 {
-  "agent": "reviewer",
+  "agent": "build-reviewer",
   "task": "Review task-1 implementation. Task: <description>. Acceptance: <criteria>.\n\nRESULT.md:\n<contents>\n\nDiff:\n<diff contents>",
   "cwd": "$WORKTREE_ROOT/task-1"
 }
@@ -176,7 +176,7 @@ For each task with `FAIL` verdict:
 1. Write a corrective prompt including the original task, reviewer findings,
    and required fixes.
 2. Re-run the `implementer` agent in the **same worktree** (same `cwd`).
-3. Re-run the `reviewer` agent.
+3. Re-run the `build-reviewer` agent.
 4. Max 2 corrective rounds.
 
 If still failing after round 2, mark as not approved, do not merge, report

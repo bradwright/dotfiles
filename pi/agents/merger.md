@@ -1,6 +1,7 @@
 ---
 name: merger
 description: Merges approved task branches and produces integration summary
+scope: user
 tools: read, write, bash, grep, find, ls
 extensions:
 model: claude-sonnet-4-6
