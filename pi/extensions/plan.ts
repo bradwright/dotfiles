@@ -482,13 +482,13 @@ class PlanViewerComponent implements Focusable {
 			this.scrollOffset = Math.max(0, this.scrollOffset - 1);
 		} else if (matchesKey(data, "down") || matchesKey(data, "j")) {
 			this.scrollOffset = Math.min(maxScroll, this.scrollOffset + 1);
-		} else if (matchesKey(data, "pageup") || matchesKey(data, "ctrl+u")) {
+		} else if (matchesKey(data, "pageUp") || matchesKey(data, "ctrl+u")) {
 			this.scrollOffset = Math.max(0, this.scrollOffset - this.viewportHeight);
-		} else if (matchesKey(data, "pagedown") || matchesKey(data, "ctrl+d")) {
+		} else if (matchesKey(data, "pageDown") || matchesKey(data, "ctrl+d")) {
 			this.scrollOffset = Math.min(maxScroll, this.scrollOffset + this.viewportHeight);
 		} else if (matchesKey(data, "home") || matchesKey(data, "g")) {
 			this.scrollOffset = 0;
-		} else if (matchesKey(data, "end") || matchesKey(data, "G")) {
+		} else if (matchesKey(data, "end") || matchesKey(data, "shift+g")) {
 			this.scrollOffset = maxScroll;
 		}
 	}

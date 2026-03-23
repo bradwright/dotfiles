@@ -491,6 +491,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		const activeRunDirs = findActiveRunDirs(ctx.cwd);
 		if (activeRunDirs.length > 0) {
 			const proceed = await ctx.ui.confirm(
+				"Active build run detected",
 				`Active build run found (${activeRunDirs.map((d) => path.basename(d)).join(", ")}). Cancel and start new?`,
 			);
 			if (!proceed) {
@@ -565,7 +566,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			if (!choice) return;
 
 			if (choice === INLINE_LABEL) {
-				const text = await ctx.ui.prompt("What should be built?");
+				const text = await ctx.ui.input("What should be built?");
 				if (!text?.trim()) return;
 				planSource = { type: "inline", text: text.trim() };
 			} else {
@@ -951,7 +952,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			const done = run.tasks.filter((t) => isDoneStatus(t.status)).length;
 			const failed = run.tasks.filter((t) => t.status === "failed" || t.status === "crashed").length;
 			const summary = `Build ${run.runId} ${phase}: ${done}/${run.tasks.length} done, ${failed} failed.`;
-			ctx.ui.notify(summary, phase === "completed" ? "success" : "warning");
+			ctx.ui.notify(summary, phase === "completed" ? "info" : "warning");
 			activeRun = null;
 		}
 
