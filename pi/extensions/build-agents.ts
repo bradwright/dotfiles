@@ -10,7 +10,7 @@ import {
 	listApprovedPlanDirs,
 	readJsonlEvents,
 	appendJsonlEvent,
-} from "./shared.js";
+} from "./lib/shared.js";
 
 // ---------------------------------------------------------------------------
 // Types

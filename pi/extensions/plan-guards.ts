@@ -18,7 +18,7 @@ import {
 	normalizeInputPath,
 	resolvePathForContainment,
 	toDisplayPath,
-} from "./shared.js";
+} from "./lib/shared.js";
 
 // ---------------------------------------------------------------------------
 // Bash safety patterns

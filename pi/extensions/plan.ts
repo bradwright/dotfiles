@@ -19,7 +19,7 @@ import {
 	toDisplayPath,
 	toTitleCase,
 	truncateText,
-} from "./shared.js";
+} from "./lib/shared.js";
 
 const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write", "subagent"] as const;
 const FALLBACK_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls"] as const;
