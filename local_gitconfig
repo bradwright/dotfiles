@@ -12,6 +12,7 @@
         lines = diff --stat
         amend = commit --amend -C HEAD
         words = diff --word-diff
+        prune-branches = !git branch -vv | grep ': gone]' | awk '{print $1}' | xargs git branch -d
 [branch]
         autosetuprebase = always
 [push]
