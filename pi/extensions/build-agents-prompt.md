@@ -12,22 +12,19 @@ Planner → Parallel Implementers → Auto-Reviewer → Merge Agent
 
 ## Agent model defaults
 
-Each agent has a model and thinking level tuned to its role. These are
-defined in `.pi/agents/` frontmatter and apply automatically unless the
-Run Context specifies a MODEL_OVERRIDE.
+Each agent has a thinking level tuned to its role (set in `.pi/agents/`
+frontmatter). Models are assigned per-role at build start time and
+provided in the Run Context as ROLE_MODELS.
 
-| Agent | Model | Thinking | Rationale |
-|-------|-------|----------|-----------|
-| build-planner | claude-sonnet-4-6 | high | Task decomposition — dependency analysis needs deep reasoning |
-| implementer | claude-sonnet-4-6 | medium | Code generation — balance of speed and reasoning |
-| build-reviewer | gpt-5.3-codex | medium | Code-native model — strong at spotting implementation issues |
-| merger | claude-sonnet-4-6 | low | Mechanical git ops — fast and cheap |
+| Agent | Thinking | Rationale |
+|-------|----------|-----------|
+| build-planner | high | Task decomposition — dependency analysis needs deep reasoning |
+| implementer | medium | Code generation — balance of speed and reasoning |
+| build-reviewer | medium | Code review — spotting implementation issues |
+| merger | low | Mechanical git ops — fast and cheap |
 
-**When MODEL_OVERRIDE is set:** pass `model: "<override>"` in every subagent
-task item. This overrides all agent defaults uniformly.
-
-**When MODEL_OVERRIDE is "none":** do NOT pass a `model` field — let each
-agent use its frontmatter default.
+**Always** pass the corresponding `model` value from ROLE_MODELS in each
+subagent task item. The Run Context lists the exact model string per role.
 
 ## Non-negotiable rules
 

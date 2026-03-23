@@ -3,8 +3,6 @@ name: build-planner
 description: Decomposes an approved plan into implementer-ready tasks
 scope: user
 tools: read, grep, find, ls, write
-extensions:
-model: claude-sonnet-4-6
 thinking: high
 ---
 
