@@ -21,7 +21,7 @@ import {
 	truncateText,
 } from "./lib/shared.js";
 
-const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write", "subagent"] as const;
+const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write", "Agent"] as const;
 const FALLBACK_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls"] as const;
 const ISSUE_BRIEF_FILE = "brief.md";
 const EVENTS_FILE = "events.jsonl";
@@ -592,6 +592,10 @@ export default function plan(pi: ExtensionAPI) {
 	let buildThinkingLevel: ThinkingLevel = "medium";
 	let previousThinkingLevel: ThinkingLevel | null = null;
 
+	// tintinweb/pi-subagents availability tracking
+	let tintinwebReady = false;
+	pi.events.on("subagents:ready", () => { tintinwebReady = true; });
+
 	// Auto-resume tracking
 	let planTurnsThisSession = 0;
 	let lastAutoResumeTime = 0;
@@ -847,23 +851,6 @@ export default function plan(pi: ExtensionAPI) {
 
 		const selected = choice as ThinkingLevel;
 		return levels.includes(selected) ? selected : null;
-	}
-
-	function resolveProjectAgentModel(cwd: string, agentName: string): string | null {
-		const agentPath = path.join(cwd, ".pi", "agents", `${agentName}.md`);
-		if (!fs.existsSync(agentPath)) return null;
-
-		try {
-			const content = fs.readFileSync(agentPath, "utf8");
-			const frontmatter = content.match(/^---\s*\n([\s\S]*?)\n---/);
-			if (!frontmatter) return null;
-			const modelMatch = frontmatter[1].match(/^model:\s*(.+)$/m);
-			if (!modelMatch) return null;
-			const model = modelMatch[1].trim();
-			return model.length > 0 ? model : null;
-		} catch {
-			return null;
-		}
 	}
 
 	function listAvailableAgentNames(cwd: string): string[] {
@@ -1202,16 +1189,16 @@ export default function plan(pi: ExtensionAPI) {
 				ctx.ui.notify("Plan mode enabled for safe plan review.", "info");
 			}
 
-			// Check if pi-subagents is installed (provides /run command)
+			// Check if tintinweb Agent tool is available
 			const allTools = new Set(pi.getAllTools().map((t) => t.name));
-			if (allTools.has("subagent")) {
+			if (allTools.has("Agent")) {
 				// Pick reviewer agent from currently available agents.
-				const preferredReviewAgents = ["plan-reviewer", "reviewer", "scout"];
+				const preferredReviewAgents = ["plan-reviewer", "reviewer", "Explore"];
 				const availableAgents = new Set(listAvailableAgentNames(ctx.cwd));
 				const reviewAgents = preferredReviewAgents.filter((name) => availableAgents.has(name));
 				if (reviewAgents.length === 0) {
 					ctx.ui.notify(
-						"No review agents found (expected one of: plan-reviewer, reviewer, scout). Falling back to in-session review.",
+						"No review agents found (expected one of: plan-reviewer, reviewer, Explore). Falling back to in-session review.",
 						"warning",
 					);
 					const reviewPrompt = `/skill:plan-methodology review ${planDir}`;
@@ -1231,24 +1218,57 @@ export default function plan(pi: ExtensionAPI) {
 				);
 				if (thinkingChoice === null) return;
 
-				// Build the /run command — pi-subagents handles execution,
-				// progress display, and injects results into conversation.
-				// /run supports [model=...] inline config (not [thinking=...]).
-				let inlineConfig = "";
-				if (thinkingChoice !== "medium") {
-					const agentModel = resolveProjectAgentModel(ctx.cwd, agentChoice);
-					if (agentModel) {
-						inlineConfig = `[model=${agentModel}:${thinkingChoice}]`;
+				// Dispatch review via RPC if tintinweb is ready
+				const task = `Review the plan package at ${planDir}. Read plan.md and feedback.md, evaluate against the readiness criteria, then write findings to feedback.md and a Review entry to changelog.md.`;
+
+				if (tintinwebReady) {
+					const requestId = `plan-review-${Date.now()}`;
+					const spawnReplyEvent = `subagents:rpc:spawn:reply:${requestId}`;
+
+					// Listen for spawn reply
+					const spawnPromise = new Promise<{ success: boolean; data?: { id: string }; error?: string }>((resolve) => {
+						const handler = (reply: { success: boolean; data?: { id: string }; error?: string }) => {
+							pi.events.off(spawnReplyEvent, handler);
+							resolve(reply);
+						};
+						pi.events.on(spawnReplyEvent, handler);
+						// Timeout after 10 seconds
+						setTimeout(() => {
+							pi.events.off(spawnReplyEvent, handler);
+							resolve({ success: false, error: "RPC spawn timeout" });
+						}, 10000);
+					});
+
+					// Emit spawn request
+					pi.events.emit("subagents:rpc:spawn", {
+						requestId,
+						type: agentChoice,
+						prompt: task,
+						options: {
+							description: `Review plan at ${planDir}`,
+							...(thinkingChoice !== "medium" ? { thinking: thinkingChoice } : {}),
+						},
+					});
+
+					const reply = await spawnPromise;
+
+					if (reply.success) {
+						ctx.ui.notify(`Started ${agentChoice} review of ${toDisplayPath(planDir, ctx.cwd)} via RPC...`, "info");
 					} else {
+						// RPC failed — fall back to in-session review
 						ctx.ui.notify(
-							`Could not resolve model for ${agentChoice}; using agent default thinking.`,
+							`RPC spawn failed (${reply.error ?? "unknown"}). Falling back to in-session review.`,
 							"warning",
 						);
+						const reviewPrompt = `/skill:plan-methodology review ${planDir}`;
+						queueUserPrompt(reviewPrompt, ctx);
 					}
+				} else {
+					// tintinweb not ready — fall back to in-session review
+					const reviewPrompt = `/skill:plan-methodology review ${planDir}`;
+					queueUserPrompt(reviewPrompt, ctx);
+					ctx.ui.notify(`Queued plan review for ${toDisplayPath(planDir, ctx.cwd)}.`, "info");
 				}
-				const task = `Review the plan package at ${planDir}. Read plan.md and feedback.md, evaluate against the readiness criteria, then write findings to feedback.md and a Review entry to changelog.md.`;
-				queueUserPrompt(`/run ${agentChoice}${inlineConfig} ${task}`, ctx);
-				ctx.ui.notify(`Starting ${agentChoice} review of ${toDisplayPath(planDir, ctx.cwd)}...`, "info");
 			} else {
 				// Fallback: run review in-session via the skill
 				const reviewPrompt = `/skill:plan-methodology review ${planDir}`;
