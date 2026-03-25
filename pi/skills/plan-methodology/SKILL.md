@@ -1,8 +1,8 @@
 ---
 name: plan-methodology
 description: Iterative planning workflow for coding tasks. Creates an implementation plan package, then iterates through draft/review cycles with user feedback until the plan is approved.
-compatibility: pi with optional subagent tool (delegation preferred, in-session fallback supported).
-allowed-tools: subagent read write edit bash grep find ls
+compatibility: pi with optional Agent tool (@tintinweb/pi-subagents; delegation preferred, in-session fallback supported).
+allowed-tools: Agent read write edit bash grep find ls
 ---
 
 # Plan (Iterative Planning Loop)
@@ -16,7 +16,7 @@ Treat this as **planning-only**. Do not implement code changes yet.
 Planning is an **iterative loop**, not a one-shot handoff. The user steers
 every transition.
 
-Heavy work (scouting, drafting, reviewing) is **delegated to subagents** so
+Heavy work (scouting, drafting, reviewing) is **delegated to agents** so
 the primary agent keeps a small context window. The primary agent
 orchestrates, handles user discussion, and reads plan files on demand.
 
@@ -25,9 +25,9 @@ User provides task description
   ↓
 Create plan package directory
   ↓
-Scout (subagent: scout) → writes context to plan dir
+Scout (Agent: Explore) → writes context to plan dir
   ↓
-Draft 1 (subagent: worker) → writes plan.md using scout context
+Draft 1 (Agent: writer) → writes plan.md using Explore context
   ↓
 Primary reads plan.md, presents summary to user
   ↓
@@ -38,18 +38,18 @@ User feedback / discussion loop
   │    → plan.md unchanged
   └─ Explicit edit request from user:
        → Primary revises plan.md in place (small edits)
-       → OR delegates to worker for large revisions
+       → OR delegates to writer for large revisions
        → Adds Edit entry to changelog.md if material
   ↓
 User requests review
   ↓
-Review (subagent: plan-reviewer) → writes to feedback.md + changelog.md
+Review (Agent: plan-reviewer) → writes to feedback.md + changelog.md
   ↓
 Primary reads feedback.md, presents findings to user
   ↓
 User selects which feedback items to incorporate
   ↓
-Draft N+1 (subagent: worker) → incorporates selected items
+Draft N+1 (Agent: writer) → incorporates selected items
   ↓
 Plan approved by user?
   ├─ no  → Next draft/review cycle
@@ -58,51 +58,44 @@ Plan approved by user?
 
 Never switch phases unless the user explicitly says so.
 
-## Subagent Delegation Rules
+## Agent Delegation Rules
 
 ### Scout (codebase reconnaissance)
 
-Use the builtin `scout` agent. Write output into the plan package.
+Use the builtin `Explore` agent. Write output into the plan package.
 
 ```
-subagent(
-  agent: "scout",
-  task: "<scouting instructions derived from user's task>",
-  output: "<plan-dir>/context.md"
-)
+Agent({
+  subagent_type: "Explore",
+  prompt: "<scouting instructions derived from user's task>. Write findings to <plan-dir>/context.md.",
+  description: "Scout codebase for planning context",
+})
 ```
 
-The scout reads relevant source files, traces code paths, and writes
+The Explore agent reads relevant source files, traces code paths, and writes
 structured findings to `context.md` in the plan directory.
 
 ### Drafter (plan creation and revision)
 
-Use the builtin `worker` agent for drafting. It reads the scout context
+Use the builtin `writer` agent for drafting. It reads the Explore context
 and feedback, then writes the plan.
 
 For **Draft 1**:
 ```
-subagent(
-  agent: "worker",
-  task: "Read <plan-dir>/context.md and <plan-dir>/feedback.md.
-         Write an implementation plan to <plan-dir>/plan.md following
-         the format specified below. Add a Draft 1 entry to
-         <plan-dir>/changelog.md with today's date.
-         <include task description and any user constraints>"
-)
+Agent({
+  subagent_type: "writer",
+  prompt: "Read <plan-dir>/context.md and <plan-dir>/feedback.md. Write an implementation plan to <plan-dir>/plan.md following the format specified below. Add a Draft 1 entry to <plan-dir>/changelog.md with today's date. <include task description and any user constraints>",
+  description: "Draft initial plan",
+})
 ```
 
 For **Draft N+1** (incorporating review feedback):
 ```
-subagent(
-  agent: "worker",
-  task: "Read <plan-dir>/plan.md, <plan-dir>/feedback.md, and
-         <plan-dir>/context.md.
-         Incorporate ONLY these specific feedback items: <list items>.
-         Update plan.md in place. Remove incorporated items from
-         feedback.md. Add a Draft N+1 entry to changelog.md.
-         <include any new user constraints>"
-)
+Agent({
+  subagent_type: "writer",
+  prompt: "Read <plan-dir>/plan.md, <plan-dir>/feedback.md, and <plan-dir>/context.md. Incorporate ONLY these specific feedback items: <list items>. Update plan.md in place. Remove incorporated items from feedback.md. Add a Draft N+1 entry to changelog.md. <include any new user constraints>",
+  description: "Revise plan with feedback",
+})
 ```
 
 ### Reviewer (plan stress-testing)
@@ -111,11 +104,11 @@ Use the project `plan-reviewer` agent. It already knows how to review
 plan packages.
 
 ```
-subagent(
-  agent: "plan-reviewer",
-  task: "Review the plan package at <plan-dir>/. The repository root
-         is <cwd>. <any user steering, e.g. 'focus on error handling'>"
-)
+Agent({
+  subagent_type: "plan-reviewer",
+  prompt: "Review the plan package at <plan-dir>/. The repository root is <cwd>. <any user steering, e.g. 'focus on error handling'>",
+  description: "Review plan for completeness and risks",
+})
 ```
 
 The reviewer writes findings to `feedback.md` and a Review entry to
@@ -123,7 +116,7 @@ The reviewer writes findings to `feedback.md` and a Review entry to
 
 ## Capability Detection and Fallback (Mandatory)
 
-Before delegating, check whether the `subagent` tool is available.
+Before delegating, check whether the `Agent` tool is available.
 
 - If available: use the delegation flow in this skill (preferred).
 - If unavailable: run an in-session fallback that preserves the same file
@@ -143,7 +136,7 @@ Fallback behavior:
 
 The primary agent (you) handles ONLY:
 
-1. **Orchestration** — dispatch to subagents at the right time.
+1. **Orchestration** — dispatch to agents at the right time.
 2. **User interaction** — present summaries, answer questions, gather
    feedback.
 3. **Lightweight edits** — small, targeted changes to `plan.md` or
@@ -153,10 +146,10 @@ The primary agent (you) handles ONLY:
 5. **Reading plan files** — read `plan.md`, `feedback.md`, `changelog.md`
    to answer user questions or present summaries.
 
-When `subagent` is available: **Do NOT** read large swathes of source code
-or write full drafts yourself — delegate to scout/worker.
+When `Agent` is available: **Do NOT** read large swathes of source code
+or write full drafts yourself — delegate to Explore/writer.
 
-When `subagent` is unavailable: perform those tasks in-session, but keep
+When `Agent` is unavailable: perform those tasks in-session, but keep
 reads targeted and the output concise.
 
 ## Changelog Attribution Policy
@@ -202,7 +195,7 @@ All planning work is recorded in one directory:
 - `plan.md` — working implementation draft (what will be built).
 - `feedback.md` — working user/reviewer notes and recommendations.
 - `changelog.md` — lightweight ledger of significant events.
-- `context.md` — scout findings (codebase context for drafting).
+- `context.md` — Explore findings (codebase context for drafting).
 
 ## Working vs Ledger Boundary (Mandatory)
 
@@ -292,12 +285,12 @@ This is guidance, not a hard rule.
 2. **Persist user context to `feedback.md`** — write concise, factual
    task constraints and preferences before scouting.
 3. **Scout code context**:
-   - Preferred: dispatch `scout` subagent; output to `<plan-dir>/context.md`.
-   - Fallback (no subagent): scout in-session and write `context.md`.
+   - Preferred: dispatch `Explore` agent; output to `<plan-dir>/context.md`.
+   - Fallback (no `Agent`): scout in-session and write `context.md`.
 4. **Create Draft 1**:
-   - Preferred: dispatch `worker` subagent to read `context.md` +
+   - Preferred: dispatch `writer` agent to read `context.md` +
      `feedback.md`, write `plan.md`, and append Draft 1 to `changelog.md`.
-   - Fallback (no subagent): draft in-session and append Draft 1 yourself.
+   - Fallback (no `Agent`): draft in-session and append Draft 1 yourself.
 5. **Read `plan.md`** and present a summary to the user.
 6. Stop and wait for user feedback.
 
@@ -310,8 +303,8 @@ This is guidance, not a hard rule.
 3. For **small edits** the user explicitly requests: edit `plan.md`
    directly with the `edit` tool.
 4. For **large revisions**:
-   - Preferred: delegate to `worker` with specific instructions.
-   - Fallback (no subagent): perform the revision in-session.
+   - Preferred: delegate to `writer` with specific instructions.
+   - Fallback (no `Agent`): perform the revision in-session.
 5. Add `Edit` entry to `changelog.md` if the change is material.
 6. Stop and wait for user feedback.
 
@@ -320,8 +313,8 @@ This is guidance, not a hard rule.
 1. **Persist any user steering** to `feedback.md` (e.g. "focus on
    error handling").
 2. **Run review**:
-   - Preferred: dispatch `plan-reviewer` subagent with the plan directory.
-   - Fallback (no subagent): review in-session and append findings to
+   - Preferred: dispatch `plan-reviewer` agent with the plan directory.
+   - Fallback (no `Agent`): review in-session and append findings to
      `feedback.md` and a `Review` entry to `changelog.md`.
 3. **Read updated `feedback.md`** and present findings to user.
 4. Stop and wait for user feedback.
@@ -331,9 +324,9 @@ This is guidance, not a hard rule.
 1. **Persist any new user constraints** to `feedback.md`.
 2. Confirm which feedback items to incorporate (user selects).
 3. **Incorporate selected items**:
-   - Preferred: dispatch `worker` with explicit list of items to
+   - Preferred: dispatch `writer` with explicit list of items to
      incorporate.
-   - Fallback (no subagent): incorporate in-session.
+   - Fallback (no `Agent`): incorporate in-session.
 4. **Read updated `plan.md`** and present changes to user.
 5. Stop and wait for user feedback.
 
