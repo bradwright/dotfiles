@@ -1208,6 +1208,25 @@ export default function plan(pi: ExtensionAPI) {
 				const agentChoice = await ctx.ui.select("Review agent:", reviewAgents);
 				if (!agentChoice) return;
 
+				// Pick model for reviewer
+				let availableModels: string[] = [];
+				try {
+					const settingsPath = path.join(getAgentDir(), "settings.json");
+					if (fs.existsSync(settingsPath)) {
+						const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+						if (Array.isArray(settings.enabledModels) && settings.enabledModels.length > 0) {
+							availableModels = settings.enabledModels;
+						}
+					}
+				} catch { /* ignore */ }
+
+				let modelChoice: string | null = null;
+				if (availableModels.length > 0 && ctx.hasUI) {
+					const selected = await ctx.ui.select("Model for review:", availableModels);
+					if (!selected) return;
+					modelChoice = selected;
+				}
+
 				// Pick thinking level
 				const REVIEW_THINKING: ThinkingLevel[] = ["medium", "high", "low"];
 				const thinkingChoice = await promptThinkingLevel(
@@ -1248,6 +1267,7 @@ export default function plan(pi: ExtensionAPI) {
 					prompt: task,
 					options: {
 						description: `Review plan at ${planDir}`,
+						...(modelChoice ? { model: modelChoice } : {}),
 						...(thinkingChoice !== "medium" ? { thinking: thinkingChoice } : {}),
 					},
 				});
