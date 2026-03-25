@@ -17,4 +17,4 @@ done
 # Companion packages — extensions that provide tools/commands we
 # depend on at runtime. Our code degrades gracefully if these are
 # missing, but the full experience requires them.
-pi install npm:pi-subagents
+pi install npm:@tintinweb/pi-subagents
