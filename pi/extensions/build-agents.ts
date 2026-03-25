@@ -524,7 +524,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			return;
 		}
 
-		// 3. Verify subagent tool is available
+		// 3. Verify Agent tool is available
 		if (!activeTools.includes("Agent")) {
 			ctx.ui.notify(
 				"Build requires the Agent tool (@tintinweb/pi-subagents extension). Install with: pi install npm:@tintinweb/pi-subagents",

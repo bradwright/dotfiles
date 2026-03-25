@@ -134,6 +134,11 @@ spawning the dependent tasks in a second parallel batch.
 After agents complete, use `get_subagent_result` to retrieve each agent's
 output. Save results to `$RUN_DIR/tasks/<task-id>/RESULT.md`.
 
+**Note:** Some agents (especially `Explore`) may return no inline text
+even on success — they write to files instead. If `get_subagent_result`
+returns empty, check the worktree for `RESULT.md` or other expected
+artifacts directly.
+
 If a task failed or `RESULT.md` is missing, mark it for corrective handling.
 
 If an implementer appears stuck or is going off-track, use `steer_subagent`

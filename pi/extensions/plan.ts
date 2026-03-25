@@ -1218,56 +1218,109 @@ export default function plan(pi: ExtensionAPI) {
 				);
 				if (thinkingChoice === null) return;
 
-				// Dispatch review via RPC if tintinweb is ready
+				// Dispatch review via RPC (treat Agent tool presence as ready to avoid event-race false negatives)
+				if (!tintinwebReady) {
+					ctx.ui.notify("subagents:ready was not observed; attempting RPC based on Agent tool availability.", "info");
+				}
+				tintinwebReady = true;
 				const task = `Review the plan package at ${planDir}. Read plan.md and feedback.md, evaluate against the readiness criteria, then write findings to feedback.md and a Review entry to changelog.md.`;
+				const requestId = `plan-review-${Date.now()}`;
+				const spawnReplyEvent = `subagents:rpc:spawn:reply:${requestId}`;
 
-				if (tintinwebReady) {
-					const requestId = `plan-review-${Date.now()}`;
-					const spawnReplyEvent = `subagents:rpc:spawn:reply:${requestId}`;
+				// Listen for spawn reply
+				const spawnPromise = new Promise<{ success: boolean; data?: { id: string }; error?: string }>((resolve) => {
+					const handler = (reply: { success: boolean; data?: { id: string }; error?: string }) => {
+						pi.events.off(spawnReplyEvent, handler);
+						resolve(reply);
+					};
+					pi.events.on(spawnReplyEvent, handler);
+					// Timeout after 10 seconds
+					setTimeout(() => {
+						pi.events.off(spawnReplyEvent, handler);
+						resolve({ success: false, error: "RPC spawn timeout" });
+					}, 10000);
+				});
 
-					// Listen for spawn reply
-					const spawnPromise = new Promise<{ success: boolean; data?: { id: string }; error?: string }>((resolve) => {
-						const handler = (reply: { success: boolean; data?: { id: string }; error?: string }) => {
-							pi.events.off(spawnReplyEvent, handler);
-							resolve(reply);
-						};
-						pi.events.on(spawnReplyEvent, handler);
-						// Timeout after 10 seconds
-						setTimeout(() => {
-							pi.events.off(spawnReplyEvent, handler);
-							resolve({ success: false, error: "RPC spawn timeout" });
-						}, 10000);
-					});
+				// Emit spawn request
+				pi.events.emit("subagents:rpc:spawn", {
+					requestId,
+					type: agentChoice,
+					prompt: task,
+					options: {
+						description: `Review plan at ${planDir}`,
+						...(thinkingChoice !== "medium" ? { thinking: thinkingChoice } : {}),
+					},
+				});
 
-					// Emit spawn request
-					pi.events.emit("subagents:rpc:spawn", {
-						requestId,
-						type: agentChoice,
-						prompt: task,
-						options: {
-							description: `Review plan at ${planDir}`,
-							...(thinkingChoice !== "medium" ? { thinking: thinkingChoice } : {}),
-						},
-					});
+				const reply = await spawnPromise;
 
-					const reply = await spawnPromise;
+				if (reply.success && reply.data?.id) {
+					const agentId = reply.data.id;
+					ctx.ui.notify(`Started ${agentChoice} review of ${toDisplayPath(planDir, ctx.cwd)} via RPC...`, "info");
 
-					if (reply.success) {
-						ctx.ui.notify(`Started ${agentChoice} review of ${toDisplayPath(planDir, ctx.cwd)} via RPC...`, "info");
-					} else {
-						// RPC failed — fall back to in-session review
-						ctx.ui.notify(
-							`RPC spawn failed (${reply.error ?? "unknown"}). Falling back to in-session review.`,
-							"warning",
-						);
-						const reviewPrompt = `/skill:plan-methodology review ${planDir}`;
-						queueUserPrompt(reviewPrompt, ctx);
-					}
+					// Surface completion back into the conversation.
+					const completeHandler = (event: Record<string, unknown>) => {
+						const eventAgentId =
+							typeof event.id === "string" ? event.id
+								: typeof event.agentId === "string" ? event.agentId
+								: typeof event.agent_id === "string" ? event.agent_id
+								: typeof (event.data as { id?: unknown } | undefined)?.id === "string" ? (event.data as { id: string }).id
+								: null;
+						if (eventAgentId !== agentId) return;
+
+						pi.events.off("subagents:completed", completeHandler);
+						pi.events.off("subagents:failed", failedHandler);
+						if (completionTimeout) clearTimeout(completionTimeout);
+
+						const data = event.data as Record<string, unknown> | undefined;
+						const rawResult = data?.result ?? event.result ?? data?.output ?? event.output ?? event.text;
+						const resultText =
+							typeof rawResult === "string" && rawResult.trim().length > 0
+								? rawResult
+								: rawResult != null && rawResult !== ""
+									? JSON.stringify(rawResult, null, 2)
+									: null;
+
+						ctx.ui.notify(`Review completed by ${agentChoice}.`, "info");
+						if (resultText) {
+							pi.sendUserMessage(`Plan review complete (${agentChoice}).\n\n${resultText}`);
+						} else {
+							pi.sendUserMessage(`Plan review complete (${agentChoice}). The reviewer wrote findings directly to the plan package. Read \`feedback.md\` and \`changelog.md\` in ${planDir} for the review output.`);
+						}
+					};
+
+					const failedHandler = (event: Record<string, unknown>) => {
+						const eventAgentId =
+							typeof event.id === "string" ? event.id
+								: typeof event.agentId === "string" ? event.agentId
+								: typeof event.agent_id === "string" ? event.agent_id
+								: typeof (event.data as { id?: unknown } | undefined)?.id === "string" ? (event.data as { id: string }).id
+								: null;
+						if (eventAgentId !== agentId) return;
+
+						pi.events.off("subagents:completed", completeHandler);
+						pi.events.off("subagents:failed", failedHandler);
+						if (completionTimeout) clearTimeout(completionTimeout);
+						ctx.ui.notify(`Review agent ${agentChoice} failed. Falling back to in-session review.`, "warning");
+						queueUserPrompt(`/skill:plan-methodology review ${planDir}`, ctx);
+					};
+
+					const completionTimeout = setTimeout(() => {
+						pi.events.off("subagents:completed", completeHandler);
+						pi.events.off("subagents:failed", failedHandler);
+						ctx.ui.notify("Timed out waiting for review completion event. You can continue after checking feedback.md.", "warning");
+					}, 30 * 60 * 1000);
+
+					pi.events.on("subagents:completed", completeHandler);
+					pi.events.on("subagents:failed", failedHandler);
 				} else {
-					// tintinweb not ready — fall back to in-session review
+					// RPC failed — fall back to in-session review
+					ctx.ui.notify(
+						`RPC spawn failed (${reply.error ?? "unknown"}). Falling back to in-session review.`,
+						"warning",
+					);
 					const reviewPrompt = `/skill:plan-methodology review ${planDir}`;
 					queueUserPrompt(reviewPrompt, ctx);
-					ctx.ui.notify(`Queued plan review for ${toDisplayPath(planDir, ctx.cwd)}.`, "info");
 				}
 			} else {
 				// Fallback: run review in-session via the skill
