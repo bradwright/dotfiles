@@ -1,9 +1,6 @@
 ---
-name: build-reviewer
 description: Reviews a build task implementation against acceptance criteria
-scope: user
 tools: read, grep, find, ls, bash
-
 thinking: medium
 ---
 

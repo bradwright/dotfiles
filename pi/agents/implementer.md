@@ -1,7 +1,5 @@
 ---
-name: implementer
 description: Implements a single task in an isolated git worktree
-scope: user
 tools: read, write, edit, bash, grep, find, ls
 thinking: medium
 ---

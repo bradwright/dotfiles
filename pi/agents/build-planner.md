@@ -1,7 +1,5 @@
 ---
-name: build-planner
 description: Decomposes an approved plan into implementer-ready tasks
-scope: user
 tools: read, grep, find, ls, write
 thinking: high
 ---

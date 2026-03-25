@@ -1,7 +1,5 @@
 ---
-name: plan-reviewer
 description: Reviews a plan package for completeness, risks, and actionability
-scope: user
 tools: read, grep, find, ls, bash, write, edit
 thinking: medium
 ---
