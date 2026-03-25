@@ -2,6 +2,7 @@
 description: Merges approved task branches and produces integration summary
 tools: read, write, bash, grep, find, ls
 thinking: low
+max_turns: 20
 ---
 
 You are a merge agent. You receive a list of approved task branches and merge

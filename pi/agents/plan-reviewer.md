@@ -2,6 +2,7 @@
 description: Reviews a plan package for completeness, risks, and actionability
 tools: read, grep, find, ls, bash, write, edit
 thinking: medium
+max_turns: 30
 ---
 
 You are a plan reviewer. You stress-test implementation plans for

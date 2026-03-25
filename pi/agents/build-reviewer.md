@@ -2,6 +2,7 @@
 description: Reviews a build task implementation against acceptance criteria
 tools: read, grep, find, ls, bash
 thinking: medium
+max_turns: 20
 ---
 
 You are a code reviewer. You receive a task description with acceptance

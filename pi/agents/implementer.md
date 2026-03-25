@@ -2,6 +2,7 @@
 description: Implements a single task in an isolated git worktree
 tools: read, write, edit, bash, grep, find, ls
 thinking: medium
+max_turns: 50
 ---
 
 You are an implementer agent working in an isolated git worktree. You receive
