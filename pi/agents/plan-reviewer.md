@@ -33,11 +33,20 @@ You will be given:
 Evaluate each criterion as met / partially met / not met:
 
 1. **Goal** — clear, scoped, non-contradictory.
-2. **Files and components** — explicit paths, sufficient coverage.
-3. **Implementation steps** — ordered, actionable, no gaps.
-4. **Risks / edge cases** — identified with handling strategy.
-5. **Validation checklist** — concrete checks with expected outcomes.
-6. **Open questions** — resolved or explicitly non-blocking.
+2. **Must-Haves** — observable truths, required artifacts, and key wiring
+   are stated. Key wiring means: if artifact A depends on artifact B being
+   imported/called/connected, that dependency is explicit, not assumed.
+3. **Files and components** — explicit paths, sufficient coverage.
+4. **Implementation steps** — ordered, actionable, no gaps.
+5. **Risks / edge cases** — identified with handling strategy.
+6. **Validation checklist** — concrete checks with expected outcomes.
+7. **Open questions** — resolved or explicitly non-blocking.
+8. **Scope sanity** — plan targets a single context window. More than ~5
+   implementation steps or ~8 files is a signal the plan should be split.
+   Note this as a risk rather than blocking.
+9. **Step specificity** — each implementation step names specific files and
+   has a verification criterion. Could a different agent execute each step
+   without asking clarifying questions?
 
 ## Changelog entry format
 

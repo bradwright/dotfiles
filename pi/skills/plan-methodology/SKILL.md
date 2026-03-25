@@ -222,10 +222,25 @@ Rules:
 
 ### `plan.md`
 
+The plan is the prompt. When the user runs `/build`, `plan.md` is sent
+to the implementer as the kickoff prompt. Write it so a fresh agent in a
+new context window can execute it without asking clarifying questions.
+
+**Sizing:** Plans should target ~50% context window budget. If a plan
+has more than ~5 implementation steps or touches more than ~8 files,
+suggest splitting into two plans with a clear sequencing dependency.
+This is guidance, not a hard rule.
+
 ```markdown
 # <Plan Title>
 
 ## Goal
+
+## Must-Haves
+<!-- Observable truths: what must be TRUE from the user's perspective -->
+<!-- Required artifacts: specific files that must exist -->
+<!-- Key wiring: critical connections between artifacts
+     (e.g. "LoginForm.tsx calls /api/auth/login via fetch in onSubmit") -->
 
 ## Context and Constraints
 
@@ -233,7 +248,9 @@ Rules:
 <!-- explicit paths -->
 
 ## Implementation Plan
-<!-- numbered steps -->
+<!-- numbered steps, each with: what to do, which files, how to verify,
+     and what "done" looks like. The specificity test: could a different
+     agent execute this step without asking clarifying questions? -->
 
 ## Risks / Edge Cases
 
@@ -328,11 +345,17 @@ findings were addressed and identifies new issues.
 ## Definition of Ready (for review recommendation)
 
 1. Goal, scope, constraints are clear and non-contradictory.
-2. Files/components to touch are explicit and sufficient.
-3. Implementation steps are ordered and actionable.
-4. Risks/edge cases are identified with handling strategy.
-5. Validation checklist has concrete checks and expected outcomes.
-6. Open questions are resolved or explicitly non-blocking.
+2. Must-Haves state observable truths, required artifacts, and key
+   wiring between them.
+3. Files/components to touch are explicit and sufficient.
+4. Implementation steps are ordered and actionable.
+5. Risks/edge cases are identified with handling strategy.
+6. Validation checklist has concrete checks and expected outcomes.
+7. Open questions are resolved or explicitly non-blocking.
+8. Scope is sized for a single context window (~5 steps, ~8 files).
+9. Each implementation step has a verification criterion and names
+   specific files — a different agent could execute it without
+   clarifying questions.
 
 ## After Approval — Transition to Implementation
 

@@ -262,12 +262,14 @@ function countFeedbackItems(planDir: string): number {
 /** Compute readiness score by checking plan.md sections. */
 function computeReadiness(planDir: string): { score: number; total: number } {
 	const planPath = path.join(planDir, "plan.md");
-	if (!fs.existsSync(planPath)) return { score: 0, total: 6 };
+	if (!fs.existsSync(planPath)) return { score: 0, total: 7 };
 	try {
 		const content = fs.readFileSync(planPath, "utf8");
 		const checks = [
 			// Goal section has content
 			/## Goal\s*\n(?!\s*##)(.+)/s,
+			// Must-Haves section has content
+			/## Must-Haves\s*\n(?!\s*##)(.+)/s,
 			// Files and Components section has content
 			/## Files and Components to Touch\s*\n(?!\s*##)(.+)/s,
 			// Implementation Plan has numbered steps
@@ -293,14 +295,37 @@ function computeReadiness(planDir: string): { score: number; total: number } {
 				score++;
 			}
 		}
-		return { score, total: 6 };
+		return { score, total: 7 };
 	} catch {
-		return { score: 0, total: 6 };
+		return { score: 0, total: 7 };
 	}
 }
 
 function planTemplate(title: string): string {
-	return `# Plan: ${title}\n\n## Goal\n\n## Context and Constraints\n\n## Files and Components to Touch\n\n## Implementation Plan\n1.\n\n## Risks / Edge Cases\n\n## Validation Checklist\n\n## Open Questions\n`;
+	return [
+		`# Plan: ${title}`,
+		"",
+		"## Goal",
+		"",
+		"## Must-Haves",
+		"<!-- Observable truths: what must be TRUE from the user's perspective -->",
+		"<!-- Required artifacts: specific files that must exist -->",
+		"<!-- Key wiring: critical connections between artifacts -->",
+		"",
+		"## Context and Constraints",
+		"",
+		"## Files and Components to Touch",
+		"",
+		"## Implementation Plan",
+		"1.",
+		"",
+		"## Risks / Edge Cases",
+		"",
+		"## Validation Checklist",
+		"",
+		"## Open Questions",
+		"",
+	].join("\n");
 }
 
 function feedbackTemplate(): string {
@@ -1382,7 +1407,7 @@ export default function plan(pi: ExtensionAPI) {
 				});
 			}
 
-			const buildPrompt = `Start implementing now using ${planFile} as the guide. Read plan.md first, then execute the implementation steps in order. Keep code changes aligned with the plan and run the Validation Checklist before finishing. Do not modify plan package files unless explicitly asked.`;
+			const buildPrompt = `Start implementing now using ${planFile} as the guide. Read the full plan.md first — especially the Must-Haves section, which defines what must be true when you're done. Execute the Implementation Plan steps in order. After completing each step, verify it using the step's own verification criteria before proceeding. Run the Validation Checklist before finishing. Do not modify plan package files unless explicitly asked.`;
 			queueUserPrompt(buildPrompt, ctx);
 		},
 	});
