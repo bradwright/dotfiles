@@ -51,7 +51,7 @@ This directory contains project-local Pi extensions.
   - `/plan resume` with no args opens a selector of available plan packages under `./.pi/plans`.
   - `/plan mode` shows a thinking-level selector (`medium|high|xhigh`) with `high` as the default.
   - Entering plan mode sets thinking to the selected plan thinking level and restores previous thinking when exiting plan mode.
-  - `/plan review` auto-enables plan mode guardrails (if needed) and dispatches review to a subagent (plan-reviewer, reviewer, or scout) via `/run` when pi-subagents is installed, falling back to in-session `/skill:plan-methodology review` otherwise.
+  - `/plan review` auto-enables plan mode guardrails (if needed) and dispatches review via RPC to a reviewer agent (plan-reviewer, reviewer, or Explore) when `@tintinweb/pi-subagents` is installed, falling back to in-session `/skill:plan-methodology review` otherwise.
   - Adds `/build` command to disable plan mode and queue implementation from active `plan.md`.
     - `/build mode` shows a thinking-level selector (`low|medium|high|xhigh`) with `medium` as the default.
     - Sets thinking to the selected build thinking level when starting build.
@@ -60,17 +60,22 @@ This directory contains project-local Pi extensions.
   - Persists mode state (`enabled`, active plan path, previous tool set) in session entry `plan-state`.
   - Shows active plan slug in footer status while plan mode is enabled.
   - Restricts tool usage in plan mode:
-    - Active tool set includes `edit`/`write` for plan docs and `subagent` for delegation.
+    - Active tool set includes `edit`/`write` for plan docs and `Agent` for delegation.
     - Blocks `edit`/`write` outside the active plan package.
     - Allows only read-oriented bash commands.
-  - The `subagent` tool is included in plan mode tools so the LLM can delegate scouting and drafting to subagents (scout, worker) per the plan-methodology skill, keeping the primary agent's context window small.
+  - The `Agent` tool is included in plan mode tools so the LLM can delegate scouting and drafting to agents (Explore, writer) per the plan-methodology skill, keeping the primary agent's context window small.
   - Injects hidden planning context before each turn when plan mode is enabled.
   - Auto-detects active plan dir from `/skill:plan-methodology review <plan-dir>` input.
 
 - `build-agents.ts`
   - Adds `/build-agents` for multi-agent implementation orchestration.
+  - Checks for the `Agent` tool to determine if `@tintinweb/pi-subagents` is available.
   - Task status detection is artifact-first (`tasks/<id>/RESULT.md`, `tasks/<id>/REVIEW.md`) with fallback to structured `events.jsonl` task events when artifacts are missing.
   - During scans, missing task `RESULT.md` / `REVIEW.md` files are mirrored from matching worktrees when available.
+
+## Agent files
+
+- `writer.md` — Agent definition for the writer agent, used for implementation/drafting tasks delegated from plan mode.
 
 ## Operational notes
 
@@ -78,6 +83,9 @@ This directory contains project-local Pi extensions.
 - Dotfiles install symlinks this directory into `~/.pi/agent/extensions/` via `make install_pi`.
 - Keep footer rendering lightweight: avoid expensive per-render shell commands.
 - Prefer branch-change-triggered refresh + cached metadata for git/GitHub info.
+- Install the subagents package with: `pi install npm:@tintinweb/pi-subagents`
+
+> **Phase 2 note:** Phase 2 will replace the `build-agents-prompt.md` LLM-driven orchestration with an extension-driven state machine for more deterministic task lifecycle management.
 
 ## Package manifest (`pi/package.json`)
 
