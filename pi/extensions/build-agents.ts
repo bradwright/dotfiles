@@ -525,9 +525,9 @@ export default function buildAgents(pi: ExtensionAPI) {
 		}
 
 		// 3. Verify subagent tool is available
-		if (!activeTools.includes("subagent")) {
+		if (!activeTools.includes("Agent")) {
 			ctx.ui.notify(
-				"Build requires the subagent tool (pi-subagents extension). Install with: pi install npm:pi-subagents",
+				"Build requires the Agent tool (@tintinweb/pi-subagents extension). Install with: pi install npm:@tintinweb/pi-subagents",
 				"warning",
 			);
 			return;
@@ -698,11 +698,11 @@ export default function buildAgents(pi: ExtensionAPI) {
 			planSourceForKickoff(planSource),
 			`Create task subdirectories under ${tasksDir}/ for each implementation task.`,
 			``,
-			`Use the \`subagent\` tool for all subprocess work:`,
-			`- Task decomposition: use single mode with the \`build-planner\` agent, pass \`model: "${rm.planner}"\``,
-			`- Parallel implementers: use parallel mode with \`cwd\` set to each worktree, pass \`model: "${rm.implementer}"\``,
-			`- Reviews: use single mode with the \`build-reviewer\` agent, pass \`model: "${rm.reviewer}"\``,
-			`- Merge: use single mode with the \`merger\` agent, pass \`model: "${rm.merger}"\``,
+			`Use the \`Agent\` tool for all subprocess work:`,
+			`- Task decomposition: call Agent() with subagent_type "build-planner", pass model "${rm.planner}" via the model parameter`,
+			`- Parallel implementers: call Agent() multiple times with run_in_background: true, subagent_type "implementer", pass model "${rm.implementer}", use isolation: "worktree" for each`,
+			`- Reviews: call Agent() with subagent_type "build-reviewer", pass model "${rm.reviewer}"`,
+			`- Merge: call Agent() with subagent_type "merger", pass model "${rm.merger}"`,
 		].join("\n");
 
 		pi.sendUserMessage(kickoffMsg);
@@ -897,7 +897,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			`  build-reviewer: ${rm.reviewer}`,
 			`  merger:         ${rm.merger}`,
 			"",
-			"Pass the corresponding `model` value in each subagent task item:",
+			"Pass the corresponding `model` value in each Agent() call:",
 			`  - build-planner tasks: model: "${rm.planner}"`,
 			`  - implementer tasks:   model: "${rm.implementer}"`,
 			`  - build-reviewer tasks: model: "${rm.reviewer}"`,
@@ -914,8 +914,8 @@ export default function buildAgents(pi: ExtensionAPI) {
 			`PLAN_SOURCE: ${planSourceLabel(run.planSource, ctx.cwd)}`,
 			...modelInstructions,
 			"",
-			"Use the `subagent` tool for all subprocess work.",
-			"Set `cwd` to the appropriate worktree directory for each task.",
+			"Use the `Agent` tool for all subprocess work.",
+			"Use `isolation: \"worktree\"` for implementer tasks. Use `run_in_background: true` for parallel execution.",
 		].join("\n");
 
 		return {
