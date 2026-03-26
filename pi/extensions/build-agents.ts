@@ -2,7 +2,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { type ExtensionAPI, type ExtensionContext, getAgentDir } from "@mariozechner/pi-coding-agent";
-import { Key, Text } from "@mariozechner/pi-tui";
 import {
 	AutoResumeTracker,
 	localIsoDate,
@@ -45,7 +44,6 @@ type RunPhase = "running" | "canceled" | "completed" | "failed";
 // ---------------------------------------------------------------------------
 
 const STATE_ENTRY = "build-agents-state";
-const STATUS_KEY = "build-agents";
 const STATUS_FILE = "status.json";
 const BUILD_ROOT = ".pi/build";
 
@@ -167,40 +165,8 @@ export default function buildAgents(pi: ExtensionAPI) {
 		}
 	}
 
-	function updateWidget(ctx: ExtensionContext): void {
-		if (!ctx.hasUI) return;
-
-		ctx.ui.setStatus(STATUS_KEY, undefined);
-
-		if (!activeRun) {
-			ctx.ui.setWidget(STATUS_KEY, undefined);
-			return;
-		}
-
-		const run = activeRun;
-
-		ctx.ui.setWidget(STATUS_KEY, (_tui, theme) => {
-			const phase = readRunPhase(run.runDir) ?? "running";
-
-			const elapsed = run.startedAt
-				? `${Math.round((Date.now() - new Date(run.startedAt).getTime()) / 60000)}m`
-				: "";
-
-			const parts = [
-				theme.fg("accent", `🏗️ ${run.runId}`),
-				isTerminalPhase(phase)
-					? theme.fg(phase === "completed" ? "success" : "error", phase)
-					: theme.fg("warning", phase),
-				theme.fg("dim", `models: ${run.roleModels.implementer}`),
-			];
-			if (elapsed) parts.push(theme.fg("dim", elapsed));
-
-			return new Text(parts.join(theme.fg("dim", " │ ")), 0, 0);
-		});
-	}
-
 	// ------------------------------------------------------------------
-	// Command: /build-agents
+	// Command: /build
 	// ------------------------------------------------------------------
 
 	// ------------------------------------------------------------------
@@ -411,7 +377,6 @@ export default function buildAgents(pi: ExtensionAPI) {
 			startedAt: new Date().toISOString(),
 		};
 		persistState();
-		updateWidget(ctx);
 		autoResume.reset();
 
 		const rm = roleModels as RoleModels;
@@ -484,7 +449,6 @@ export default function buildAgents(pi: ExtensionAPI) {
 		writeRunPhase(activeRun.runDir, "canceled");
 		ctx.ui.notify(`Build run ${activeRun.runId} canceled.`, "info");
 		activeRun = null;
-		updateWidget(ctx);
 	}
 
 	async function handleCleanup(ctx: ExtensionContext): Promise<void> {
@@ -555,20 +519,6 @@ export default function buildAgents(pi: ExtensionAPI) {
 			} else {
 				await handleSingleAgent(planSource, ctx);
 			}
-		},
-	});
-
-	// ------------------------------------------------------------------
-	// Ctrl+Shift+B — toggle expanded widget
-	// ------------------------------------------------------------------
-
-	pi.registerShortcut(Key.ctrlShift("b"), {
-		description: "Toggle build-agents widget expanded/collapsed",
-		handler: async (ctx) => {
-			// No expanded view needed for run-level-only widget; keep shortcut
-			// registered so it doesn't error if users have muscle memory.
-			const phase = activeRun ? (readRunPhase(activeRun.runDir) ?? "running") : "no active run";
-			ctx.ui.notify(`Build: ${activeRun?.runId ?? "(none)"} — ${phase}`, "info");
 		},
 	});
 
@@ -699,6 +649,5 @@ export default function buildAgents(pi: ExtensionAPI) {
 			}
 		}
 
-		updateWidget(ctx);
 	});
 }
