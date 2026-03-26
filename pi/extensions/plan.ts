@@ -7,7 +7,6 @@ import { isToolCallEventType, type ExtensionAPI, type ExtensionContext, type The
 import { type Focusable, Key, matchesKey, Text, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@mariozechner/pi-tui";
 
 import {
-	hasApprovedEntry,
 	isWithinDirectory,
 	localIsoDate,
 	normalizeInputPath,
@@ -36,14 +35,11 @@ const GITHUB_ISSUE_BODY_MAX_CHARS = 12000;
 type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
 
 const PLAN_THINKING_LEVELS: ThinkingLevel[] = ["medium", "high", "xhigh"];
-const BUILD_THINKING_LEVELS: ThinkingLevel[] = ["low", "medium", "high", "xhigh"];
-
 type PlanState = {
 	enabled: boolean;
 	activePlanDir: string | null;
 	previousTools: string[];
 	planThinkingLevel: ThinkingLevel;
-	buildThinkingLevel: ThinkingLevel;
 	previousThinkingLevel: ThinkingLevel | null;
 };
 
@@ -135,51 +131,6 @@ function getPlanMeta(planDir: string): PlanMeta {
 		return { currentDraft, reviewCount, isApproved, lastEvent, lastModel };
 	} catch {
 		return { currentDraft: 0, reviewCount: 0, isApproved: false, lastEvent: null, lastModel: null };
-	}
-}
-
-/** Analyze plan.md complexity and recommend single-agent vs multi-agent build. */
-function recommendBuildMode(planDir: string): "multi" | "single" {
-	const planPath = path.join(planDir, "plan.md");
-	if (!fs.existsSync(planPath)) return "single";
-
-	try {
-		const content = fs.readFileSync(planPath, "utf8");
-		const lines = content.split("\n");
-
-		let inImplementation = false;
-		let inFiles = false;
-		let stepCount = 0;
-		let fileCount = 0;
-
-		for (const line of lines) {
-			if (/^## Implementation Plan/i.test(line)) {
-				inImplementation = true;
-				inFiles = false;
-				continue;
-			}
-			if (/^## Files and Components to Touch/i.test(line)) {
-				inFiles = true;
-				inImplementation = false;
-				continue;
-			}
-			if (/^## /.test(line)) {
-				inImplementation = false;
-				inFiles = false;
-				continue;
-			}
-
-			if (inImplementation && /^\s*\d+\./.test(line)) {
-				stepCount++;
-			}
-			if (inFiles && /^\s*-\s+/.test(line)) {
-				fileCount++;
-			}
-		}
-
-		return stepCount >= 4 && fileCount >= 5 ? "multi" : "single";
-	} catch {
-		return "single";
 	}
 }
 
@@ -530,7 +481,6 @@ export default function plan(pi: ExtensionAPI) {
 	let activePlanDir: string | null = null;
 	let previousTools: string[] = [];
 	let planThinkingLevel: ThinkingLevel = "high";
-	let buildThinkingLevel: ThinkingLevel = "medium";
 	let previousThinkingLevel: ThinkingLevel | null = null;
 
 	// Auto-resume tracking
@@ -545,7 +495,6 @@ export default function plan(pi: ExtensionAPI) {
 			activePlanDir,
 			previousTools,
 			planThinkingLevel,
-			buildThinkingLevel,
 			previousThinkingLevel,
 		});
 	}
@@ -1119,134 +1068,6 @@ export default function plan(pi: ExtensionAPI) {
 		handler: async (args, ctx) => handlePlanCommand(args, ctx),
 	});
 
-	pi.registerCommand("build", {
-		description: "Disable plan mode and implement from the active plan file (use --yolo to skip approval check, 'mode' to set thinking)",
-		handler: async (args, ctx) => {
-			const rawArgs = args.trim();
-
-			const modeMatch = rawArgs.match(/^mode(?:\s+(\S+))?\s*$/i);
-			if (modeMatch) {
-				const requested = modeMatch[1]?.toLowerCase() as ThinkingLevel | undefined;
-				if (requested) {
-					if (!BUILD_THINKING_LEVELS.includes(requested)) {
-						ctx.ui.notify(`Usage: /build mode [${BUILD_THINKING_LEVELS.join("|")}]`, "warning");
-						return;
-					}
-					buildThinkingLevel = requested;
-					persistState();
-					ctx.ui.notify(`Build thinking set to ${buildThinkingLevel}.`, "info");
-					return;
-				}
-
-				if (!ctx.hasUI) {
-					ctx.ui.notify(`Build thinking: ${buildThinkingLevel} (set with /build mode [${BUILD_THINKING_LEVELS.join("|")}])`, "info");
-					return;
-				}
-
-				const currentIndex = BUILD_THINKING_LEVELS.indexOf(buildThinkingLevel);
-				const reordered = [
-					...BUILD_THINKING_LEVELS.slice(currentIndex),
-					...BUILD_THINKING_LEVELS.slice(0, currentIndex),
-				];
-				const choice = await ctx.ui.select(
-					"Choose thinking level for build:",
-					reordered as string[],
-				);
-				if (!choice) return;
-
-				const selected = choice as ThinkingLevel;
-				if (!BUILD_THINKING_LEVELS.includes(selected)) return;
-
-				buildThinkingLevel = selected;
-				persistState();
-				ctx.ui.notify(`Build thinking set to ${buildThinkingLevel}.`, "info");
-				return;
-			}
-
-			const yolo = /(^|\s)--yolo(?=\s|$)/.test(rawArgs);
-			const pathArg = rawArgs.replace(/(^|\s)--yolo(?=\s|$)/g, " ").trim();
-			let planDir = activePlanDir;
-
-			if (pathArg) {
-				let overridePlanDir = normalizeInputPath(pathArg, ctx.cwd);
-				if (path.basename(overridePlanDir) === "plan.md") overridePlanDir = path.dirname(overridePlanDir);
-
-				if (!fs.existsSync(overridePlanDir) || !fs.statSync(overridePlanDir).isDirectory()) {
-					ctx.ui.notify(`Not a directory: ${toDisplayPath(overridePlanDir, ctx.cwd)}`, "error");
-					return;
-				}
-
-				const planFileInOverride = path.join(overridePlanDir, "plan.md");
-				if (!fs.existsSync(planFileInOverride) || !fs.statSync(planFileInOverride).isFile()) {
-					ctx.ui.notify(`Missing plan.md in ${toDisplayPath(overridePlanDir, ctx.cwd)}.`, "warning");
-					return;
-				}
-
-				setActivePlanDir(overridePlanDir, ctx);
-				planDir = overridePlanDir;
-			}
-
-			if (!planDir) {
-				ctx.ui.notify("No active plan package. Use /plan new [context] or /plan resume <plan-dir> first.", "warning");
-				return;
-			}
-
-			const planFile = path.join(planDir, "plan.md");
-			if (!fs.existsSync(planFile) || !fs.statSync(planFile).isFile()) {
-				ctx.ui.notify(`Missing plan.md in ${toDisplayPath(planDir, ctx.cwd)}.`, "warning");
-				return;
-			}
-
-			const changelogPath = path.join(planDir, "changelog.md");
-			if (!yolo && !hasApprovedEntry(changelogPath)) {
-				ctx.ui.notify(
-					`Build blocked: no approval entry found in ${toDisplayPath(changelogPath, ctx.cwd)}. Approve the plan first, or run /build --yolo to proceed anyway.`,
-					"warning",
-				);
-				return;
-			}
-
-			// Build mode selection: single-agent vs multi-agent
-			const recommended = recommendBuildMode(planDir);
-			const modeOptions = recommended === "multi"
-				? ["Multi-agent (/build-agents) — recommended", "Single agent"]
-				: ["Single agent — recommended", "Multi-agent (/build-agents)"];
-			const modeChoice = await ctx.ui.select("Build mode:", modeOptions);
-			if (!modeChoice) return;
-
-			if (modeChoice.includes("Multi-agent")) {
-				queueUserPrompt("/build-agents " + planDir, ctx);
-				return;
-			}
-
-			const level = await promptThinkingLevel(
-				"Thinking level for build:",
-				BUILD_THINKING_LEVELS,
-				buildThinkingLevel,
-				ctx,
-			);
-			if (level === null) return;
-			buildThinkingLevel = level;
-			persistState();
-
-			if (planEnabled) {
-				setPlan(false, ctx, { notify: false, captureCurrentTools: false });
-			}
-
-			pi.setThinkingLevel(buildThinkingLevel);
-
-			const displayPlanFile = toDisplayPath(planFile, ctx.cwd);
-			if (yolo) {
-				ctx.ui.notify(`YOLO build enabled. Thinking: ${buildThinkingLevel}. Starting build using ${displayPlanFile}.`, "warning");
-			} else {
-				ctx.ui.notify(`Thinking: ${buildThinkingLevel}. Starting build using ${displayPlanFile}.`, "info");
-			}
-
-			const buildPrompt = `Start implementing now using ${planFile} as the guide. Read the full plan.md first — especially the Must-Haves section, which defines what must be true when you're done. Execute the Implementation Plan steps in order. After completing each step, verify it using the step's own verification criteria before proceeding. Run the Validation Checklist before finishing. Do not modify plan package files unless explicitly asked.`;
-			queueUserPrompt(buildPrompt, ctx);
-		},
-	});
-
 	pi.registerShortcut(Key.ctrlAlt("p"), {
 		description: "Toggle plan mode",
 		handler: async (ctx) => setPlan(!planEnabled, ctx),
@@ -1428,11 +1249,6 @@ export default function plan(pi: ExtensionAPI) {
 				PLAN_THINKING_LEVELS.includes(data.planThinkingLevel as ThinkingLevel)
 					? (data.planThinkingLevel as ThinkingLevel)
 					: "high";
-			const restoredBuildThinking =
-				typeof data.buildThinkingLevel === "string" &&
-				BUILD_THINKING_LEVELS.includes(data.buildThinkingLevel as ThinkingLevel)
-					? (data.buildThinkingLevel as ThinkingLevel)
-					: "medium";
 			const restoredPreviousThinking =
 				typeof data.previousThinkingLevel === "string"
 					? (data.previousThinkingLevel as ThinkingLevel)
@@ -1445,7 +1261,6 @@ export default function plan(pi: ExtensionAPI) {
 					? data.previousTools.filter((tool): tool is string => typeof tool === "string")
 					: [],
 				planThinkingLevel: restoredPlanThinking,
-				buildThinkingLevel: restoredBuildThinking,
 				previousThinkingLevel: restoredPreviousThinking,
 			};
 		}
@@ -1455,7 +1270,6 @@ export default function plan(pi: ExtensionAPI) {
 			activePlanDir = restoredState.activePlanDir ? path.resolve(restoredState.activePlanDir) : null;
 			previousTools = restoredState.previousTools;
 			planThinkingLevel = restoredState.planThinkingLevel;
-			buildThinkingLevel = restoredState.buildThinkingLevel;
 			previousThinkingLevel = restoredState.previousThinkingLevel;
 		}
 

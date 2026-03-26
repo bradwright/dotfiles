@@ -47,11 +47,7 @@ This directory contains project-local Pi extensions.
   - `/plan mode` shows a thinking-level selector (`medium|high|xhigh`) with `high` as the default.
   - Entering plan mode sets thinking to the selected plan thinking level and restores previous thinking when exiting plan mode.
   - `/plan review` auto-enables plan mode guardrails (if needed) and delegates review via the plan-methodology skill, which dispatches a `plan-reviewer` agent via `Agent()` when available or runs review in-session as fallback.
-  - Adds `/build` command to disable plan mode and queue implementation from active `plan.md`.
-    - `/build mode` shows a thinking-level selector (`low|medium|high|xhigh`) with `medium` as the default.
-    - Sets thinking to the selected build thinking level when starting build.
-    - Requires `Approved — <date>, user.` in `changelog.md` by default.
-    - `--yolo` bypasses the approval check.
+
   - Persists mode state (`enabled`, active plan path, previous tool set) in session entry `plan-state`.
   - Shows active plan slug in footer status while plan mode is enabled.
   - Restricts tool usage in plan mode:
@@ -62,11 +58,12 @@ This directory contains project-local Pi extensions.
   - Auto-detects active plan dir from `/skill:plan-methodology review <plan-dir>` input.
 
 - `build-agents.ts`
-  - Adds `/build-agents` for multi-agent implementation orchestration.
-  - Checks for the `Agent` tool to determine if `@tintinweb/pi-subagents` is available.
-  - Run lifecycle tracked via `status.json` (simple `{ phase }` marker).
-  - Task-level state is managed entirely by the supervisor LLM — the extension handles run lifecycle, system prompt injection, auto-resume, and the widget.
+  - Adds `/build` command for implementation from a plan file.
+  - Supports single-agent (direct implementation) and multi-agent (parallel workers via `Agent` tool) modes.
+  - Accepts a plan file, plan directory, or inline description. Checks for approval in `changelog.md` (bypass with `--yolo`).
+  - Multi-agent run lifecycle tracked via `status.json`. Task-level state managed by the supervisor LLM.
   - Artifacts (`RESULT.md`, `REVIEW.md`) live in worktrees; supervisor collects them via `get_subagent_result`.
+  - Subcommands: `status`, `cancel`, `cleanup`.
 
 ## Agent files
 

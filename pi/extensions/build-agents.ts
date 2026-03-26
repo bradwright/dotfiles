@@ -8,6 +8,8 @@ import {
 	slugify,
 	toDisplayPath,
 	listApprovedPlanDirs,
+	hasApprovedEntry,
+	normalizeInputPath,
 } from "./lib/shared.js";
 
 // ---------------------------------------------------------------------------
@@ -47,7 +49,7 @@ const STATUS_FILE = "status.json";
 const BUILD_ROOT = ".pi/build";
 
 const COMMAND_USAGE =
-	"/build-agents — multi-agent build orchestration\n/build-agents [start] [plan-file|plan-dir|description]\n/build-agents status\n/build-agents cancel\n/build-agents cleanup";
+	"/build — build from a plan file\n/build [plan-file|plan-dir|description] [--yolo]\n/build status\n/build cancel\n/build cleanup";
 
 const MAX_AUTO_RESUME_TURNS = 5;
 const AUTO_RESUME_COOLDOWN_MS = 60 * 1000;
@@ -203,8 +205,106 @@ export default function buildAgents(pi: ExtensionAPI) {
 	// Command: /build-agents
 	// ------------------------------------------------------------------
 
-	async function handleStart(args: string, ctx: ExtensionContext): Promise<void> {
-		// 1. Concurrent run guard
+	// ------------------------------------------------------------------
+	// Resolve plan source from args or interactive picker
+	// ------------------------------------------------------------------
+
+	async function resolvePlanSource(args: string, ctx: ExtensionContext): Promise<PlanSource | null> {
+		if (args) {
+			const resolved = normalizeInputPath(args, ctx.cwd);
+
+			if (fs.existsSync(resolved)) {
+				const stat = fs.statSync(resolved);
+				if (stat.isFile()) return { type: "file", path: resolved };
+				if (stat.isDirectory()) return { type: "dir", path: resolved };
+			}
+
+			return { type: "inline", text: args };
+		}
+
+		// Interactive picker
+		const approved = listApprovedPlanDirs(ctx.cwd);
+		const INLINE_LABEL = "⌨ Describe what to build (inline)";
+		const labels = [
+			...approved.map((dir) => toDisplayPath(dir, ctx.cwd)),
+			INLINE_LABEL,
+		];
+
+		const choice = await ctx.ui.select("Plan source:", labels);
+		if (!choice) return null;
+
+		if (choice === INLINE_LABEL) {
+			const text = await ctx.ui.input("What should be built?");
+			if (!text?.trim()) return null;
+			return { type: "inline", text: text.trim() };
+		}
+
+		const selectedIndex = labels.indexOf(choice);
+		if (selectedIndex < 0 || !approved[selectedIndex]) return null;
+		return { type: "dir", path: approved[selectedIndex] };
+	}
+
+	function checkApproval(planSource: PlanSource, ctx: ExtensionContext): boolean {
+		if (planSource.type === "inline") return true;
+		const dir = planSource.type === "dir" ? planSource.path : path.dirname(planSource.path);
+		const changelogPath = path.join(dir, "changelog.md");
+		if (!fs.existsSync(changelogPath)) return true; // no changelog = no approval requirement
+		if (!hasApprovedEntry(changelogPath)) {
+			ctx.ui.notify(
+				`Build blocked: no approval entry in ${toDisplayPath(changelogPath, ctx.cwd)}. Approve the plan first, or use --yolo.`,
+				"warning",
+			);
+			return false;
+		}
+		return true;
+	}
+
+	function planFilePath(planSource: PlanSource): string {
+		switch (planSource.type) {
+			case "file": return planSource.path;
+			case "dir": return path.join(planSource.path, "plan.md");
+			case "inline": return "";
+		}
+	}
+
+	// ------------------------------------------------------------------
+	// Single-agent build
+	// ------------------------------------------------------------------
+
+	async function handleSingleAgent(planSource: PlanSource, ctx: ExtensionContext): Promise<void> {
+		const planFile = planFilePath(planSource);
+		if (!planFile) {
+			ctx.ui.notify("Single-agent build requires a plan file, not inline text.", "warning");
+			return;
+		}
+		if (!fs.existsSync(planFile)) {
+			ctx.ui.notify(`Plan file not found: ${toDisplayPath(planFile, ctx.cwd)}`, "warning");
+			return;
+		}
+
+		const THINKING_LEVELS = ["low", "medium", "high", "xhigh"] as const;
+		type Level = typeof THINKING_LEVELS[number];
+		let level: Level = "medium";
+		if (ctx.hasUI) {
+			const choice = await ctx.ui.select("Thinking level:", THINKING_LEVELS as unknown as string[]);
+			if (!choice) return;
+			level = choice as Level;
+		}
+
+		pi.setThinkingLevel(level);
+		ctx.ui.notify(`Single-agent build. Thinking: ${level}. Plan: ${toDisplayPath(planFile, ctx.cwd)}.`, "info");
+
+		pi.sendUserMessage(
+			`Start implementing now using ${planFile} as the guide. Read the full plan.md first — especially the Must-Haves section, which defines what must be true when you're done. Execute the Implementation Plan steps in order. After completing each step, verify it using the step's own verification criteria before proceeding. Run the Validation Checklist before finishing. Do not modify plan package files unless explicitly asked.`,
+		);
+	}
+
+	// ------------------------------------------------------------------
+	// Multi-agent build
+	// ------------------------------------------------------------------
+
+	async function handleMultiAgent(planSource: PlanSource, ctx: ExtensionContext): Promise<void> {
+		// Concurrent run guard
 		const activeRunDirs = findActiveRunDirs(ctx.cwd);
 		if (activeRunDirs.length > 0) {
 			const proceed = await ctx.ui.confirm(
@@ -220,26 +320,20 @@ export default function buildAgents(pi: ExtensionAPI) {
 			}
 		}
 
-		// 2. Plan mode gate
+		// Plan mode gate
 		const activeTools = pi.getActiveTools();
 		if (!activeTools.includes("bash") || !activeTools.includes("write")) {
-			ctx.ui.notify(
-				"Build requires full tool access. Run /plan off first to disable plan mode.",
-				"warning",
-			);
+			ctx.ui.notify("Build requires full tool access. Run /plan off first.", "warning");
 			return;
 		}
 
-		// 3. Verify Agent tool is available
+		// Agent tool check
 		if (!activeTools.includes("Agent")) {
-			ctx.ui.notify(
-				"Build requires the Agent tool. Install with: pi install npm:@tintinweb/pi-subagents",
-				"warning",
-			);
+			ctx.ui.notify("Multi-agent build requires the Agent tool. Install with: pi install npm:@tintinweb/pi-subagents", "warning");
 			return;
 		}
 
-		// 4. Validate clean git
+		// Clean git check
 		const diffResult = await pi.exec("git", ["diff", "--quiet"]);
 		const diffCachedResult = await pi.exec("git", ["diff", "--cached", "--quiet"]);
 		if (diffResult.code !== 0 || diffCachedResult.code !== 0) {
@@ -247,49 +341,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			return;
 		}
 
-		// 5. Resolve plan source
-		let planSource: PlanSource | null = null;
-
-		if (args.trim()) {
-			const resolved = path.resolve(ctx.cwd, args.trim());
-
-			if (fs.existsSync(resolved)) {
-				const stat = fs.statSync(resolved);
-				if (stat.isFile()) {
-					planSource = { type: "file", path: resolved };
-				} else if (stat.isDirectory()) {
-					planSource = { type: "dir", path: resolved };
-				}
-			}
-
-			if (!planSource) {
-				planSource = { type: "inline", text: args.trim() };
-			}
-		} else {
-			const approved = listApprovedPlanDirs(ctx.cwd);
-			const INLINE_LABEL = "⌨ Describe what to build (inline)";
-			const labels = [
-				...approved.map((dir) => toDisplayPath(dir, ctx.cwd)),
-				INLINE_LABEL,
-			];
-
-			const choice = await ctx.ui.select("Plan source:", labels);
-			if (!choice) return;
-
-			if (choice === INLINE_LABEL) {
-				const text = await ctx.ui.input("What should be built?");
-				if (!text?.trim()) return;
-				planSource = { type: "inline", text: text.trim() };
-			} else {
-				const selectedIndex = labels.indexOf(choice);
-				if (selectedIndex < 0 || !approved[selectedIndex]) return;
-				planSource = { type: "dir", path: approved[selectedIndex] };
-			}
-		}
-
-		if (!planSource) return;
-
-		// 6. Per-role model picker
+		// Per-role model picker
 		let availableModels: string[] = [];
 		try {
 			const settingsPath = path.join(getAgentDir(), "settings.json");
@@ -320,7 +372,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			roleModels[role.key] = `${selected}:${role.thinking}`;
 		}
 
-		// 7. Create run directory
+		// Create run directory
 		const planSlug = planSourceSlug(planSource);
 		const runId = `${localIsoDate()}-${planSlug}`;
 		const runDir = path.join(ctx.cwd, BUILD_ROOT, runId);
@@ -350,10 +402,8 @@ export default function buildAgents(pi: ExtensionAPI) {
 			}
 		}
 
-		// 8. Write initial run status
 		writeRunPhase(runDir, "running");
 
-		// 9. Persist BuildRunState
 		activeRun = {
 			runId,
 			planSource,
@@ -363,11 +413,9 @@ export default function buildAgents(pi: ExtensionAPI) {
 			startedAt: new Date().toISOString(),
 		};
 		persistState();
-
 		updateWidget(ctx);
 		turnsThisSession = 0;
 
-		// 10. Send kickoff message
 		const rm = roleModels as RoleModels;
 		const kickoffMsg = [
 			`Multi-agent build started.`,
@@ -473,34 +521,42 @@ export default function buildAgents(pi: ExtensionAPI) {
 		ctx.ui.notify(`Cleanup complete. Removed ${cleaned} orphaned worktrees/branches.`, "info");
 	}
 
-	pi.registerCommand("build-agents", {
-		description: "Multi-agent build orchestration. Subcommands: start/status/cancel/cleanup",
+	pi.registerCommand("build", {
+		description: "Build from a plan. Subcommands: status/cancel/cleanup",
 		handler: async (args, ctx) => {
 			const trimmed = args.trim();
-			const [verb, ...restParts] = trimmed.split(/\s+/);
-			const rest = restParts.join(" ").trim();
 
-			if (!verb || verb === "start") {
-				await handleStart(rest, ctx);
-				return;
+			// Subcommands that don't take plan args
+			if (/^status\b/i.test(trimmed)) { await handleStatus(ctx); return; }
+			if (/^cancel\b/i.test(trimmed)) { await handleCancel(ctx); return; }
+			if (/^cleanup\b/i.test(trimmed)) { await handleCleanup(ctx); return; }
+
+			// Parse --yolo flag
+			const yolo = /(?:^|\s)--yolo(?=\s|$)/.test(trimmed);
+			const pathArg = trimmed.replace(/(?:^|\s)--yolo(?=\s|$)/g, "").trim();
+
+			// Resolve plan source
+			const planSource = await resolvePlanSource(pathArg, ctx);
+			if (!planSource) return;
+
+			// Approval check (unless --yolo or inline)
+			if (!yolo && !checkApproval(planSource, ctx)) return;
+
+			// Pick build mode
+			const hasAgent = pi.getActiveTools().includes("Agent");
+			const modeOptions = hasAgent
+				? ["Single agent", "Multi-agent (parallel workers)"]
+				: ["Single agent"];
+			const modeChoice = modeOptions.length === 1
+				? modeOptions[0]
+				: await ctx.ui.select("Build mode:", modeOptions);
+			if (!modeChoice) return;
+
+			if (modeChoice.includes("Multi-agent")) {
+				await handleMultiAgent(planSource, ctx);
+			} else {
+				await handleSingleAgent(planSource, ctx);
 			}
-
-			if (verb === "status") {
-				await handleStatus(ctx);
-				return;
-			}
-
-			if (verb === "cancel") {
-				await handleCancel(ctx);
-				return;
-			}
-
-			if (verb === "cleanup") {
-				await handleCleanup(ctx);
-				return;
-			}
-
-			ctx.ui.notify(COMMAND_USAGE, "warning");
 		},
 	});
 
