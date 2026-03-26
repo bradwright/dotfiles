@@ -233,6 +233,16 @@ Agent({
 })
 ```
 
+**After merge completes**, mark the build as finished by updating
+`$RUN_DIR/status.json` with `"phase": "completed"`. This stops the
+auto-resume from firing on future context limits:
+
+```bash
+echo '{"phase":"completed","step":"merged","updatedAt":"'$(date -u +%FT%TZ)'"}' > $RUN_DIR/status.json
+```
+
+If the build fails irrecoverably, write `"phase": "failed"` instead.
+
 ---
 
 ## Execution order (must follow exactly)
@@ -243,6 +253,7 @@ Agent({
 4. Review via build-reviewer agents
 5. If needed, spawn corrective implementers
 6. Merge approved work via merger agent
+7. **Write `"phase": "completed"` to `$RUN_DIR/status.json`**
 
 ## Coordination policy
 
