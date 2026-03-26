@@ -105,6 +105,54 @@ function readRunStep(runDir: string): string | null {
 	}
 }
 
+function wildcardPatternToRegex(pattern: string): RegExp {
+	const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
+	return new RegExp(`^${escaped}$`, "i");
+}
+
+function normalizeEnabledModelPattern(raw: string): string {
+	const trimmed = raw.trim();
+	return trimmed.replace(/:(off|minimal|low|medium|high|xhigh)$/i, "");
+}
+
+function getPinnedConcreteModels(cwd: string, availableLabels: string[]): string[] {
+	const settingsCandidates = [
+		path.join(cwd, "pi", "settings.json"),
+		path.join(cwd, ".pi", "settings.json"),
+		path.join(getAgentDir(), "settings.json"),
+		path.join(process.env.HOME ?? "", ".pi", "settings.json"),
+	];
+
+	let enabledPatterns: string[] = [];
+	for (const candidate of settingsCandidates) {
+		if (!candidate || !fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) continue;
+		try {
+			const parsed = JSON.parse(fs.readFileSync(candidate, "utf8")) as { enabledModels?: unknown };
+			if (Array.isArray(parsed.enabledModels)) {
+				enabledPatterns = parsed.enabledModels.filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+				break;
+			}
+		} catch {
+			// ignore invalid settings file and keep searching
+		}
+	}
+
+	if (enabledPatterns.length === 0) return [];
+
+	const normalizedPatterns = enabledPatterns
+		.map((pattern) => normalizeEnabledModelPattern(pattern))
+		.filter((pattern) => pattern.length > 0);
+	if (normalizedPatterns.length === 0) return [];
+
+	const regexes = normalizedPatterns.map((pattern) => wildcardPatternToRegex(pattern));
+	const matches = availableLabels.filter((label) => {
+		const modelId = label.includes("/") ? label.split("/").slice(1).join("/") : label;
+		return regexes.some((rx) => rx.test(label) || rx.test(modelId));
+	});
+
+	return Array.from(new Set(matches));
+}
+
 function writeRunPhase(runDir: string, phase: RunPhase, step?: string): void {
 	const statusPath = path.join(runDir, STATUS_FILE);
 	let existing: Record<string, unknown> = {};
@@ -289,19 +337,17 @@ export default function buildAgents(pi: ExtensionAPI) {
 		}
 
 		// Per-role model picker
-		let availableModels: string[] = [];
-		try {
-			const settingsPath = path.join(getAgentDir(), "settings.json");
-			if (fs.existsSync(settingsPath)) {
-				const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
-				if (Array.isArray(settings.enabledModels) && settings.enabledModels.length > 0) {
-					availableModels = settings.enabledModels;
-				}
-			}
-		} catch { /* ignore */ }
+		// Resolve pinned patterns (enabledModels) to concrete available models,
+		// then pick per role. Never pass wildcard patterns to Agent.model.
+		const allAvailableModels = ctx.modelRegistry.getAvailable().map((m) => `${m.provider}/${m.id}`);
+		if (allAvailableModels.length === 0) {
+			ctx.ui.notify("No available models found in model registry.", "warning");
+			return;
+		}
 
-		if (availableModels.length === 0) {
-			ctx.ui.notify("No models found in settings.json enabledModels.", "warning");
+		const pinnedConcreteModels = getPinnedConcreteModels(ctx.cwd, allAvailableModels);
+		if (pinnedConcreteModels.length === 0) {
+			ctx.ui.notify("No pinned models resolved from enabledModels. Update enabledModels or select a model via Ctrl+L first.", "warning");
 			return;
 		}
 
@@ -314,7 +360,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 
 		const roleModels: Partial<RoleModels> = {};
 		for (const role of roles) {
-			const selected = await ctx.ui.select(`Model for ${role.label}:`, availableModels);
+			const selected = await ctx.ui.select(`Model for ${role.label}:`, pinnedConcreteModels);
 			if (!selected) return;
 			// Store as "provider/model:thinking" — the provider/model part is passed
 			// to Agent(model:) and the thinking part to Agent(thinking:).
