@@ -70,8 +70,9 @@ This directory contains project-local Pi extensions.
 - `build-agents.ts`
   - Adds `/build-agents` for multi-agent implementation orchestration.
   - Checks for the `Agent` tool to determine if `@tintinweb/pi-subagents` is available.
-  - Run lifecycle tracked via `status.json` (simple `{ phase }` marker). Task status is artifact-only (`tasks/<id>/RESULT.md`, `tasks/<id>/REVIEW.md`).
-  - During scans, missing task `RESULT.md` / `REVIEW.md` files are mirrored from matching worktrees when available.
+  - Run lifecycle tracked via `status.json` (simple `{ phase }` marker).
+  - Task-level state is managed entirely by the supervisor LLM — the extension handles run lifecycle, system prompt injection, auto-resume, and the widget.
+  - Artifacts (`RESULT.md`, `REVIEW.md`) live in worktrees; supervisor collects them via `get_subagent_result`.
 
 ## Agent files
 

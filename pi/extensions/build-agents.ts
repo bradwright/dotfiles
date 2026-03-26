@@ -14,20 +14,10 @@ import {
 // Types
 // ---------------------------------------------------------------------------
 
-type TaskStatus = "pending" | "spawned" | "completed" | "reviewing" | "passed" | "failed" | "crashed" | "corrective" | "merged";
-
-type TaskState = {
-	id: string;
-	title: string;
-	status: TaskStatus;
-	reviewVerdict: string | null;
-	correctiveRound: number;
-};
-
 type PlanSource =
-	| { type: "file"; path: string }      // a specific file (plan.md, etc.)
-	| { type: "dir"; path: string }        // a plan directory (approved /plan output)
-	| { type: "inline"; text: string };    // text passed directly as args
+	| { type: "file"; path: string }
+	| { type: "dir"; path: string }
+	| { type: "inline"; text: string };
 
 type RoleModels = {
 	planner: string;
@@ -41,15 +31,11 @@ type BuildRunState = {
 	planSource: PlanSource;
 	baseBranch: string;
 	runDir: string;
-	worktreeRoot: string;
-	tasks: TaskState[];
-	roleModels: RoleModels; // per-role model assignments chosen at start
+	roleModels: RoleModels;
 	startedAt: string;
 };
 
 type RunPhase = "running" | "canceled" | "completed" | "failed";
-
-type DerivedRunPhase = "preparing" | "running" | "canceling" | "completed" | "failed" | "canceled";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -59,12 +45,10 @@ const STATE_ENTRY = "build-agents-state";
 const STATUS_KEY = "build-agents";
 const STATUS_FILE = "status.json";
 const BUILD_ROOT = ".pi/build";
-const WORKTREE_ROOT_NAME = "worktrees";
 
 const COMMAND_USAGE =
 	"/build-agents — multi-agent build orchestration\n/build-agents [start] [plan-file|plan-dir|description]\n/build-agents status\n/build-agents cancel\n/build-agents cleanup";
 
-// Auto-resume
 const MAX_AUTO_RESUME_TURNS = 5;
 const AUTO_RESUME_COOLDOWN_MS = 60 * 1000;
 
@@ -97,10 +81,10 @@ function planSourceSlug(source: PlanSource): string {
 }
 
 // ---------------------------------------------------------------------------
-// Run status (status.json) — simple run-level lifecycle marker
+// Run status (status.json)
 // ---------------------------------------------------------------------------
 
-function readRunStatus(runDir: string): RunPhase | null {
+function readRunPhase(runDir: string): RunPhase | null {
 	const statusPath = path.join(runDir, STATUS_FILE);
 	if (!fs.existsSync(statusPath)) return null;
 	try {
@@ -111,181 +95,15 @@ function readRunStatus(runDir: string): RunPhase | null {
 	}
 }
 
-function writeRunStatus(runDir: string, phase: RunPhase): void {
+function writeRunPhase(runDir: string, phase: RunPhase): void {
 	fs.writeFileSync(
 		path.join(runDir, STATUS_FILE),
 		JSON.stringify({ phase, updatedAt: new Date().toISOString() }) + "\n",
 	);
 }
 
-// ---------------------------------------------------------------------------
-// Phase derivation
-// ---------------------------------------------------------------------------
-
-function deriveRunPhase(runDir: string, tasks: TaskState[]): DerivedRunPhase {
-	const explicit = readRunStatus(runDir);
-	if (explicit === "canceled") return "canceled";
-	if (explicit === "completed") return "completed";
-	if (explicit === "failed") return "failed";
-
-	if (tasks.length === 0) return "preparing";
-
-	const terminalStatuses: TaskStatus[] = ["passed", "failed", "crashed", "merged"];
-	const allTerminal = tasks.every((t) => terminalStatuses.includes(t.status));
-	if (allTerminal) {
-		const anyFailed = tasks.some((t) => t.status === "failed" || t.status === "crashed");
-		return anyFailed ? "failed" : "completed";
-	}
-
-	return "running";
-}
-
-function isTerminalPhase(phase: DerivedRunPhase): boolean {
+function isTerminalPhase(phase: RunPhase | null): boolean {
 	return phase === "completed" || phase === "failed" || phase === "canceled";
-}
-
-function isDoneStatus(status: TaskStatus): boolean {
-	return status === "completed" || status === "passed" || status === "merged";
-}
-
-// ---------------------------------------------------------------------------
-// Task status scanning (artifact-only)
-// ---------------------------------------------------------------------------
-
-function scanTaskArtifacts(runDir: string, tasks: TaskState[], worktreeRoot?: string): { updated: TaskState[]; changed: boolean } {
-	const tasksDir = path.join(runDir, "tasks");
-	if (!fs.existsSync(tasksDir)) return { updated: tasks, changed: false };
-
-	let changed = false;
-	const taskMap = new Map(tasks.map((t) => [t.id, t]));
-
-	let entries: fs.Dirent[];
-	try {
-		entries = fs.readdirSync(tasksDir, { withFileTypes: true }).filter((e) => e.isDirectory());
-	} catch {
-		return { updated: tasks, changed: false };
-	}
-
-	for (const entry of entries) {
-		const taskId = entry.name;
-		const taskDir = path.join(tasksDir, taskId);
-
-		let task = taskMap.get(taskId);
-		if (!task) {
-			task = {
-				id: taskId,
-				title: taskId,
-				status: "pending",
-				reviewVerdict: null,
-				correctiveRound: 0,
-			};
-			taskMap.set(taskId, task);
-			changed = true;
-		}
-
-		const oldStatus = task.status;
-
-		// Ensure RESULT/REVIEW artifacts are mirrored from matching worktrees
-		// when they were generated there but not copied into run/tasks/<task-id>/.
-		if (worktreeRoot) {
-			syncMissingTaskArtifactsFromWorktrees(taskDir, taskId, worktreeRoot);
-		}
-
-		// Determine status from artifacts
-		const hasResult = fs.existsSync(path.join(taskDir, "RESULT.md"));
-		const hasReview = fs.existsSync(path.join(taskDir, "REVIEW.md"));
-
-		if (hasReview) {
-			try {
-				const reviewContent = fs.readFileSync(path.join(taskDir, "REVIEW.md"), "utf8");
-				if (/PASS_WITH_NOTES/i.test(reviewContent) || /^PASS$/im.test(reviewContent)) {
-					task.status = "passed";
-					task.reviewVerdict = /PASS_WITH_NOTES/i.test(reviewContent) ? "PASS_WITH_NOTES" : "PASS";
-				} else if (/FAIL/i.test(reviewContent)) {
-					task.status = "failed";
-					task.reviewVerdict = "FAIL";
-				}
-			} catch { /* ignore */ }
-		} else if (hasResult) {
-			task.status = "completed";
-		}
-
-		if (task.status !== oldStatus) {
-			changed = true;
-		}
-	}
-
-	return { updated: Array.from(taskMap.values()), changed };
-}
-
-function syncMissingTaskArtifactsFromWorktrees(taskDir: string, taskId: string, worktreeRoot: string): void {
-	if (!fs.existsSync(worktreeRoot)) return;
-
-	const needsResult = !fs.existsSync(path.join(taskDir, "RESULT.md"));
-	const needsReview = !fs.existsSync(path.join(taskDir, "REVIEW.md"));
-	if (!needsResult && !needsReview) return;
-
-	let worktrees: fs.Dirent[] = [];
-	try {
-		worktrees = fs.readdirSync(worktreeRoot, { withFileTypes: true }).filter((e) => e.isDirectory());
-	} catch {
-		return;
-	}
-
-	const slug = taskId.replace(/^task-\d+-/, "").toLowerCase();
-	let candidates = worktrees
-		.map((entry) => ({ name: entry.name.toLowerCase(), fullPath: path.join(worktreeRoot, entry.name) }))
-		.filter(({ name }) => name.includes(taskId.toLowerCase()) || (slug.length > 0 && name.includes(slug)));
-
-	// If no obvious name match is found, fall back to scanning all worktrees.
-	if (candidates.length === 0) {
-		candidates = worktrees.map((entry) => ({ name: entry.name.toLowerCase(), fullPath: path.join(worktreeRoot, entry.name) }));
-	}
-
-	function newestExisting(paths: string[]): string | null {
-		let bestPath: string | null = null;
-		let bestMtime = -1;
-		for (const p of paths) {
-			if (!fs.existsSync(p)) continue;
-			try {
-				const stat = fs.statSync(p);
-				if (!stat.isFile()) continue;
-				if (stat.mtimeMs > bestMtime) {
-					bestMtime = stat.mtimeMs;
-					bestPath = p;
-				}
-			} catch { /* ignore */ }
-		}
-		return bestPath;
-	}
-
-	for (const candidate of candidates) {
-		if (needsResult) {
-			const resultSource = newestExisting([
-				path.join(candidate.fullPath, "RESULT.md"),
-				path.join(candidate.fullPath, taskId, "RESULT.md"),
-				path.join(candidate.fullPath, "tasks", taskId, "RESULT.md"),
-			]);
-			if (resultSource && !fs.existsSync(path.join(taskDir, "RESULT.md"))) {
-				try {
-					fs.copyFileSync(resultSource, path.join(taskDir, "RESULT.md"));
-				} catch { /* ignore */ }
-			}
-		}
-
-		if (needsReview) {
-			const reviewSource = newestExisting([
-				path.join(candidate.fullPath, "REVIEW.md"),
-				path.join(candidate.fullPath, taskId, "REVIEW.md"),
-				path.join(candidate.fullPath, "tasks", taskId, "REVIEW.md"),
-			]);
-			if (reviewSource && !fs.existsSync(path.join(taskDir, "REVIEW.md"))) {
-				try {
-					fs.copyFileSync(reviewSource, path.join(taskDir, "REVIEW.md"));
-				} catch { /* ignore */ }
-			}
-		}
-	}
 }
 
 // ---------------------------------------------------------------------------
@@ -293,8 +111,7 @@ function syncMissingTaskArtifactsFromWorktrees(taskDir: string, taskId: string, 
 // ---------------------------------------------------------------------------
 
 function isRunDir(dir: string): boolean {
-	// A run directory has a status.json or a tasks/ subdirectory
-	return fs.existsSync(path.join(dir, STATUS_FILE)) || fs.existsSync(path.join(dir, "tasks"));
+	return fs.existsSync(path.join(dir, STATUS_FILE));
 }
 
 function findMostRecentRunDir(cwd: string): string | null {
@@ -304,7 +121,7 @@ function findMostRecentRunDir(cwd: string): string | null {
 	try {
 		const dirs = fs
 			.readdirSync(buildRoot, { withFileTypes: true })
-			.filter((e) => e.isDirectory() && e.name !== WORKTREE_ROOT_NAME)
+			.filter((e) => e.isDirectory())
 			.map((e) => path.join(buildRoot, e.name))
 			.filter((dir) => isRunDir(dir))
 			.sort((a, b) => path.basename(b).localeCompare(path.basename(a)));
@@ -322,12 +139,11 @@ function findActiveRunDirs(cwd: string): string[] {
 	try {
 		return fs
 			.readdirSync(buildRoot, { withFileTypes: true })
-			.filter((e) => e.isDirectory() && e.name !== WORKTREE_ROOT_NAME)
+			.filter((e) => e.isDirectory())
 			.map((e) => path.join(buildRoot, e.name))
 			.filter((dir) => {
 				if (!isRunDir(dir)) return false;
-				const phase = deriveRunPhase(dir, []);
-				return !isTerminalPhase(phase);
+				return !isTerminalPhase(readRunPhase(dir));
 			});
 	} catch {
 		return [];
@@ -340,7 +156,6 @@ function findActiveRunDirs(cwd: string): string[] {
 
 export default function buildAgents(pi: ExtensionAPI) {
 	let activeRun: BuildRunState | null = null;
-	let widgetExpanded = false;
 
 	// Auto-resume tracking
 	let turnsThisSession = 0;
@@ -365,64 +180,22 @@ export default function buildAgents(pi: ExtensionAPI) {
 		const run = activeRun;
 
 		ctx.ui.setWidget(STATUS_KEY, (_tui, theme) => {
-			const { updated } = scanTaskArtifacts(run.runDir, run.tasks, run.worktreeRoot);
-			run.tasks = updated;
-			const tasks = run.tasks;
-			const phase = deriveRunPhase(run.runDir, tasks);
+			const phase = readRunPhase(run.runDir) ?? "running";
 
-			const done = tasks.filter((t) => isDoneStatus(t.status)).length;
-			const running = tasks.filter((t) => t.status === "spawned" || t.status === "reviewing" || t.status === "corrective").length;
-			const failed = tasks.filter((t) => t.status === "failed").length;
-			const crashed = tasks.filter((t) => t.status === "crashed").length;
+			const elapsed = run.startedAt
+				? `${Math.round((Date.now() - new Date(run.startedAt).getTime()) / 60000)}m`
+				: "";
 
-			if (!widgetExpanded) {
-				const parts = [
-					theme.fg("accent", `🏗️ ${run.runId}`),
-					theme.fg("muted", phase),
-					theme.fg("success", `${done}/${tasks.length} done`),
-					theme.fg("warning", `${running} running`),
-					failed > 0 ? theme.fg("error", `${failed} failed`) : theme.fg("muted", "0 failed"),
-					crashed > 0 ? theme.fg("error", `${crashed} crashed`) : theme.fg("muted", "0 crashed"),
-					theme.fg("dim", `models: ${run.roleModels.implementer}`),
-				];
-				return new Text(parts.join(theme.fg("dim", " │ ")), 0, 0);
-			}
+			const parts = [
+				theme.fg("accent", `🏗️ ${run.runId}`),
+				isTerminalPhase(phase)
+					? theme.fg(phase === "completed" ? "success" : "error", phase)
+					: theme.fg("warning", phase),
+				theme.fg("dim", `models: ${run.roleModels.implementer}`),
+			];
+			if (elapsed) parts.push(theme.fg("dim", elapsed));
 
-			// Expanded view
-			const lines: string[] = [];
-			lines.push(theme.fg("accent", `🏗️ build: ${run.runId}`));
-			lines.push(`  Phase: ${phase}`);
-			lines.push(`  ${"#".padEnd(4)}${"task".padEnd(20)}${"status".padEnd(14)}${"review".padEnd(10)}`);
-
-			for (let i = 0; i < tasks.length; i++) {
-				const t = tasks[i];
-				const num = String(i + 1).padEnd(4);
-				const name = t.id.slice(0, 18).padEnd(20);
-
-				let statusIcon: string;
-				switch (t.status) {
-					case "passed":
-					case "merged":
-						statusIcon = theme.fg("success", `✓ ${t.status}`.padEnd(14));
-						break;
-					case "failed":
-					case "crashed":
-						statusIcon = theme.fg("error", `✗ ${t.status}`.padEnd(14));
-						break;
-					case "spawned":
-					case "reviewing":
-					case "corrective":
-						statusIcon = theme.fg("warning", `⏳ ${t.status}`.padEnd(14));
-						break;
-					default:
-						statusIcon = theme.fg("muted", `· ${t.status}`.padEnd(14));
-				}
-
-				const review = (t.reviewVerdict ?? "—").padEnd(10);
-				lines.push(`  ${num}${name}${statusIcon}${review}`);
-			}
-
-			return new Text(lines.join("\n"), 0, 0);
+			return new Text(parts.join(theme.fg("dim", " │ ")), 0, 0);
 		});
 	}
 
@@ -443,7 +216,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 				return;
 			}
 			for (const runDir of activeRunDirs) {
-				writeRunStatus(runDir, "canceled");
+				writeRunPhase(runDir, "canceled");
 			}
 		}
 
@@ -460,7 +233,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		// 3. Verify Agent tool is available
 		if (!activeTools.includes("Agent")) {
 			ctx.ui.notify(
-				"Build requires the Agent tool (@tintinweb/pi-subagents extension). Install with: pi install npm:@tintinweb/pi-subagents",
+				"Build requires the Agent tool. Install with: pi install npm:@tintinweb/pi-subagents",
 				"warning",
 			);
 			return;
@@ -474,7 +247,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			return;
 		}
 
-		// 5. Resolve plan source — file, directory, inline text, or interactive picker
+		// 5. Resolve plan source
 		let planSource: PlanSource | null = null;
 
 		if (args.trim()) {
@@ -489,12 +262,10 @@ export default function buildAgents(pi: ExtensionAPI) {
 				}
 			}
 
-			// If it didn't resolve to a file/dir, treat as inline text
 			if (!planSource) {
 				planSource = { type: "inline", text: args.trim() };
 			}
 		} else {
-			// Interactive picker: approved plans + ad-hoc option
 			const approved = listApprovedPlanDirs(ctx.cwd);
 			const INLINE_LABEL = "⌨ Describe what to build (inline)";
 			const labels = [
@@ -553,18 +324,12 @@ export default function buildAgents(pi: ExtensionAPI) {
 		const planSlug = planSourceSlug(planSource);
 		const runId = `${localIsoDate()}-${planSlug}`;
 		const runDir = path.join(ctx.cwd, BUILD_ROOT, runId);
-		const tasksDir = path.join(runDir, "tasks");
-		fs.mkdirSync(tasksDir, { recursive: true });
-
-		// 8. Create worktree root
-		const worktreeRoot = path.join(ctx.cwd, BUILD_ROOT, WORKTREE_ROOT_NAME);
-		fs.mkdirSync(worktreeRoot, { recursive: true });
+		fs.mkdirSync(runDir, { recursive: true });
 
 		// Get base branch
 		const branchResult = await pi.exec("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
 		let baseBranch = (branchResult.stdout || "main").trim();
 
-		// Offer to create a branch when on main/master
 		if (baseBranch === "main" || baseBranch === "master") {
 			const action = await ctx.ui.select(
 				`You're on ${baseBranch}. Create a new branch?`,
@@ -585,34 +350,30 @@ export default function buildAgents(pi: ExtensionAPI) {
 			}
 		}
 
-		// 9. Write initial run status
-		writeRunStatus(runDir, "running");
+		// 8. Write initial run status
+		writeRunPhase(runDir, "running");
 
-		// 10. Persist BuildRunState
+		// 9. Persist BuildRunState
 		activeRun = {
 			runId,
 			planSource,
 			baseBranch,
 			runDir,
-			worktreeRoot,
-			tasks: [],
 			roleModels: roleModels as RoleModels,
 			startedAt: new Date().toISOString(),
 		};
 		persistState();
 
-		// Update widget
 		updateWidget(ctx);
 		turnsThisSession = 0;
 
-		// 11. Send kickoff message
+		// 10. Send kickoff message
 		const rm = roleModels as RoleModels;
 		const kickoffMsg = [
 			`Multi-agent build started.`,
 			`Run ID: ${runId}`,
 			`Run directory: ${runDir}`,
 			`Plan source: ${planSourceLabel(planSource, ctx.cwd)}`,
-			`Worktree root: ${worktreeRoot}`,
 			`Base branch: ${baseBranch}`,
 			``,
 			`Per-role models:`,
@@ -622,13 +383,15 @@ export default function buildAgents(pi: ExtensionAPI) {
 			`  merger:         ${rm.merger}`,
 			``,
 			planSourceForKickoff(planSource),
-			`Create task subdirectories under ${tasksDir}/ for each implementation task.`,
 			``,
 			`Use the \`Agent\` tool for all subprocess work:`,
-			`- Task decomposition: call Agent() with subagent_type "build-planner", pass model "${rm.planner}" via the model parameter`,
-			`- Parallel implementers: call Agent() multiple times with run_in_background: true, subagent_type "implementer", pass model "${rm.implementer}", use isolation: "worktree" for each`,
-			`- Reviews: call Agent() with subagent_type "build-reviewer", pass model "${rm.reviewer}"`,
-			`- Merge: call Agent() with subagent_type "merger", pass model "${rm.merger}"`,
+			`- Task decomposition: Agent() with subagent_type "build-planner", model "${rm.planner}"`,
+			`- Parallel implementers: Agent() with subagent_type "implementer", model "${rm.implementer}", isolation: "worktree", run_in_background: true`,
+			`- Reviews: Agent() with subagent_type "build-reviewer", model "${rm.reviewer}"`,
+			`- Merge: Agent() with subagent_type "merger", model "${rm.merger}"`,
+			``,
+			`Implementers write RESULT.md in their worktree. Reviewers write REVIEW.md.`,
+			`Use get_subagent_result to collect results after agents complete.`,
 		].join("\n");
 
 		pi.sendUserMessage(kickoffMsg);
@@ -643,7 +406,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 				return;
 			}
 
-			const phase = deriveRunPhase(recentRunDir, []);
+			const phase = readRunPhase(recentRunDir) ?? "running";
 			ctx.ui.notify(
 				`Last run: ${path.basename(recentRunDir)}\nPhase: ${phase}\nDir: ${toDisplayPath(recentRunDir, ctx.cwd)}`,
 				"info",
@@ -652,29 +415,16 @@ export default function buildAgents(pi: ExtensionAPI) {
 		}
 
 		const run = activeRun;
-		const { updated } = scanTaskArtifacts(run.runDir, run.tasks, run.worktreeRoot);
-		run.tasks = updated;
-		persistState();
-		updateWidget(ctx);
-
-		const phase = deriveRunPhase(run.runDir, run.tasks);
-		const done = run.tasks.filter((t) => isDoneStatus(t.status)).length;
-		const running = run.tasks.filter((t) => t.status === "spawned" || t.status === "reviewing" || t.status === "corrective").length;
-		const failed = run.tasks.filter((t) => t.status === "failed").length;
-		const crashed = run.tasks.filter((t) => t.status === "crashed").length;
+		const phase = readRunPhase(run.runDir) ?? "running";
 
 		const lines = [
 			`Run: ${run.runId}`,
 			`Phase: ${phase}`,
 			`Plan: ${planSourceLabel(run.planSource, ctx.cwd)}`,
+			`Branch: ${run.baseBranch}`,
 			`Models: planner=${run.roleModels.planner}, impl=${run.roleModels.implementer}, reviewer=${run.roleModels.reviewer}, merger=${run.roleModels.merger}`,
-			`Tasks: ${run.tasks.length} total, ${done} done, ${running} running, ${failed} failed, ${crashed} crashed`,
 			`Started: ${run.startedAt}`,
 		];
-
-		for (const task of run.tasks) {
-			lines.push(`  ${task.id}: ${task.status}${task.reviewVerdict ? ` (${task.reviewVerdict})` : ""}`);
-		}
 
 		ctx.ui.notify(lines.join("\n"), "info");
 	}
@@ -685,40 +435,26 @@ export default function buildAgents(pi: ExtensionAPI) {
 			return;
 		}
 
-		const run = activeRun;
-
-		writeRunStatus(run.runDir, "canceled");
-
-		// Clean up worktrees
-		if (fs.existsSync(run.worktreeRoot)) {
-			try {
-				const worktrees = fs.readdirSync(run.worktreeRoot, { withFileTypes: true }).filter((e) => e.isDirectory());
-				for (const wt of worktrees) {
-					const wtPath = path.join(run.worktreeRoot, wt.name);
-					await pi.exec("git", ["worktree", "remove", "--force", wtPath]);
-				}
-			} catch { /* ignore */ }
-		}
-
-		ctx.ui.notify(`Build run ${run.runId} canceled.`, "info");
+		writeRunPhase(activeRun.runDir, "canceled");
+		ctx.ui.notify(`Build run ${activeRun.runId} canceled.`, "info");
 		activeRun = null;
 		updateWidget(ctx);
 	}
 
 	async function handleCleanup(ctx: ExtensionContext): Promise<void> {
-		const worktreeRoot = path.join(ctx.cwd, BUILD_ROOT, WORKTREE_ROOT_NAME);
 		let cleaned = 0;
 
-		// Clean orphaned worktrees
-		if (fs.existsSync(worktreeRoot)) {
-			try {
-				const worktrees = fs.readdirSync(worktreeRoot, { withFileTypes: true }).filter((e) => e.isDirectory());
-				for (const wt of worktrees) {
-					const wtPath = path.join(worktreeRoot, wt.name);
-					const result = await pi.exec("git", ["worktree", "remove", "--force", wtPath]);
-					if (result.code === 0) cleaned++;
-				}
-			} catch { /* ignore */ }
+		// Clean orphaned worktrees via git
+		const listResult = await pi.exec("git", ["worktree", "list", "--porcelain"]);
+		if (listResult.code === 0) {
+			const worktreeLines = listResult.stdout.split("\n").filter((l) => l.startsWith("worktree "));
+			for (const line of worktreeLines) {
+				const wtPath = line.replace("worktree ", "").trim();
+				// Skip the main worktree
+				if (wtPath === ctx.cwd) continue;
+				const result = await pi.exec("git", ["worktree", "remove", "--force", wtPath]);
+				if (result.code === 0) cleaned++;
+			}
 		}
 
 		// Clean orphaned build/* branches
@@ -775,8 +511,10 @@ export default function buildAgents(pi: ExtensionAPI) {
 	pi.registerShortcut(Key.ctrlShift("b"), {
 		description: "Toggle build-agents widget expanded/collapsed",
 		handler: async (ctx) => {
-			widgetExpanded = !widgetExpanded;
-			updateWidget(ctx);
+			// No expanded view needed for run-level-only widget; keep shortcut
+			// registered so it doesn't error if users have muscle memory.
+			const phase = activeRun ? (readRunPhase(activeRun.runDir) ?? "running") : "no active run";
+			ctx.ui.notify(`Build: ${activeRun?.runId ?? "(none)"} — ${phase}`, "info");
 		},
 	});
 
@@ -789,8 +527,6 @@ export default function buildAgents(pi: ExtensionAPI) {
 
 		turnsThisSession++;
 
-		// Resolve prompt relative to this extension file so it works
-		// regardless of where the package is installed.
 		const promptPath = path.join(__dirname, "build-agents-prompt.md");
 		if (!fs.existsSync(promptPath)) {
 			ctx.ui.notify(
@@ -809,63 +545,29 @@ export default function buildAgents(pi: ExtensionAPI) {
 
 		const run = activeRun;
 		const rm = run.roleModels;
-		const modelInstructions = [
-			"ROLE_MODELS:",
-			`  build-planner:  ${rm.planner}`,
-			`  implementer:    ${rm.implementer}`,
-			`  build-reviewer: ${rm.reviewer}`,
-			`  merger:         ${rm.merger}`,
-			"",
-			"Pass the corresponding `model` value in each Agent() call:",
-			`  - build-planner tasks: model: "${rm.planner}"`,
-			`  - implementer tasks:   model: "${rm.implementer}"`,
-			`  - build-reviewer tasks: model: "${rm.reviewer}"`,
-			`  - merger tasks:        model: "${rm.merger}"`,
-		];
 
 		const runContext = [
 			"## Run Context (injected by extension — do not edit)",
 			"",
 			`RUN_ID: ${run.runId}`,
 			`RUN_DIR: ${run.runDir}`,
-			`WORKTREE_ROOT: ${run.worktreeRoot}`,
 			`BASE_BRANCH: ${run.baseBranch}`,
 			`PLAN_SOURCE: ${planSourceLabel(run.planSource, ctx.cwd)}`,
-			...modelInstructions,
 			"",
-			"Use the `Agent` tool for all subprocess work.",
+			"ROLE_MODELS:",
+			`  build-planner:  ${rm.planner}`,
+			`  implementer:    ${rm.implementer}`,
+			`  build-reviewer: ${rm.reviewer}`,
+			`  merger:         ${rm.merger}`,
+			"",
+			"Pass the corresponding `model` value in each Agent() call.",
 			"Use `isolation: \"worktree\"` for implementer tasks. Use `run_in_background: true` for parallel execution.",
+			"Artifacts (RESULT.md, REVIEW.md) live in worktrees — use `get_subagent_result` to collect them.",
 		].join("\n");
 
 		return {
 			systemPrompt: event.systemPrompt + "\n\n" + promptContent + "\n\n" + runContext,
 		};
-	});
-
-	// ------------------------------------------------------------------
-	// tool_result hook — artifact scanning + terminal phase detection
-	// ------------------------------------------------------------------
-
-	pi.on("tool_result", async (_event, ctx) => {
-		if (!activeRun) return;
-
-		const run = activeRun;
-
-		const { updated, changed } = scanTaskArtifacts(run.runDir, run.tasks, run.worktreeRoot);
-		run.tasks = updated;
-
-		// Check if the run reached a terminal phase
-		const phase = deriveRunPhase(run.runDir, run.tasks);
-		if (isTerminalPhase(phase)) {
-			const done = run.tasks.filter((t) => isDoneStatus(t.status)).length;
-			const failed = run.tasks.filter((t) => t.status === "failed" || t.status === "crashed").length;
-			const summary = `Build ${run.runId} ${phase}: ${done}/${run.tasks.length} done, ${failed} failed.`;
-			ctx.ui.notify(summary, phase === "completed" ? "info" : "warning");
-			activeRun = null;
-		}
-
-		if (changed) persistState();
-		updateWidget(ctx);
 	});
 
 	// ------------------------------------------------------------------
@@ -876,10 +578,9 @@ export default function buildAgents(pi: ExtensionAPI) {
 		if (!activeRun) return;
 		if (turnsThisSession === 0) return;
 
-		const phase = deriveRunPhase(activeRun.runDir, activeRun.tasks);
+		const phase = readRunPhase(activeRun.runDir);
 		if (isTerminalPhase(phase)) return;
 
-		// Rate-limit
 		const now = Date.now();
 		if (now - lastAutoResumeTime < AUTO_RESUME_COOLDOWN_MS) return;
 		if (turnsThisSession >= MAX_AUTO_RESUME_TURNS) {
@@ -893,11 +594,10 @@ export default function buildAgents(pi: ExtensionAPI) {
 		lastAutoResumeTime = now;
 
 		const run = activeRun;
-		let resumeMsg = `Build context limit reached. Resume orchestrating the multi-agent build.`;
-		resumeMsg += ` Run dir: ${run.runDir}.`;
-		resumeMsg += ` Check task status in ${path.join(run.runDir, "tasks")}/ and continue the build workflow.`;
-
-		pi.sendUserMessage(resumeMsg);
+		pi.sendUserMessage(
+			`Build context limit reached. Resume orchestrating the multi-agent build.\n` +
+			`Run dir: ${run.runDir}. Use get_subagent_result to check on any running agents.`,
+		);
 	});
 
 	// ------------------------------------------------------------------
@@ -923,8 +623,6 @@ export default function buildAgents(pi: ExtensionAPI) {
 				planSource,
 				baseBranch: data.baseBranch ?? "main",
 				runDir: data.runDir ?? "",
-				worktreeRoot: data.worktreeRoot ?? "",
-				tasks: Array.isArray(data.tasks) ? data.tasks : [],
 				roleModels: data.roleModels ?? defaultRoleModels,
 				startedAt: data.startedAt ?? "",
 			};
@@ -933,7 +631,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		// Also scan filesystem for most recent run
 		const recentRunDir = findMostRecentRunDir(ctx.cwd);
 		if (recentRunDir) {
-			const phase = deriveRunPhase(recentRunDir, activeRun?.tasks ?? []);
+			const phase = readRunPhase(recentRunDir);
 
 			if (!isTerminalPhase(phase)) {
 				if (!activeRun || activeRun.runDir !== recentRunDir) {
@@ -943,16 +641,10 @@ export default function buildAgents(pi: ExtensionAPI) {
 						planSource: { type: "inline", text: "(restored from filesystem)" },
 						baseBranch: "main",
 						runDir: recentRunDir,
-						worktreeRoot: path.join(path.dirname(recentRunDir), WORKTREE_ROOT_NAME),
-						tasks: [],
 						roleModels: defaultRoleModels2,
 						startedAt: "",
 					};
 				}
-
-				// Scan artifacts to rebuild task state
-				const { updated } = scanTaskArtifacts(activeRun.runDir, activeRun.tasks, activeRun.worktreeRoot);
-				activeRun.tasks = updated;
 
 				ctx.ui.notify(`Active build run found: ${activeRun.runId}`, "info");
 			}
