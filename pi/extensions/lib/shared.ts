@@ -186,3 +186,47 @@ export function readJsonlEvents<T>(filePath: string): T[] {
 export function appendJsonlEvent<T>(filePath: string, event: T): void {
 	fs.appendFileSync(filePath, JSON.stringify(event) + "\n");
 }
+
+// ---------------------------------------------------------------------------
+// Auto-resume tracker
+// ---------------------------------------------------------------------------
+
+/**
+ * Tracks agent turns and rate-limits auto-resume attempts when the agent
+ * hits a context limit. Shared by plan and build extensions.
+ *
+ * Usage:
+ *   - Call `tick()` on each `before_agent_start` / agent turn.
+ *   - Call `reset()` on `agent_start` (new session).
+ *   - Call `shouldResume()` on `agent_end` — returns true if a resume
+ *     message should be sent.
+ */
+export class AutoResumeTracker {
+	private turns = 0;
+	private lastResumeTime = 0;
+
+	constructor(
+		private maxTurns = 5,
+		private cooldownMs = 60_000,
+	) {}
+
+	reset(): void {
+		this.turns = 0;
+	}
+
+	tick(): void {
+		this.turns++;
+	}
+
+	/** Returns true if auto-resume should fire, false if rate-limited or exhausted. */
+	shouldResume(): { ok: true } | { ok: false; reason: "no-turns" | "cooldown" | "exhausted" } {
+		if (this.turns === 0) return { ok: false, reason: "no-turns" };
+
+		const now = Date.now();
+		if (now - this.lastResumeTime < this.cooldownMs) return { ok: false, reason: "cooldown" };
+		if (this.turns >= this.maxTurns) return { ok: false, reason: "exhausted" };
+
+		this.lastResumeTime = now;
+		return { ok: true };
+	}
+}

@@ -4,6 +4,7 @@ import * as path from "node:path";
 import { type ExtensionAPI, type ExtensionContext, getAgentDir } from "@mariozechner/pi-coding-agent";
 import { Key, Text } from "@mariozechner/pi-tui";
 import {
+	AutoResumeTracker,
 	localIsoDate,
 	slugify,
 	toDisplayPath,
@@ -51,8 +52,7 @@ const BUILD_ROOT = ".pi/build";
 const COMMAND_USAGE =
 	"/build — build from a plan file\n/build [plan-file|plan-dir|description] [--yolo]\n/build status\n/build cancel\n/build cleanup";
 
-const MAX_AUTO_RESUME_TURNS = 5;
-const AUTO_RESUME_COOLDOWN_MS = 60 * 1000;
+
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -159,9 +159,7 @@ function findActiveRunDirs(cwd: string): string[] {
 export default function buildAgents(pi: ExtensionAPI) {
 	let activeRun: BuildRunState | null = null;
 
-	// Auto-resume tracking
-	let turnsThisSession = 0;
-	let lastAutoResumeTime = 0;
+	const autoResume = new AutoResumeTracker();
 
 	function persistState(): void {
 		if (activeRun) {
@@ -414,7 +412,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 		};
 		persistState();
 		updateWidget(ctx);
-		turnsThisSession = 0;
+		autoResume.reset();
 
 		const rm = roleModels as RoleModels;
 		const kickoffMsg = [
@@ -581,7 +579,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 	pi.on("before_agent_start", async (event, ctx) => {
 		if (!activeRun) return;
 
-		turnsThisSession++;
+		autoResume.tick();
 
 		const promptPath = path.join(__dirname, "build-agents-prompt.md");
 		if (!fs.existsSync(promptPath)) {
@@ -632,22 +630,17 @@ export default function buildAgents(pi: ExtensionAPI) {
 
 	pi.on("agent_end", async (_event, ctx) => {
 		if (!activeRun) return;
-		if (turnsThisSession === 0) return;
 
 		const phase = readRunPhase(activeRun.runDir);
 		if (isTerminalPhase(phase)) return;
 
-		const now = Date.now();
-		if (now - lastAutoResumeTime < AUTO_RESUME_COOLDOWN_MS) return;
-		if (turnsThisSession >= MAX_AUTO_RESUME_TURNS) {
-			ctx.ui.notify(
-				`Build auto-resume limit reached (${MAX_AUTO_RESUME_TURNS} turns). Use /build-agents to re-activate.`,
-				"info",
-			);
+		const resume = autoResume.shouldResume();
+		if (!resume.ok) {
+			if (resume.reason === "exhausted") {
+				ctx.ui.notify("Build auto-resume limit reached. Use /build to re-activate.", "info");
+			}
 			return;
 		}
-
-		lastAutoResumeTime = now;
 
 		const run = activeRun;
 		pi.sendUserMessage(

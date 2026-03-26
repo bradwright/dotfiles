@@ -7,6 +7,7 @@ import { isToolCallEventType, type ExtensionAPI, type ExtensionContext, type The
 import { type Focusable, Key, matchesKey, Text, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@mariozechner/pi-tui";
 
 import {
+	AutoResumeTracker,
 	isWithinDirectory,
 	localIsoDate,
 	normalizeInputPath,
@@ -483,11 +484,7 @@ export default function plan(pi: ExtensionAPI) {
 	let planThinkingLevel: ThinkingLevel = "high";
 	let previousThinkingLevel: ThinkingLevel | null = null;
 
-	// Auto-resume tracking
-	let planTurnsThisSession = 0;
-	let lastAutoResumeTime = 0;
-	const MAX_AUTO_RESUME_TURNS = 5;
-	const AUTO_RESUME_COOLDOWN_MS = 60 * 1000; // 1 minute
+	const autoResume = new AutoResumeTracker();
 
 	function persistState(): void {
 		pi.appendEntry<PlanState>(STATE_ENTRY, {
@@ -1162,13 +1159,13 @@ export default function plan(pi: ExtensionAPI) {
 	});
 
 	pi.on("agent_start", async () => {
-		planTurnsThisSession = 0;
+		autoResume.reset();
 	});
 
 	pi.on("before_agent_start", async () => {
 		if (!planEnabled) return;
 
-		planTurnsThisSession++;
+		autoResume.tick();
 
 		const activePlanMessage = activePlanDir
 			? `Active plan package: ${activePlanDir}`
@@ -1187,23 +1184,13 @@ export default function plan(pi: ExtensionAPI) {
 	pi.on("agent_end", async (_event, ctx) => {
 		if (!planEnabled || !activePlanDir) return;
 
-		// Only auto-resume if the agent did work this session
-		if (planTurnsThisSession === 0) return;
-
-		// Rate-limit auto-resume
-		const now = Date.now();
-		if (now - lastAutoResumeTime < AUTO_RESUME_COOLDOWN_MS) return;
-
-		// Don't auto-resume forever
-		if (planTurnsThisSession >= MAX_AUTO_RESUME_TURNS) {
-			ctx.ui.notify(
-				`Plan auto-resume limit reached (${MAX_AUTO_RESUME_TURNS} turns). Use /plan to re-activate.`,
-				"info",
-			);
+		const resume = autoResume.shouldResume();
+		if (!resume.ok) {
+			if (resume.reason === "exhausted") {
+				ctx.ui.notify("Plan auto-resume limit reached. Use /plan to re-activate.", "info");
+			}
 			return;
 		}
-
-		lastAutoResumeTime = now;
 
 		const meta = getPlanMeta(activePlanDir);
 		const planFile = path.join(activePlanDir, "plan.md");
