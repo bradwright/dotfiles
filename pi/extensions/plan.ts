@@ -3,7 +3,7 @@ import * as path from "node:path";
 
 import { execFileSync } from "node:child_process";
 
-import { type ExtensionAPI, type ExtensionContext, type Theme } from "@mariozechner/pi-coding-agent";
+import { isToolCallEventType, type ExtensionAPI, type ExtensionContext, type Theme } from "@mariozechner/pi-coding-agent";
 import { type Focusable, Key, matchesKey, Text, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@mariozechner/pi-tui";
 
 import {
@@ -19,7 +19,7 @@ import {
 	truncateText,
 } from "./lib/shared.js";
 
-const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write", "Agent"] as const;
+const PLAN_TOOLS = ["read", "grep", "find", "ls", "edit", "write", "Agent"] as const;
 const FALLBACK_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls"] as const;
 const ISSUE_BRIEF_FILE = "brief.md";
 const STATE_ENTRY = "plan-state";
@@ -550,10 +550,6 @@ export default function plan(pi: ExtensionAPI) {
 		});
 	}
 
-	function emitStateChanged(): void {
-		pi.events.emit("plan:state-changed", { enabled: planEnabled, activePlanDir });
-	}
-
 	function planLabel(): string {
 		if (!activePlanDir) return "no plan";
 		return path.basename(activePlanDir);
@@ -674,7 +670,6 @@ export default function plan(pi: ExtensionAPI) {
 
 		updateStatus(ctx);
 		persistState();
-		emitStateChanged();
 	}
 
 	function formatStatusSummary(ctx: ExtensionContext): string {
@@ -689,7 +684,6 @@ export default function plan(pi: ExtensionAPI) {
 		activePlanDir = nextPlanDir ? path.resolve(nextPlanDir) : null;
 		updateStatus(ctx);
 		persistState();
-		emitStateChanged();
 	}
 
 	function usage(ctx: ExtensionContext): void {
@@ -1295,6 +1289,32 @@ export default function plan(pi: ExtensionAPI) {
 		},
 	});
 
+	// Write containment: restrict edit/write to the active plan package
+	pi.on("tool_call", async (event, ctx) => {
+		if (!planEnabled) return;
+
+		if (isToolCallEventType("edit", event) || isToolCallEventType("write", event)) {
+			const requestedPath = event.input.path;
+
+			if (!activePlanDir) {
+				return {
+					block: true,
+					reason: "Plan mode only allows edits in an active plan package. Set one with /plan new [context] or /plan resume <plan-dir>.",
+				};
+			}
+
+			const planRoot = resolvePathForContainment(activePlanDir, ctx.cwd);
+			const target = resolvePathForContainment(requestedPath, ctx.cwd);
+
+			if (!isWithinDirectory(target, planRoot)) {
+				return {
+					block: true,
+					reason: `Plan mode only allows edits inside the active plan package (${toDisplayPath(activePlanDir, ctx.cwd)}).\nBlocked path: ${toDisplayPath(normalizeInputPath(requestedPath, ctx.cwd), ctx.cwd)}`,
+				};
+			}
+		}
+	});
+
 	// Refresh widget when changelog.md is written (status may have changed)
 	pi.on("tool_result", async (event, ctx) => {
 		if (!planEnabled || !activePlanDir) return;
@@ -1448,7 +1468,5 @@ export default function plan(pi: ExtensionAPI) {
 			updateStatus(ctx);
 		}
 
-		// Emit state-changed so plan-guards.ts syncs on session restore
-		emitStateChanged();
 	});
 }

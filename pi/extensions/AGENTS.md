@@ -34,13 +34,8 @@ This directory contains project-local Pi extensions.
 
 
 - `shared.ts`
-  - Utility module shared by `plan.ts` and `plan-guards.ts`. Not an extension entry point — not listed in `pi/package.json`.
-  - Exports common helpers (e.g. plan-state reading/writing, session entry key, path utilities) used across plan-related extensions.
-
-- `plan-guards.ts`
-  - Plan-mode guard sub-extension that listens to the `plan:state-changed` event.
-  - Enforces tool restrictions when plan mode is active: allows only read-oriented bash commands and limits `edit`/`write` to the active plan package directory.
-  - Registered in `pi/package.json` after `plan.ts`.
+  - Utility module shared by `plan.ts` and `build-agents.ts`. Not an extension entry point — not listed in `pi/package.json`.
+  - Exports common helpers (e.g. path utilities, plan directory helpers, JSONL event log helpers).
 
 - `plan.ts`
   - Adds `/plan` command for planning-state controls:
@@ -60,9 +55,8 @@ This directory contains project-local Pi extensions.
   - Persists mode state (`enabled`, active plan path, previous tool set) in session entry `plan-state`.
   - Shows active plan slug in footer status while plan mode is enabled.
   - Restricts tool usage in plan mode:
-    - Active tool set includes `edit`/`write` for plan docs and `Agent` for delegation.
-    - Blocks `edit`/`write` outside the active plan package.
-    - Allows only read-oriented bash commands.
+    - Active tool set: `read`, `grep`, `find`, `ls`, `edit`, `write`, `Agent`. No `bash`.
+    - Blocks `edit`/`write` outside the active plan package (inline `tool_call` guard).
   - The `Agent` tool is included in plan mode tools so the LLM can delegate scouting and drafting to agents (Explore, writer) per the plan-methodology skill, keeping the primary agent's context window small.
   - Injects hidden planning context before each turn when plan mode is enabled.
   - Auto-detects active plan dir from `/skill:plan-methodology review <plan-dir>` input.
