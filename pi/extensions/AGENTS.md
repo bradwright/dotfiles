@@ -51,7 +51,7 @@ This directory contains project-local Pi extensions.
   - `/plan resume` with no args opens a selector of available plan packages under `./.pi/plans`.
   - `/plan mode` shows a thinking-level selector (`medium|high|xhigh`) with `high` as the default.
   - Entering plan mode sets thinking to the selected plan thinking level and restores previous thinking when exiting plan mode.
-  - `/plan review` auto-enables plan mode guardrails (if needed) and dispatches review via RPC to a reviewer agent (plan-reviewer, reviewer, or Explore) when `@tintinweb/pi-subagents` is installed, falling back to in-session `/skill:plan-methodology review` otherwise.
+  - `/plan review` auto-enables plan mode guardrails (if needed) and delegates review via the plan-methodology skill, which dispatches a `plan-reviewer` agent via `Agent()` when available or runs review in-session as fallback.
   - Adds `/build` command to disable plan mode and queue implementation from active `plan.md`.
     - `/build mode` shows a thinking-level selector (`low|medium|high|xhigh`) with `medium` as the default.
     - Sets thinking to the selected build thinking level when starting build.
@@ -70,7 +70,7 @@ This directory contains project-local Pi extensions.
 - `build-agents.ts`
   - Adds `/build-agents` for multi-agent implementation orchestration.
   - Checks for the `Agent` tool to determine if `@tintinweb/pi-subagents` is available.
-  - Task status detection is artifact-first (`tasks/<id>/RESULT.md`, `tasks/<id>/REVIEW.md`) with fallback to structured `events.jsonl` task events when artifacts are missing.
+  - Run lifecycle tracked via `status.json` (simple `{ phase }` marker). Task status is artifact-only (`tasks/<id>/RESULT.md`, `tasks/<id>/REVIEW.md`).
   - During scans, missing task `RESULT.md` / `REVIEW.md` files are mirrored from matching worktrees when available.
 
 ## Agent files

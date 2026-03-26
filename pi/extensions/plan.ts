@@ -3,16 +3,14 @@ import * as path from "node:path";
 
 import { execFileSync } from "node:child_process";
 
-import { getAgentDir, type ExtensionAPI, type ExtensionContext, type Theme } from "@mariozechner/pi-coding-agent";
+import { type ExtensionAPI, type ExtensionContext, type Theme } from "@mariozechner/pi-coding-agent";
 import { type Focusable, Key, matchesKey, Text, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@mariozechner/pi-tui";
 
 import {
-	appendJsonlEvent,
 	hasApprovedEntry,
 	isWithinDirectory,
 	localIsoDate,
 	normalizeInputPath,
-	readJsonlEvents,
 	requiredFilesMissing,
 	resolvePathForContainment,
 	slugify,
@@ -24,8 +22,6 @@ import {
 const PLAN_TOOLS = ["read", "bash", "grep", "find", "ls", "edit", "write", "Agent"] as const;
 const FALLBACK_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls"] as const;
 const ISSUE_BRIEF_FILE = "brief.md";
-const EVENTS_FILE = "events.jsonl";
-
 const STATE_ENTRY = "plan-state";
 const LEGACY_STATE_ENTRY = "plan-mode-state";
 const STATUS_KEY = "plan";
@@ -71,20 +67,11 @@ type GitHubIssue = {
 };
 
 // ---------------------------------------------------------------------------
-// Structured event log (events.jsonl)
+// Plan metadata (derived from changelog.md)
 // ---------------------------------------------------------------------------
 
-type PlanEventType = "created" | "draft" | "edit" | "review" | "approved" | "build_started";
+type PlanEventType = "draft" | "edit" | "review" | "approved";
 
-type PlanEvent = {
-	type: PlanEventType;
-	timestamp: string;
-	model?: string;
-	version?: number;
-	summary?: string;
-};
-
-/** Metadata derived from events.jsonl for display in the widget. */
 type PlanMeta = {
 	currentDraft: number;
 	reviewCount: number;
@@ -93,42 +80,8 @@ type PlanMeta = {
 	lastModel: string | null;
 };
 
-function readPlanEvents(planDir: string): PlanEvent[] {
-	return readJsonlEvents<PlanEvent>(path.join(planDir, EVENTS_FILE));
-}
-
-function appendPlanEvent(planDir: string, event: PlanEvent): void {
-	appendJsonlEvent<PlanEvent>(path.join(planDir, EVENTS_FILE), event);
-}
-
-function derivePlanMeta(events: PlanEvent[]): PlanMeta {
-	let currentDraft = 0;
-	let reviewCount = 0;
-	let isApproved = false;
-	let lastEvent: PlanEventType | null = null;
-	let lastModel: string | null = null;
-
-	for (const event of events) {
-		lastEvent = event.type;
-		if (event.model) lastModel = event.model;
-
-		if (event.type === "draft") {
-			currentDraft = event.version ?? currentDraft + 1;
-		} else if (event.type === "review") {
-			reviewCount++;
-		} else if (event.type === "approved") {
-			isApproved = true;
-		}
-	}
-
-	return { currentDraft, reviewCount, isApproved, lastEvent, lastModel };
-}
-
-/**
- * Derive plan metadata by parsing changelog.md.
- * Works for plans that predate events.jsonl, and supplements event-based metadata.
- */
-function derivePlanMetaFromChangelog(planDir: string): PlanMeta {
+/** Derive plan metadata by parsing changelog.md. */
+function getPlanMeta(planDir: string): PlanMeta {
 	const changelogPath = path.join(planDir, "changelog.md");
 	if (!fs.existsSync(changelogPath)) return { currentDraft: 0, reviewCount: 0, isApproved: false, lastEvent: null, lastModel: null };
 
@@ -183,18 +136,6 @@ function derivePlanMetaFromChangelog(planDir: string): PlanMeta {
 	} catch {
 		return { currentDraft: 0, reviewCount: 0, isApproved: false, lastEvent: null, lastModel: null };
 	}
-}
-
-/**
- * Get the best available plan metadata, preferring events.jsonl and falling
- * back to changelog.md parsing for older plans.
- */
-function getPlanMeta(planDir: string): PlanMeta {
-	const events = readPlanEvents(planDir);
-	if (events.length > 0) {
-		return derivePlanMeta(events);
-	}
-	return derivePlanMetaFromChangelog(planDir);
 }
 
 /** Analyze plan.md complexity and recommend single-agent vs multi-agent build. */
@@ -592,10 +533,6 @@ export default function plan(pi: ExtensionAPI) {
 	let buildThinkingLevel: ThinkingLevel = "medium";
 	let previousThinkingLevel: ThinkingLevel | null = null;
 
-	// tintinweb/pi-subagents availability tracking
-	let tintinwebReady = false;
-	pi.events.on("subagents:ready", () => { tintinwebReady = true; });
-
 	// Auto-resume tracking
 	let planTurnsThisSession = 0;
 	let lastAutoResumeTime = 0;
@@ -853,24 +790,6 @@ export default function plan(pi: ExtensionAPI) {
 		return levels.includes(selected) ? selected : null;
 	}
 
-	function listAvailableAgentNames(cwd: string): string[] {
-		const names = new Set<string>();
-		const roots = [
-			path.join(cwd, ".pi", "agents"),
-			path.join(getAgentDir(), "agents"),
-		];
-
-		for (const root of roots) {
-			if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) continue;
-			for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
-				if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
-				names.add(path.basename(entry.name, ".md"));
-			}
-		}
-
-		return Array.from(names).sort();
-	}
-
 	async function handlePlanNew(rest: string, ctx: ExtensionContext): Promise<void> {
 		let issue: GitHubIssue | null = null;
 		let userContext = rest;
@@ -936,11 +855,6 @@ export default function plan(pi: ExtensionAPI) {
 		if (created.length === 0) {
 			ctx.ui.notify(`Using existing plan package: ${displayPlanDir}.`, "info");
 		} else {
-			appendPlanEvent(planDir, {
-				type: "created",
-				timestamp: new Date().toISOString(),
-				summary: title,
-			});
 			ctx.ui.notify(
 				`Created ${displayPlanDir} (${created.join(", ")}) and enabled plan mode.`,
 				"info",
@@ -1189,165 +1103,12 @@ export default function plan(pi: ExtensionAPI) {
 				ctx.ui.notify("Plan mode enabled for safe plan review.", "info");
 			}
 
-			// Check if tintinweb Agent tool is available
-			const allTools = new Set(pi.getAllTools().map((t) => t.name));
-			if (allTools.has("Agent")) {
-				// Pick reviewer agent from currently available agents.
-				const preferredReviewAgents = ["plan-reviewer", "reviewer", "Explore"];
-				const availableAgents = new Set(listAvailableAgentNames(ctx.cwd));
-				const reviewAgents = preferredReviewAgents.filter((name) => availableAgents.has(name));
-				if (reviewAgents.length === 0) {
-					ctx.ui.notify(
-						"No review agents found (expected one of: plan-reviewer, reviewer, Explore). Falling back to in-session review.",
-						"warning",
-					);
-					const reviewPrompt = `/skill:plan-methodology review ${planDir}`;
-					queueUserPrompt(reviewPrompt, ctx);
-					return;
-				}
-				const agentChoice = await ctx.ui.select("Review agent:", reviewAgents);
-				if (!agentChoice) return;
-
-				// Pick model for reviewer
-				let availableModels: string[] = [];
-				try {
-					const settingsPath = path.join(getAgentDir(), "settings.json");
-					if (fs.existsSync(settingsPath)) {
-						const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
-						if (Array.isArray(settings.enabledModels) && settings.enabledModels.length > 0) {
-							availableModels = settings.enabledModels;
-						}
-					}
-				} catch { /* ignore */ }
-
-				let modelChoice: string | null = null;
-				if (availableModels.length > 0 && ctx.hasUI) {
-					const selected = await ctx.ui.select("Model for review:", availableModels);
-					if (!selected) return;
-					modelChoice = selected;
-				}
-
-				// Pick thinking level
-				const REVIEW_THINKING: ThinkingLevel[] = ["medium", "high", "low"];
-				const thinkingChoice = await promptThinkingLevel(
-					"Thinking level for review:",
-					REVIEW_THINKING,
-					"medium",
-					ctx,
-				);
-				if (thinkingChoice === null) return;
-
-				// Dispatch review via RPC (treat Agent tool presence as ready to avoid event-race false negatives)
-				if (!tintinwebReady) {
-					ctx.ui.notify("subagents:ready was not observed; attempting RPC based on Agent tool availability.", "info");
-				}
-				tintinwebReady = true;
-				const task = `Review the plan package at ${planDir}. Read plan.md and feedback.md, evaluate against the readiness criteria, then write findings to feedback.md and a Review entry to changelog.md.`;
-				const requestId = `plan-review-${Date.now()}`;
-				const spawnReplyEvent = `subagents:rpc:spawn:reply:${requestId}`;
-
-				// Listen for spawn reply
-				const spawnPromise = new Promise<{ success: boolean; data?: { id: string }; error?: string }>((resolve) => {
-					const handler = (reply: { success: boolean; data?: { id: string }; error?: string }) => {
-						pi.events.off(spawnReplyEvent, handler);
-						resolve(reply);
-					};
-					pi.events.on(spawnReplyEvent, handler);
-					// Timeout after 10 seconds
-					setTimeout(() => {
-						pi.events.off(spawnReplyEvent, handler);
-						resolve({ success: false, error: "RPC spawn timeout" });
-					}, 10000);
-				});
-
-				// Emit spawn request
-				pi.events.emit("subagents:rpc:spawn", {
-					requestId,
-					type: agentChoice,
-					prompt: task,
-					options: {
-						description: `Review plan at ${planDir}`,
-						...(modelChoice ? { model: modelChoice } : {}),
-						...(thinkingChoice !== "medium" ? { thinking: thinkingChoice } : {}),
-					},
-				});
-
-				const reply = await spawnPromise;
-
-				if (reply.success && reply.data?.id) {
-					const agentId = reply.data.id;
-					ctx.ui.notify(`Started ${agentChoice} review of ${toDisplayPath(planDir, ctx.cwd)} via RPC...`, "info");
-
-					// Surface completion back into the conversation.
-					const completeHandler = (event: Record<string, unknown>) => {
-						const eventAgentId =
-							typeof event.id === "string" ? event.id
-								: typeof event.agentId === "string" ? event.agentId
-								: typeof event.agent_id === "string" ? event.agent_id
-								: typeof (event.data as { id?: unknown } | undefined)?.id === "string" ? (event.data as { id: string }).id
-								: null;
-						if (eventAgentId !== agentId) return;
-
-						pi.events.off("subagents:completed", completeHandler);
-						pi.events.off("subagents:failed", failedHandler);
-						if (completionTimeout) clearTimeout(completionTimeout);
-
-						const data = event.data as Record<string, unknown> | undefined;
-						const rawResult = data?.result ?? event.result ?? data?.output ?? event.output ?? event.text;
-						const resultText =
-							typeof rawResult === "string" && rawResult.trim().length > 0
-								? rawResult
-								: rawResult != null && rawResult !== ""
-									? JSON.stringify(rawResult, null, 2)
-									: null;
-
-						ctx.ui.notify(`Review completed by ${agentChoice}.`, "info");
-						if (resultText) {
-							pi.sendUserMessage(`Plan review complete (${agentChoice}).\n\n${resultText}`);
-						} else {
-							pi.sendUserMessage(`Plan review complete (${agentChoice}). The reviewer wrote findings directly to the plan package. Read \`feedback.md\` and \`changelog.md\` in ${planDir} for the review output.`);
-						}
-					};
-
-					const failedHandler = (event: Record<string, unknown>) => {
-						const eventAgentId =
-							typeof event.id === "string" ? event.id
-								: typeof event.agentId === "string" ? event.agentId
-								: typeof event.agent_id === "string" ? event.agent_id
-								: typeof (event.data as { id?: unknown } | undefined)?.id === "string" ? (event.data as { id: string }).id
-								: null;
-						if (eventAgentId !== agentId) return;
-
-						pi.events.off("subagents:completed", completeHandler);
-						pi.events.off("subagents:failed", failedHandler);
-						if (completionTimeout) clearTimeout(completionTimeout);
-						ctx.ui.notify(`Review agent ${agentChoice} failed. Falling back to in-session review.`, "warning");
-						queueUserPrompt(`/skill:plan-methodology review ${planDir}`, ctx);
-					};
-
-					const completionTimeout = setTimeout(() => {
-						pi.events.off("subagents:completed", completeHandler);
-						pi.events.off("subagents:failed", failedHandler);
-						ctx.ui.notify("Timed out waiting for review completion event. You can continue after checking feedback.md.", "warning");
-					}, 30 * 60 * 1000);
-
-					pi.events.on("subagents:completed", completeHandler);
-					pi.events.on("subagents:failed", failedHandler);
-				} else {
-					// RPC failed — fall back to in-session review
-					ctx.ui.notify(
-						`RPC spawn failed (${reply.error ?? "unknown"}). Falling back to in-session review.`,
-						"warning",
-					);
-					const reviewPrompt = `/skill:plan-methodology review ${planDir}`;
-					queueUserPrompt(reviewPrompt, ctx);
-				}
-			} else {
-				// Fallback: run review in-session via the skill
-				const reviewPrompt = `/skill:plan-methodology review ${planDir}`;
-				queueUserPrompt(reviewPrompt, ctx);
-				ctx.ui.notify(`Queued plan review for ${toDisplayPath(planDir, ctx.cwd)}.`, "info");
-			}
+			// Delegate review via the plan-methodology skill. When the Agent
+			// tool is available, the skill dispatches a plan-reviewer agent
+			// automatically. Otherwise it runs the review in-session.
+			const reviewPrompt = `/skill:plan-methodology review ${planDir}`;
+			queueUserPrompt(reviewPrompt, ctx);
+			ctx.ui.notify(`Queued plan review for ${toDisplayPath(planDir, ctx.cwd)}.`, "info");
 			return;
 		}
 
@@ -1460,11 +1221,6 @@ export default function plan(pi: ExtensionAPI) {
 			if (!modeChoice) return;
 
 			if (modeChoice.includes("Multi-agent")) {
-				appendPlanEvent(planDir, {
-					type: "build_started",
-					timestamp: new Date().toISOString(),
-					summary: "multi-agent build",
-				});
 				queueUserPrompt("/build-agents " + planDir, ctx);
 				return;
 			}
@@ -1490,14 +1246,6 @@ export default function plan(pi: ExtensionAPI) {
 				ctx.ui.notify(`YOLO build enabled. Thinking: ${buildThinkingLevel}. Starting build using ${displayPlanFile}.`, "warning");
 			} else {
 				ctx.ui.notify(`Thinking: ${buildThinkingLevel}. Starting build using ${displayPlanFile}.`, "info");
-			}
-
-			if (planDir) {
-				appendPlanEvent(planDir, {
-					type: "build_started",
-					timestamp: new Date().toISOString(),
-					summary: yolo ? "YOLO build" : "build",
-				});
 			}
 
 			const buildPrompt = `Start implementing now using ${planFile} as the guide. Read the full plan.md first — especially the Must-Haves section, which defines what must be true when you're done. Execute the Implementation Plan steps in order. After completing each step, verify it using the step's own verification criteria before proceeding. Run the Validation Checklist before finishing. Do not modify plan package files unless explicitly asked.`;
@@ -1547,7 +1295,7 @@ export default function plan(pi: ExtensionAPI) {
 		},
 	});
 
-	// Detect changelog.md writes and emit structured events to events.jsonl
+	// Refresh widget when changelog.md is written (status may have changed)
 	pi.on("tool_result", async (event, ctx) => {
 		if (!planEnabled || !activePlanDir) return;
 		if (event.toolName !== "edit" && event.toolName !== "write") return;
@@ -1558,39 +1306,6 @@ export default function plan(pi: ExtensionAPI) {
 		const resolvedPath = resolvePathForContainment(input.path, activePlanDir);
 		if (path.basename(resolvedPath) !== "changelog.md") return;
 		if (!isWithinDirectory(resolvedPath, activePlanDir)) return;
-
-		// Re-derive metadata from changelog and compare with events.jsonl
-		const changelogMeta = derivePlanMetaFromChangelog(activePlanDir);
-		const eventMeta = derivePlanMeta(readPlanEvents(activePlanDir));
-
-		const timestamp = new Date().toISOString();
-
-		// Emit new draft events
-		if (changelogMeta.currentDraft > eventMeta.currentDraft) {
-			appendPlanEvent(activePlanDir, {
-				type: "draft",
-				timestamp,
-				version: changelogMeta.currentDraft,
-				model: changelogMeta.lastModel ?? undefined,
-			});
-		}
-
-		// Emit new review events
-		if (changelogMeta.reviewCount > eventMeta.reviewCount) {
-			appendPlanEvent(activePlanDir, {
-				type: "review",
-				timestamp,
-				model: changelogMeta.lastModel ?? undefined,
-			});
-		}
-
-		// Emit approval event
-		if (changelogMeta.isApproved && !eventMeta.isApproved) {
-			appendPlanEvent(activePlanDir, {
-				type: "approved",
-				timestamp,
-			});
-		}
 
 		updateStatus(ctx);
 	});
