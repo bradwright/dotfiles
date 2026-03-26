@@ -22,8 +22,13 @@ provided in the Run Context as ROLE_MODELS.
 | build-reviewer | medium | Code review — spotting implementation issues |
 | merger | low | Mechanical git ops — fast and cheap |
 
-**Always** pass the corresponding `model` value from ROLE_MODELS in each
-Agent() call. The Run Context lists the exact model string per role.
+ROLE_MODELS values use the format `provider/modelId:thinking_level`.
+Split on the **last** colon to get the two Agent() parameters:
+- `model`: everything before the last `:` (e.g. `anthropic/claude-opus-4-6`)
+- `thinking`: everything after the last `:` (e.g. `high`)
+
+**Always** pass both `model` and `thinking` from ROLE_MODELS in each
+Agent() call.
 
 ## Non-negotiable rules
 
@@ -50,6 +55,42 @@ git diff --quiet && git diff --cached --quiet
 The extension injects a `## Run Context` block with `RUN_ID`, `RUN_DIR`,
 `BASE_BRANCH`, and `ROLE_MODELS`. Use those values directly.
 
+## Build step tracking
+
+The file `$RUN_DIR/status.json` tracks the current build step. **You must
+update it** at each phase transition so that a resume after context limit
+knows where to continue.
+
+Steps in order: `plan_pending` → `plan_approved` → `implementing` →
+`reviewing` → `merging` → (terminal phase set by extension)
+
+To update the step, read the existing file, update the `step` field, and
+write it back:
+
+```bash
+# Example: mark plan as approved
+cd $RUN_DIR
+cat status.json  # read current state
+# Write back with updated step (preserve other fields)
+echo '{"phase":"running","step":"plan_approved","updatedAt":"..."}' > status.json
+```
+
+## Resuming after context limit
+
+When you see "Build context limit reached. Resume orchestrating…":
+
+1. **Read `$RUN_DIR/status.json`** to find the current `step`.
+2. **Resume from that step**, not from the beginning:
+   - `plan_pending` — PLAN.md may exist but was NOT approved. Present it
+     to the user and **ask for approval again**. Do NOT proceed without it.
+   - `plan_approved` — Plan was approved. Spawn implementers.
+   - `implementing` — Implementers were spawned. Use `get_subagent_result`
+     to check which are done, then proceed to review.
+   - `reviewing` — Reviews in progress. Collect review results.
+   - `merging` — Merge in progress. Check merge status.
+3. **Never skip user approval.** If step is `plan_pending`, the user has
+   not approved the plan even if PLAN.md exists.
+
 ---
 
 ## 1) Planner — Create implementer-ready `PLAN.md`
@@ -67,11 +108,17 @@ Agent({
   subagent_type: "build-planner",
   prompt: "Decompose the following plan into implementer-ready tasks. Base branch: $BASE_BRANCH. Run ID: $RUN_ID. Write PLAN.md to $RUN_DIR/PLAN.md.\n\n<plan source content or path>",
   description: "Decompose plan into tasks",
-  model: "<from ROLE_MODELS build-planner>"
+  model: "<model from ROLE_MODELS build-planner>",
+  thinking: "<thinking from ROLE_MODELS build-planner>"
 })
 ```
 
 Present `PLAN.md` to the user and wait for approval.
+
+**After user approves**, update the step:
+```bash
+# Read existing status.json and update step to plan_approved
+```
 
 ---
 
@@ -82,8 +129,9 @@ Present `PLAN.md` to the user and wait for approval.
 Worktrees are created automatically when you use `isolation: "worktree"`.
 Include the full task description and acceptance criteria in the prompt.
 
-Call `Agent()` for each task with `run_in_background: true` to run
-independent tasks concurrently:
+Update the step to `implementing` before spawning, then call `Agent()`
+for each task with `run_in_background: true` to run independent tasks
+concurrently:
 
 ```
 Agent({
@@ -92,7 +140,8 @@ Agent({
   description: "Implement task-1",
   run_in_background: true,
   isolation: "worktree",
-  model: "<from ROLE_MODELS implementer>"
+  model: "<model from ROLE_MODELS implementer>",
+  thinking: "<thinking from ROLE_MODELS implementer>"
 })
 ```
 
@@ -101,11 +150,30 @@ spawning dependent tasks in a second batch.
 
 ### 2b. Collect results
 
-Use `get_subagent_result` to retrieve each agent's output. Each
-implementer writes `RESULT.md` in their worktree root.
+Use `get_subagent_result` to retrieve each agent's output.
 
-If `get_subagent_result` returns empty text, the implementer may have
-written to files directly — check the worktree.
+**Important: how worktree isolation works.** Each `isolation: "worktree"`
+agent runs in a temporary directory that is **deleted** when the agent
+completes. You cannot `cd` into it afterward. However:
+
+1. The agent commits its work on a **detached HEAD** in the worktree.
+2. That commit is still reachable by SHA in the main repo's object store
+   even after the worktree is cleaned up.
+3. To find the commit SHA, call `get_subagent_result` with `verbose: true`
+   and look for the git commit output (e.g. `[detached HEAD abc1234]`).
+4. To get the diff for review, run:
+   ```bash
+   git diff <BASE_BRANCH_SHA>..<WORKTREE_COMMIT_SHA> -- path/to/files
+   ```
+   where `BASE_BRANCH_SHA` is the HEAD of `$BASE_BRANCH` and
+   `WORKTREE_COMMIT_SHA` is the SHA from step 3. Exclude `RESULT.md`
+   from the diff (it's an implementer artifact, not a deliverable).
+5. To merge later, cherry-pick or checkout individual files from the
+   commit SHA — the merger agent handles this.
+
+**Do not** attempt to `cd` into worktree temp paths, `ls` worktree
+directories, or search for branches created by worktree agents — the
+paths no longer exist and no named branches are created.
 
 If an implementer appears stuck, use `steer_subagent` to provide
 corrective guidance without restarting.
@@ -114,7 +182,8 @@ corrective guidance without restarting.
 
 ## 3) Auto-Reviewer — Validate each task
 
-For each completed task, dispatch a `build-reviewer`. Include the task
+Update the step to `reviewing`, then for each completed task dispatch a
+`build-reviewer`. Include the task
 description, acceptance criteria, and diff in the prompt:
 
 ```
@@ -122,7 +191,8 @@ Agent({
   subagent_type: "build-reviewer",
   prompt: "Review task-1 implementation. Task: <description>. Acceptance: <criteria>.\n\nDiff:\n<diff contents>",
   description: "Review task-1",
-  model: "<from ROLE_MODELS build-reviewer>"
+  model: "<model from ROLE_MODELS build-reviewer>",
+  thinking: "<thinking from ROLE_MODELS build-reviewer>"
 })
 ```
 
@@ -148,7 +218,8 @@ If still failing after round 2, report to user and wait for decision.
 
 ## 5) Merge Agent — Merge approved work
 
-Use the `merger` agent to squash-merge approved branches. Pass the list
+Update the step to `merging`, then use the `merger` agent to squash-merge
+approved branches. Pass the list
 of approved tasks and the base branch. Branch names can be retrieved
 from `get_subagent_result` output.
 
@@ -157,7 +228,8 @@ Agent({
   subagent_type: "merger",
   prompt: "Merge approved tasks into $BASE_BRANCH. Run dir: $RUN_DIR. Approved tasks: task-1, task-3. Failed: task-2 (FAIL after 2 rounds).",
   description: "Merge approved tasks",
-  model: "<from ROLE_MODELS merger>"
+  model: "<model from ROLE_MODELS merger>",
+  thinking: "<thinking from ROLE_MODELS merger>"
 })
 ```
 

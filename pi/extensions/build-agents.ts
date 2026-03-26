@@ -94,11 +94,15 @@ function readRunPhase(runDir: string): RunPhase | null {
 	}
 }
 
-function writeRunPhase(runDir: string, phase: RunPhase): void {
-	fs.writeFileSync(
-		path.join(runDir, STATUS_FILE),
-		JSON.stringify({ phase, updatedAt: new Date().toISOString() }) + "\n",
-	);
+function writeRunPhase(runDir: string, phase: RunPhase, step?: string): void {
+	const statusPath = path.join(runDir, STATUS_FILE);
+	let existing: Record<string, unknown> = {};
+	try {
+		existing = JSON.parse(fs.readFileSync(statusPath, "utf8"));
+	} catch { /* ignore */ }
+	const data = { ...existing, phase, updatedAt: new Date().toISOString() };
+	if (step !== undefined) data.step = step;
+	fs.writeFileSync(statusPath, JSON.stringify(data) + "\n");
 }
 
 function isTerminalPhase(phase: RunPhase | null): boolean {
@@ -301,6 +305,8 @@ export default function buildAgents(pi: ExtensionAPI) {
 		for (const role of roles) {
 			const selected = await ctx.ui.select(`Model for ${role.label}:`, availableModels);
 			if (!selected) return;
+			// Store as "provider/model:thinking" — the provider/model part is passed
+			// to Agent(model:) and the thinking part to Agent(thinking:).
 			roleModels[role.key] = `${selected}:${role.thinking}`;
 		}
 
@@ -334,7 +340,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			}
 		}
 
-		writeRunPhase(runDir, "running");
+		writeRunPhase(runDir, "running", "plan_pending");
 
 		activeRun = {
 			runId,
@@ -519,13 +525,15 @@ export default function buildAgents(pi: ExtensionAPI) {
 			`BASE_BRANCH: ${run.baseBranch}`,
 			`PLAN_SOURCE: ${planSourceLabel(run.planSource, ctx.cwd)}`,
 			"",
-			"ROLE_MODELS:",
+			"ROLE_MODELS (format is `provider/modelId:thinking_level`):",
 			`  build-planner:  ${rm.planner}`,
 			`  implementer:    ${rm.implementer}`,
 			`  build-reviewer: ${rm.reviewer}`,
 			`  merger:         ${rm.merger}`,
 			"",
-			"Pass the corresponding `model` value in each Agent() call.",
+			"Split each ROLE_MODELS value on the LAST colon to get the Agent() parameters:",
+			"  - Everything before the last `:` → `model` (e.g. `anthropic/claude-opus-4-6`)",
+			"  - Everything after the last `:` → `thinking` (e.g. `high`)",
 			"Use `isolation: \"worktree\"` for implementer tasks. Use `run_in_background: true` for parallel execution.",
 			"Artifacts (RESULT.md, REVIEW.md) live in worktrees — use `get_subagent_result` to collect them.",
 		].join("\n");
@@ -554,9 +562,16 @@ export default function buildAgents(pi: ExtensionAPI) {
 		}
 
 		const run = activeRun;
+		// Read current step from status.json so the supervisor knows where to resume
+		let stepInfo = "";
+		try {
+			const status = JSON.parse(fs.readFileSync(path.join(run.runDir, STATUS_FILE), "utf8"));
+			if (status.step) stepInfo = `\nCurrent step: ${status.step}. Read status.json in the run dir for full state.`;
+		} catch { /* ignore */ }
 		pi.sendUserMessage(
 			`Build context limit reached. Resume orchestrating the multi-agent build.\n` +
-			`Run dir: ${run.runDir}. Use get_subagent_result to check on any running agents.`,
+			`Run dir: ${run.runDir}.${stepInfo}\n` +
+			`Check ${run.runDir}/status.json for build step, then use get_subagent_result to check on any running agents.`,
 		);
 	});
 
