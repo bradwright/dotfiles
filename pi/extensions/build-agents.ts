@@ -94,6 +94,17 @@ function readRunPhase(runDir: string): RunPhase | null {
 	}
 }
 
+function readRunStep(runDir: string): string | null {
+	const statusPath = path.join(runDir, STATUS_FILE);
+	if (!fs.existsSync(statusPath)) return null;
+	try {
+		const data = JSON.parse(fs.readFileSync(statusPath, "utf8"));
+		return typeof data.step === "string" ? data.step : null;
+	} catch {
+		return null;
+	}
+}
+
 function writeRunPhase(runDir: string, phase: RunPhase, step?: string): void {
 	const statusPath = path.join(runDir, STATUS_FILE);
 	let existing: Record<string, unknown> = {};
@@ -361,7 +372,7 @@ export default function buildAgents(pi: ExtensionAPI) {
 			`Plan source: ${planSourceLabel(planSource, ctx.cwd)}`,
 			`Base branch: ${baseBranch}`,
 			``,
-			`Per-role models:`,
+			`Per-role models (format: provider/modelId:thinking_level):`,
 			`  build-planner:  ${rm.planner}`,
 			`  implementer:    ${rm.implementer}`,
 			`  build-reviewer: ${rm.reviewer}`,
@@ -370,10 +381,11 @@ export default function buildAgents(pi: ExtensionAPI) {
 			planSourceForKickoff(planSource),
 			``,
 			`Use the \`Agent\` tool for all subprocess work:`,
-			`- Task decomposition: Agent() with subagent_type "build-planner", model "${rm.planner}"`,
-			`- Parallel implementers: Agent() with subagent_type "implementer", model "${rm.implementer}", isolation: "worktree", run_in_background: true`,
-			`- Reviews: Agent() with subagent_type "build-reviewer", model "${rm.reviewer}"`,
-			`- Merge: Agent() with subagent_type "merger", model "${rm.merger}"`,
+			`- Split each ROLE_MODELS value on the LAST colon: before ':' => model, after ':' => thinking`,
+			`- Task decomposition: Agent() with subagent_type "build-planner", model + thinking from build-planner ROLE_MODELS`,
+			`- Parallel implementers: Agent() with subagent_type "implementer", model + thinking from implementer ROLE_MODELS, isolation: "worktree", run_in_background: true`,
+			`- Reviews: Agent() with subagent_type "build-reviewer", model + thinking from build-reviewer ROLE_MODELS`,
+			`- Merge: Agent() with subagent_type "merger", model + thinking from merger ROLE_MODELS`,
 			``,
 			`Implementers write RESULT.md in their worktree. Reviewers write REVIEW.md.`,
 			`Use get_subagent_result to collect results after agents complete.`,
@@ -553,6 +565,16 @@ export default function buildAgents(pi: ExtensionAPI) {
 		const phase = readRunPhase(activeRun.runDir);
 		if (isTerminalPhase(phase)) return;
 
+		// Guard: if supervisor marked step as merged but forgot to set terminal phase,
+		// finalize the run here to prevent endless auto-resume prompts.
+		const step = readRunStep(activeRun.runDir);
+		if (phase === "running" && step === "merged") {
+			writeRunPhase(activeRun.runDir, "completed", "merged");
+			ctx.ui.notify(`Build run ${activeRun.runId} marked completed (step=merged).`, "info");
+			activeRun = null;
+			return;
+		}
+
 		const resume = autoResume.shouldResume();
 		if (!resume.ok) {
 			if (resume.reason === "exhausted") {
@@ -607,11 +629,19 @@ export default function buildAgents(pi: ExtensionAPI) {
 		const recentRunDir = findMostRecentRunDir(ctx.cwd);
 		if (recentRunDir) {
 			const phase = readRunPhase(recentRunDir);
+			const step = readRunStep(recentRunDir);
+
+			// Guard: stale running status after successful merge.
+			if (phase === "running" && step === "merged") {
+				writeRunPhase(recentRunDir, "completed", "merged");
+				if (activeRun?.runDir === recentRunDir) activeRun = null;
+				return;
+			}
 
 			if (!isTerminalPhase(phase)) {
 				if (!activeRun || activeRun.runDir !== recentRunDir) {
 					const defaultRoleModels2: RoleModels = { planner: "unknown", implementer: "unknown", reviewer: "unknown", merger: "unknown" };
-					activeRun = activeRun ?? {
+					activeRun = {
 						runId: path.basename(recentRunDir),
 						planSource: { type: "inline", text: "(restored from filesystem)" },
 						baseBranch: "main",
