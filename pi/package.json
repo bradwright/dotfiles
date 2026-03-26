@@ -10,7 +10,7 @@
     "extensions": [
       "./extensions/github-statusline.ts",
       "./extensions/plan.ts",
-      "./extensions/build-agents.ts"
+      "./extensions/build/index.ts"
     ],
     "skills": ["./skills"],
     "themes": ["./themes"]

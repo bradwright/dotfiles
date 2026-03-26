@@ -9,7 +9,7 @@ import {
 	toDisplayPath,
 
 	normalizeInputPath,
-} from "./lib/shared.js";
+} from "../lib/shared.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,7 +42,7 @@ type RunPhase = "running" | "canceled" | "completed" | "failed";
 // Constants
 // ---------------------------------------------------------------------------
 
-const STATE_ENTRY = "build-agents-state";
+const STATE_ENTRY = "build-state";
 const STATUS_FILE = "status.json";
 const BUILD_ROOT = ".pi/build";
 
@@ -216,7 +216,7 @@ function findActiveRunDirs(cwd: string): string[] {
 // Extension
 // ---------------------------------------------------------------------------
 
-export default function buildAgents(pi: ExtensionAPI) {
+export default function build(pi: ExtensionAPI) {
 	let activeRun: BuildRunState | null = null;
 
 	const autoResume = new AutoResumeTracker();
@@ -556,10 +556,10 @@ export default function buildAgents(pi: ExtensionAPI) {
 
 		autoResume.tick();
 
-		const promptPath = path.join(__dirname, "build-agents-prompt.md");
+		const promptPath = path.join(__dirname, "prompt.md");
 		if (!fs.existsSync(promptPath)) {
 			ctx.ui.notify(
-				`⚠️ build-agents-prompt.md not found at ${promptPath}. Ensure it is co-located with the extension.`,
+				`⚠️ prompt.md not found at ${promptPath}. Ensure it is co-located with the extension.`,
 				"warning",
 			);
 			return;
