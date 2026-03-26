@@ -64,16 +64,38 @@ knows where to continue.
 Steps in order: `plan_pending` → `plan_approved` → `implementing` →
 `reviewing` → `merging` → (terminal phase set by extension)
 
-To update the step, read the existing file, update the `step` field, and
-write it back:
+To update the step, write an explicit status payload to `$RUN_DIR/status.json`.
+Use these exact commands at each transition:
 
 ```bash
-# Example: mark plan as approved
-cd $RUN_DIR
-cat status.json  # read current state
-# Write back with updated step (preserve other fields)
-echo '{"phase":"running","step":"plan_approved","updatedAt":"..."}' > status.json
+# After creating PLAN.md and before asking approval
+cat > "$RUN_DIR/status.json" <<'JSON'
+{"phase":"running","step":"plan_pending","updatedAt":"MANUAL_UPDATE"}
+JSON
+
+# Immediately after user approves PLAN.md
+cat > "$RUN_DIR/status.json" <<'JSON'
+{"phase":"running","step":"plan_approved","updatedAt":"MANUAL_UPDATE"}
+JSON
+
+# Before spawning implementers
+cat > "$RUN_DIR/status.json" <<'JSON'
+{"phase":"running","step":"implementing","updatedAt":"MANUAL_UPDATE"}
+JSON
+
+# Before spawning reviewers
+cat > "$RUN_DIR/status.json" <<'JSON'
+{"phase":"running","step":"reviewing","updatedAt":"MANUAL_UPDATE"}
+JSON
+
+# Before invoking merger
+cat > "$RUN_DIR/status.json" <<'JSON'
+{"phase":"running","step":"merging","updatedAt":"MANUAL_UPDATE"}
+JSON
 ```
+
+You may replace `MANUAL_UPDATE` with an ISO timestamp if convenient; any
+string is acceptable because `phase` and `step` are the control fields.
 
 ## Resuming after context limit
 
@@ -115,9 +137,11 @@ Agent({
 
 Present `PLAN.md` to the user and wait for approval.
 
-**After user approves**, update the step:
+**After user approves, run this exact command before doing anything else:**
 ```bash
-# Read existing status.json and update step to plan_approved
+cat > "$RUN_DIR/status.json" <<'JSON'
+{"phase":"running","step":"plan_approved","updatedAt":"MANUAL_UPDATE"}
+JSON
 ```
 
 ---
@@ -129,9 +153,16 @@ Present `PLAN.md` to the user and wait for approval.
 Worktrees are created automatically when you use `isolation: "worktree"`.
 Include the full task description and acceptance criteria in the prompt.
 
-Update the step to `implementing` before spawning, then call `Agent()`
-for each task with `run_in_background: true` to run independent tasks
-concurrently:
+Before spawning implementers, run:
+
+```bash
+cat > "$RUN_DIR/status.json" <<'JSON'
+{"phase":"running","step":"implementing","updatedAt":"MANUAL_UPDATE"}
+JSON
+```
+
+Then call `Agent()` for each task with `run_in_background: true` to run
+independent tasks concurrently:
 
 ```
 Agent({
@@ -182,8 +213,15 @@ corrective guidance without restarting.
 
 ## 3) Auto-Reviewer — Validate each task
 
-Update the step to `reviewing`, then for each completed task dispatch a
-`build-reviewer`. Include the task
+Before dispatching reviewers, run:
+
+```bash
+cat > "$RUN_DIR/status.json" <<'JSON'
+{"phase":"running","step":"reviewing","updatedAt":"MANUAL_UPDATE"}
+JSON
+```
+
+Then for each completed task dispatch a `build-reviewer`. Include the task
 description, acceptance criteria, and diff in the prompt:
 
 ```
@@ -218,8 +256,15 @@ If still failing after round 2, report to user and wait for decision.
 
 ## 5) Merge Agent — Merge approved work
 
-Update the step to `merging`, then use the `merger` agent to squash-merge
-approved branches. Pass the list
+Before invoking the merger, run:
+
+```bash
+cat > "$RUN_DIR/status.json" <<'JSON'
+{"phase":"running","step":"merging","updatedAt":"MANUAL_UPDATE"}
+JSON
+```
+
+Then use the `merger` agent to squash-merge approved branches. Pass the list
 of approved tasks and the base branch. Branch names can be retrieved
 from `get_subagent_result` output.
 
@@ -238,7 +283,9 @@ Agent({
 auto-resume from firing on future context limits:
 
 ```bash
-echo '{"phase":"completed","step":"merged","updatedAt":"'$(date -u +%FT%TZ)'"}' > $RUN_DIR/status.json
+cat > "$RUN_DIR/status.json" <<'JSON'
+{"phase":"completed","step":"merged","updatedAt":"MANUAL_UPDATE"}
+JSON
 ```
 
 If the build fails irrecoverably, write `"phase": "failed"` instead.
