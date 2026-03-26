@@ -7,8 +7,7 @@ import {
 	localIsoDate,
 	slugify,
 	toDisplayPath,
-	listApprovedPlanDirs,
-	hasApprovedEntry,
+
 	normalizeInputPath,
 } from "./lib/shared.js";
 
@@ -48,7 +47,7 @@ const STATUS_FILE = "status.json";
 const BUILD_ROOT = ".pi/build";
 
 const COMMAND_USAGE =
-	"/build — build from a plan file\n/build [plan-file|plan-dir|description] [--yolo]\n/build status\n/build cancel\n/build cleanup";
+	"/build — start a build\n/build [file|dir|description]\n/build status\n/build cancel\n/build cleanup";
 
 
 
@@ -186,41 +185,10 @@ export default function buildAgents(pi: ExtensionAPI) {
 			return { type: "inline", text: args };
 		}
 
-		// Interactive picker
-		const approved = listApprovedPlanDirs(ctx.cwd);
-		const INLINE_LABEL = "⌨ Describe what to build (inline)";
-		const labels = [
-			...approved.map((dir) => toDisplayPath(dir, ctx.cwd)),
-			INLINE_LABEL,
-		];
-
-		const choice = await ctx.ui.select("Plan source:", labels);
-		if (!choice) return null;
-
-		if (choice === INLINE_LABEL) {
-			const text = await ctx.ui.input("What should be built?");
-			if (!text?.trim()) return null;
-			return { type: "inline", text: text.trim() };
-		}
-
-		const selectedIndex = labels.indexOf(choice);
-		if (selectedIndex < 0 || !approved[selectedIndex]) return null;
-		return { type: "dir", path: approved[selectedIndex] };
-	}
-
-	function checkApproval(planSource: PlanSource, ctx: ExtensionContext): boolean {
-		if (planSource.type === "inline") return true;
-		const dir = planSource.type === "dir" ? planSource.path : path.dirname(planSource.path);
-		const changelogPath = path.join(dir, "changelog.md");
-		if (!fs.existsSync(changelogPath)) return true; // no changelog = no approval requirement
-		if (!hasApprovedEntry(changelogPath)) {
-			ctx.ui.notify(
-				`Build blocked: no approval entry in ${toDisplayPath(changelogPath, ctx.cwd)}. Approve the plan first, or use --yolo.`,
-				"warning",
-			);
-			return false;
-		}
-		return true;
+		// No args — ask what to build
+		const text = await ctx.ui.input("What should be built?");
+		if (!text?.trim()) return null;
+		return { type: "inline", text: text.trim() };
 	}
 
 	function planFilePath(planSource: PlanSource): string {
@@ -493,16 +461,9 @@ export default function buildAgents(pi: ExtensionAPI) {
 			if (/^cancel\b/i.test(trimmed)) { await handleCancel(ctx); return; }
 			if (/^cleanup\b/i.test(trimmed)) { await handleCleanup(ctx); return; }
 
-			// Parse --yolo flag
-			const yolo = /(?:^|\s)--yolo(?=\s|$)/.test(trimmed);
-			const pathArg = trimmed.replace(/(?:^|\s)--yolo(?=\s|$)/g, "").trim();
-
 			// Resolve plan source
-			const planSource = await resolvePlanSource(pathArg, ctx);
+			const planSource = await resolvePlanSource(trimmed, ctx);
 			if (!planSource) return;
-
-			// Approval check (unless --yolo or inline)
-			if (!yolo && !checkApproval(planSource, ctx)) return;
 
 			// Pick build mode
 			const hasAgent = pi.getActiveTools().includes("Agent");

@@ -56,7 +56,7 @@ The extension injects a `## Run Context` block with `RUN_ID`, `RUN_DIR`,
 
 The plan source is provided in the Run Context as `PLAN_SOURCE`. It may be:
 
-- **A directory** — an approved `/plan` output. Read `plan.md` inside it.
+- **A directory** — a plan directory. Read `plan.md` inside it.
 - **A file** — a standalone plan or spec file. Read it directly.
 - **Inline text** — a description of what to build.
 

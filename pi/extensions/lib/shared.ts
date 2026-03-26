@@ -147,6 +147,7 @@ export function listApprovedPlanDirs(cwd: string): string[] {
 		.sort((a, b) => path.basename(b).localeCompare(path.basename(a)));
 }
 
+
 // ---------------------------------------------------------------------------
 // Generic JSONL event log helpers
 // ---------------------------------------------------------------------------
