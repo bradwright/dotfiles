@@ -42,12 +42,12 @@ This directory contains project-local Pi extensions.
     - `/plan [brief]` (continue active plan flow or create/start one)
     - `new [context|github-issue-url]`
     - `use <plan-dir>` / `resume [plan-dir]`
-    - `review [model]` / `status` / `clear`
+    - `review [--model <id>]` / `status` / `clear`
   - Keeps extension logic intentionally thin: active plan selection, package creation, and routing to `/skill:plan-methodology`.
   - Persists only active plan path in session state (`plan-state`).
   - Shows active plan slug in footer status (`📋 <slug>`).
   - `/plan new <github-issue-url>` fetches issue details via `gh issue view`, saves them to `brief.md`, and seeds `feedback.md`.
-  - `/plan review [model]` forwards optional model steering to the skill so review runs can target different models (e.g. Codex vs Opus).
+  - `/plan review [--model <id>]` forwards optional model steering to the skill so review runs can target different models (e.g. Codex vs Opus). Legacy `/plan review <model>` is still accepted.
   - Does **not** enforce a planning mode, tool restrictions, thinking-level toggles, or auto-resume loops.
 
 - `build-agents.ts`

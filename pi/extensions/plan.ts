@@ -19,7 +19,7 @@ const LEGACY_STATE_ENTRY = "plan-mode-state";
 const STATUS_KEY = "plan";
 
 const PLAN_USAGE =
-	"/plan [brief] | new [brief|github-url] | use <plan-dir> | resume [plan-dir] | review [model] | status | clear";
+	"/plan [brief] | new [brief|github-url] | use <plan-dir> | resume [plan-dir] | review [--model <id>] | status | clear";
 
 const GITHUB_ISSUE_FETCH_TIMEOUT_MS = 15000;
 const GITHUB_ISSUE_BODY_MAX_CHARS = 12000;
@@ -445,10 +445,21 @@ export default function plan(pi: ExtensionAPI) {
 		return lines.join("\n");
 	}
 
-	function maybeResolveReviewModel(rest: string): string | null {
+	type ReviewArgs = { modelOverride: string | null; steering: string | null };
+
+	function parsePlanReviewArgs(rest: string): ReviewArgs {
 		const trimmed = rest.trim();
-		if (!trimmed) return null;
-		return trimmed;
+		if (!trimmed) return { modelOverride: null, steering: null };
+
+		const flagMatch = trimmed.match(/^(?:--model|-m)\s+(\S+)(?:\s+([\s\S]+))?$/i);
+		if (flagMatch) {
+			const modelOverride = flagMatch[1] ?? null;
+			const steering = flagMatch[2]?.trim() || null;
+			return { modelOverride, steering };
+		}
+
+		// Backward compatibility: `/plan review <model>`
+		return { modelOverride: trimmed, steering: null };
 	}
 
 	async function handlePlanReview(rest: string, ctx: ExtensionContext): Promise<void> {
@@ -466,12 +477,15 @@ export default function plan(pi: ExtensionAPI) {
 			return;
 		}
 
-		const modelOverride = maybeResolveReviewModel(rest);
-		const modelInstruction = modelOverride
-			? `\nUse this model for the plan-reviewer Agent call: ${modelOverride}.`
+		const reviewArgs = parsePlanReviewArgs(rest);
+		const modelInstruction = reviewArgs.modelOverride
+			? `\nUse this model for the plan-reviewer Agent call: ${reviewArgs.modelOverride}.`
+			: "";
+		const steeringInstruction = reviewArgs.steering
+			? `\nReview steering: ${reviewArgs.steering}`
 			: "";
 
-		queueUserPrompt(`/skill:plan-methodology review ${activePlanDir}${modelInstruction}`, ctx);
+		queueUserPrompt(`/skill:plan-methodology review ${activePlanDir}${modelInstruction}${steeringInstruction}`, ctx);
 		ctx.ui.notify(`Queued plan review for ${toDisplayPath(activePlanDir, ctx.cwd)}.`, "info");
 	}
 
