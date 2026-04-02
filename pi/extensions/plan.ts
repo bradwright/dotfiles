@@ -398,6 +398,11 @@ export default function plan(pi: ExtensionAPI) {
 		if (rest) {
 			planDir = resolvePlanDirFromArg(rest, ctx);
 		} else {
+			if (!ctx.hasUI) {
+				ctx.ui.notify("Usage: /plan use <plan-dir>", "warning");
+				return;
+			}
+
 			planDir = await choosePlanDirViaUI(ctx);
 			if (!planDir) {
 				ctx.ui.notify("No plan packages found. Create one with /plan new [context].", "warning");
