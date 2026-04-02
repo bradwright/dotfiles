@@ -38,24 +38,17 @@ This directory contains project-local Pi extensions.
   - Exports common helpers (e.g. path utilities, plan directory helpers, JSONL event log helpers).
 
 - `plan.ts`
-  - Adds `/plan` command for planning-state controls:
-    - `on|off|toggle|status|mode [medium|high|xhigh]`
-    - `new [context|github-issue-url]` (creates `.pi/plans/<date>-<slug>/` package files and auto-starts `/skill:plan-methodology`)
-    - `resume [plan-dir]` / `review` / `clear`
-  - `/plan new <github-issue-url>` fetches issue details via `gh issue view`, saves them to `brief.md`, seeds `feedback.md`, and uses them as the initial planning brief.
-  - `/plan resume` with no args opens a selector of available plan packages under `./.pi/plans`.
-  - `/plan mode` shows a thinking-level selector (`medium|high|xhigh`) with `high` as the default.
-  - Entering plan mode sets thinking to the selected plan thinking level and restores previous thinking when exiting plan mode.
-  - `/plan review` auto-enables plan mode guardrails (if needed) and delegates review via the plan-methodology skill, which dispatches a `plan-reviewer` agent via `Agent()` when available or runs review in-session as fallback.
-
-  - Persists mode state (`enabled`, active plan path, previous tool set) in session entry `plan-state`.
-  - Shows active plan slug in footer status while plan mode is enabled.
-  - Restricts tool usage in plan mode:
-    - Active tool set: `read`, `grep`, `find`, `ls`, `edit`, `write`, `Agent`. No `bash`.
-    - Blocks `edit`/`write` outside the active plan package (inline `tool_call` guard).
-  - The `Agent` tool is included in plan mode tools so the LLM can delegate scouting and drafting to agents (Explore, writer) per the plan-methodology skill, keeping the primary agent's context window small.
-  - Injects hidden planning context before each turn when plan mode is enabled.
-  - Auto-detects active plan dir from `/skill:plan-methodology review <plan-dir>` input.
+  - Adds a lightweight `/plan` orchestrator command:
+    - `/plan [brief]` (continue active plan flow or create/start one)
+    - `new [context|github-issue-url]`
+    - `use <plan-dir>` / `resume [plan-dir]`
+    - `review [--model <id>]` / `status` / `clear`
+  - Keeps extension logic intentionally thin: active plan selection, package creation, and routing to `/skill:plan-methodology`.
+  - Persists only active plan path in session state (`plan-state`).
+  - Shows active plan slug in footer status (`📋 <slug>`).
+  - `/plan new <github-issue-url>` fetches issue details via `gh issue view`, saves them to `brief.md`, and seeds `feedback.md`.
+  - `/plan review [--model <id>]` forwards optional model steering to the skill so review runs can target different models (e.g. Codex vs Opus). Legacy `/plan review <model>` is still accepted.
+  - Does **not** enforce a planning mode, tool restrictions, thinking-level toggles, or auto-resume loops.
 
 - `build-agents.ts`
   - Adds `/build` command for implementation from a plan file.
