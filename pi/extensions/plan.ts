@@ -1,47 +1,31 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { execFileSync } from "node:child_process";
-
-import { isToolCallEventType, type ExtensionAPI, type ExtensionContext, type Theme } from "@mariozechner/pi-coding-agent";
-import { type Focusable, Key, matchesKey, Text, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@mariozechner/pi-tui";
+import { type ExtensionAPI, type ExtensionContext } from "@mariozechner/pi-coding-agent";
 
 import {
-	AutoResumeTracker,
-	isWithinDirectory,
 	localIsoDate,
 	normalizeInputPath,
 	requiredFilesMissing,
-	resolvePathForContainment,
 	slugify,
 	toDisplayPath,
 	toTitleCase,
 	truncateText,
 } from "./lib/shared.js";
 
-const PLAN_TOOLS = ["read", "grep", "find", "ls", "edit", "write", "Agent"] as const;
-const FALLBACK_TOOLS = ["read", "bash", "edit", "write", "grep", "find", "ls"] as const;
 const ISSUE_BRIEF_FILE = "brief.md";
 const STATE_ENTRY = "plan-state";
 const LEGACY_STATE_ENTRY = "plan-mode-state";
 const STATUS_KEY = "plan";
-const PLAN_CONTEXT_TYPE = "plan-context";
 
 const PLAN_USAGE =
-	"/plan — start new plan or activate existing plan\n/plan new [context|github-url]\n/plan resume [plan-dir]\n/plan review | clear | status | mode";
+	"/plan [brief] | new [brief|github-url] | use <plan-dir> | resume [plan-dir] | review [model] | status | clear";
 
 const GITHUB_ISSUE_FETCH_TIMEOUT_MS = 15000;
 const GITHUB_ISSUE_BODY_MAX_CHARS = 12000;
 
-type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
-
-const PLAN_THINKING_LEVELS: ThinkingLevel[] = ["medium", "high", "xhigh"];
 type PlanState = {
-	enabled: boolean;
 	activePlanDir: string | null;
-	previousTools: string[];
-	planThinkingLevel: ThinkingLevel;
-	previousThinkingLevel: ThinkingLevel | null;
 };
 
 type GitHubIssueRef = {
@@ -62,137 +46,6 @@ type GitHubIssue = {
 	author: string;
 	labels: string[];
 };
-
-// ---------------------------------------------------------------------------
-// Plan metadata (derived from changelog.md)
-// ---------------------------------------------------------------------------
-
-type PlanEventType = "draft" | "edit" | "review" | "approved";
-
-type PlanMeta = {
-	currentDraft: number;
-	reviewCount: number;
-	isApproved: boolean;
-	lastEvent: PlanEventType | null;
-	lastModel: string | null;
-};
-
-/** Derive plan metadata by parsing changelog.md. */
-function getPlanMeta(planDir: string): PlanMeta {
-	const changelogPath = path.join(planDir, "changelog.md");
-	if (!fs.existsSync(changelogPath)) return { currentDraft: 0, reviewCount: 0, isApproved: false, lastEvent: null, lastModel: null };
-
-	try {
-		const content = fs.readFileSync(changelogPath, "utf8");
-		const lines = content.split("\n");
-		let currentDraft = 0;
-		let reviewCount = 0;
-		let isApproved = false;
-		let lastEvent: PlanEventType | null = null;
-		let lastModel: string | null = null;
-
-		for (const line of lines) {
-			const trimmed = line.trim();
-			if (!trimmed.startsWith("-")) continue;
-
-			// Match "- Draft N — YYYY-MM-DD: ..." (model suffix optional)
-			const draftMatch = trimmed.match(/^-\s+Draft\s+(\d+)\s+[—-]\s+\d{4}-\d{2}-\d{2}(?:,\s+([^:]+?))?:/i);
-			if (draftMatch) {
-				currentDraft = parseInt(draftMatch[1], 10);
-				if (draftMatch[2] && draftMatch[2].trim().length > 0) lastModel = draftMatch[2].trim();
-				lastEvent = "draft";
-				continue;
-			}
-
-			// Match "- Review — YYYY-MM-DD: ..." (model suffix optional)
-			const reviewMatch = trimmed.match(/^-\s+Review\s+[—-]\s+\d{4}-\d{2}-\d{2}(?:,\s+([^:]+?))?:/i);
-			if (reviewMatch) {
-				reviewCount++;
-				if (reviewMatch[1] && reviewMatch[1].trim().length > 0) lastModel = reviewMatch[1].trim();
-				lastEvent = "review";
-				continue;
-			}
-
-			// Match "- Edit — YYYY-MM-DD: ..." (model suffix optional)
-			const editMatch = trimmed.match(/^-\s+Edit\s+[—-]\s+\d{4}-\d{2}-\d{2}(?:,\s+([^:]+?))?:/i);
-			if (editMatch) {
-				if (editMatch[1] && editMatch[1].trim().length > 0) lastModel = editMatch[1].trim();
-				lastEvent = "edit";
-				continue;
-			}
-
-			// Match "- Approved — YYYY-MM-DD, user."
-			if (/^-\s+Approved\s+[—-]\s+\d{4}-\d{2}-\d{2},\s+user\./i.test(trimmed)) {
-				isApproved = true;
-				lastEvent = "approved";
-				continue;
-			}
-		}
-
-		return { currentDraft, reviewCount, isApproved, lastEvent, lastModel };
-	} catch {
-		return { currentDraft: 0, reviewCount: 0, isApproved: false, lastEvent: null, lastModel: null };
-	}
-}
-
-/** Count unresolved feedback items (lines starting with "- " under # Feedback). */
-function countFeedbackItems(planDir: string): number {
-	const feedbackPath = path.join(planDir, "feedback.md");
-	if (!fs.existsSync(feedbackPath)) return 0;
-	try {
-		const content = fs.readFileSync(feedbackPath, "utf8");
-		const lines = content.split("\n");
-		let count = 0;
-		for (const line of lines) {
-			if (/^\s*-\s+\S/.test(line)) count++;
-		}
-		return count;
-	} catch {
-		return 0;
-	}
-}
-
-/** Compute readiness score by checking plan.md sections. */
-function computeReadiness(planDir: string): { score: number; total: number } {
-	const planPath = path.join(planDir, "plan.md");
-	if (!fs.existsSync(planPath)) return { score: 0, total: 7 };
-	try {
-		const content = fs.readFileSync(planPath, "utf8");
-		const checks = [
-			// Goal section has content
-			/## Goal\s*\n(?!\s*##)(.+)/s,
-			// Must-Haves section has content
-			/## Must-Haves\s*\n(?!\s*##)(.+)/s,
-			// Files and Components section has content
-			/## Files and Components to Touch\s*\n(?!\s*##)(.+)/s,
-			// Implementation Plan has numbered steps
-			/## Implementation Plan\s*\n(?!\s*##)[\s\S]*\d+\./s,
-			// Risks section has content
-			/## Risks \/ Edge Cases\s*\n(?!\s*##)(.+)/s,
-			// Validation Checklist has items
-			/## Validation Checklist\s*\n(?!\s*##)(.+)/s,
-			// Open Questions resolved (section empty or absent)
-			(() => {
-				const oqMatch = content.match(/## Open Questions\s*\n([\s\S]*?)(?=\n##|$)/);
-				if (!oqMatch) return true; // no section = resolved
-				const body = oqMatch[1].trim();
-				return body.length === 0 || /^\s*(?:none|n\/a|resolved|—)\s*$/im.test(body);
-			})(),
-		];
-
-		let score = 0;
-		for (const check of checks) {
-			if (typeof check === "boolean") {
-				if (check) score++;
-			} else if (check.test(content)) {
-				score++;
-			}
-		}
-		return { score, total: 7 };
-	} catch {
-		return { score: 0, total: 7 };
-	}
-}
 
 function planTemplate(title: string): string {
 	return [
@@ -229,6 +82,10 @@ function changelogTemplate(): string {
 	return "# Changelog\n\n";
 }
 
+function contextTemplate(): string {
+	return "# Context\n\n";
+}
+
 function ensurePlanPackage(planDir: string, title: string): string[] {
 	fs.mkdirSync(planDir, { recursive: true });
 
@@ -251,6 +108,12 @@ function ensurePlanPackage(planDir: string, title: string): string[] {
 		created.push("changelog.md");
 	}
 
+	const contextPath = path.join(planDir, "context.md");
+	if (!fs.existsSync(contextPath)) {
+		fs.writeFileSync(contextPath, contextTemplate());
+		created.push("context.md");
+	}
+
 	return created;
 }
 
@@ -258,14 +121,12 @@ function listAvailablePlanDirs(cwd: string): string[] {
 	const plansRoot = path.join(cwd, ".pi", "plans");
 	if (!fs.existsSync(plansRoot) || !fs.statSync(plansRoot).isDirectory()) return [];
 
-	const dirs = fs
+	return fs
 		.readdirSync(plansRoot, { withFileTypes: true })
 		.filter((entry) => entry.isDirectory())
 		.map((entry) => path.join(plansRoot, entry.name))
 		.filter((dir) => requiredFilesMissing(dir).length === 0)
 		.sort((a, b) => path.basename(b).localeCompare(path.basename(a)));
-
-	return dirs;
 }
 
 function parsePlanReviewPath(input: string): string | null {
@@ -345,291 +206,29 @@ function persistIssueBriefToPlanPackage(planDir: string, issue: GitHubIssue): vo
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Read-only scrollable text viewer overlay
-// ---------------------------------------------------------------------------
-
-/** Syntax-highlight markdown via bat. Falls back to plain text if bat isn't available. */
-function highlightMarkdown(content: string): string[] {
-	try {
-		const highlighted = execFileSync("bat", [
-			"--language=md",
-			"--color=always",
-			"--style=plain",
-			"--paging=never",
-			"--wrap=never",
-		], {
-			input: content,
-			encoding: "utf8",
-			timeout: 3000,
-			maxBuffer: 5 * 1024 * 1024,
-		});
-		return highlighted.split("\n");
-	} catch {
-		return content.split("\n");
-	}
-}
-
-class PlanViewerComponent implements Focusable {
-	focused = false;
-	private scrollOffset = 0;
-	private wrappedLines: string[] = [];
-	private viewportHeight = 0;
-	private title: string;
-	private highlightedLines: string[];
-
-	constructor(
-		private theme: Theme,
-		private done: () => void,
-		title: string,
-		content: string,
-	) {
-		this.title = title;
-		this.highlightedLines = highlightMarkdown(content);
-	}
-
-	handleInput(data: string): void {
-		if (matchesKey(data, "escape") || matchesKey(data, "q")) {
-			this.done();
-			return;
-		}
-
-		const maxScroll = Math.max(0, this.wrappedLines.length - this.viewportHeight);
-
-		if (matchesKey(data, "up") || matchesKey(data, "k")) {
-			this.scrollOffset = Math.max(0, this.scrollOffset - 1);
-		} else if (matchesKey(data, "down") || matchesKey(data, "j")) {
-			this.scrollOffset = Math.min(maxScroll, this.scrollOffset + 1);
-		} else if (matchesKey(data, "pageUp") || matchesKey(data, "ctrl+u")) {
-			this.scrollOffset = Math.max(0, this.scrollOffset - this.viewportHeight);
-		} else if (matchesKey(data, "pageDown") || matchesKey(data, "ctrl+d")) {
-			this.scrollOffset = Math.min(maxScroll, this.scrollOffset + this.viewportHeight);
-		} else if (matchesKey(data, "home") || matchesKey(data, "g")) {
-			this.scrollOffset = 0;
-		} else if (matchesKey(data, "end") || matchesKey(data, "shift+g")) {
-			this.scrollOffset = maxScroll;
-		}
-	}
-
-	render(width: number): string[] {
-		const th = this.theme;
-		const innerW = Math.max(20, width - 4);
-
-		// Wrap pre-highlighted lines for current width
-		this.wrappedLines = [];
-		for (const line of this.highlightedLines) {
-			if (visibleWidth(line) <= innerW) {
-				this.wrappedLines.push(line);
-			} else {
-				const wrapped = wrapTextWithAnsi(line, innerW);
-				for (const wl of wrapped) {
-					this.wrappedLines.push(wl);
-				}
-			}
-		}
-
-		const lines: string[] = [];
-
-		const pad = (s: string, len: number) => {
-			const vis = visibleWidth(s);
-			return s + " ".repeat(Math.max(0, len - vis));
-		};
-
-		const row = (content: string) =>
-			th.fg("border", "│") + " " + pad(content, innerW) + " " + th.fg("border", "│");
-
-		// Header
-		lines.push(th.fg("border", `╭${"─".repeat(innerW + 2)}╮`));
-		lines.push(row(th.fg("accent", `📋 ${this.title}`)));
-		lines.push(th.fg("border", `├${"─".repeat(innerW + 2)}┤`));
-
-		// Content area — leave room for header (3) + footer (2)
-		this.viewportHeight = Math.max(5, 30);
-		const maxScroll = Math.max(0, this.wrappedLines.length - this.viewportHeight);
-		if (this.scrollOffset > maxScroll) this.scrollOffset = maxScroll;
-
-		const visible = this.wrappedLines.slice(this.scrollOffset, this.scrollOffset + this.viewportHeight);
-		for (const line of visible) {
-			lines.push(row(truncateToWidth(line, innerW)));
-		}
-
-		// Pad if content is shorter than viewport
-		for (let i = visible.length; i < this.viewportHeight; i++) {
-			lines.push(row(""));
-		}
-
-		// Footer with scroll position
-		const total = this.wrappedLines.length;
-		const pos = total > 0
-			? `${this.scrollOffset + 1}–${Math.min(this.scrollOffset + this.viewportHeight, total)}/${total}`
-			: "empty";
-		const hint = th.fg("dim", `↑↓/jk scroll • PgUp/PgDn • g/G top/bottom • q/Esc close`);
-		const posLabel = th.fg("dim", pos);
-
-		lines.push(th.fg("border", `├${"─".repeat(innerW + 2)}┤`));
-		lines.push(row(`${hint}  ${posLabel}`));
-		lines.push(th.fg("border", `╰${"─".repeat(innerW + 2)}╯`));
-
-		return lines;
-	}
-
-	invalidate(): void {}
-	dispose(): void {}
-}
-
 export default function plan(pi: ExtensionAPI) {
-	let planEnabled = false;
 	let activePlanDir: string | null = null;
-	let previousTools: string[] = [];
-	let planThinkingLevel: ThinkingLevel = "high";
-	let previousThinkingLevel: ThinkingLevel | null = null;
-
-	const autoResume = new AutoResumeTracker();
 
 	function persistState(): void {
 		pi.appendEntry<PlanState>(STATE_ENTRY, {
-			enabled: planEnabled,
 			activePlanDir,
-			previousTools,
-			planThinkingLevel,
-			previousThinkingLevel,
 		});
-	}
-
-	function planLabel(): string {
-		if (!activePlanDir) return "no plan";
-		return path.basename(activePlanDir);
 	}
 
 	function updateStatus(ctx: ExtensionContext): void {
 		if (!ctx.hasUI) return;
-
-		// Never use the status bar — the widget handles everything
-		ctx.ui.setStatus(STATUS_KEY, undefined);
-
-		if (!planEnabled) {
-			ctx.ui.setWidget(STATUS_KEY, undefined);
+		if (!activePlanDir) {
+			ctx.ui.setStatus(STATUS_KEY, undefined);
 			return;
 		}
 
-		ctx.ui.setWidget(STATUS_KEY, (_tui, theme) => {
-			const parts: string[] = [];
-
-			if (!activePlanDir || !fs.existsSync(activePlanDir)) {
-				// Plan mode on but no plan loaded yet
-				parts.push(theme.fg("warning", "📋 DRAFT"));
-				parts.push(theme.fg("muted", planLabel()));
-				parts.push(theme.fg("dim", `thinking: ${pi.getThinkingLevel()}`));
-				return new Text(parts.join(theme.fg("dim", " │ ")), 0, 0);
-			}
-
-			const meta = getPlanMeta(activePlanDir!);
-			const feedbackCount = countFeedbackItems(activePlanDir!);
-			const readiness = computeReadiness(activePlanDir!);
-
-			// Phase indicator
-			if (meta.isApproved) {
-				parts.push(theme.fg("success", "📋 APPROVED"));
-			} else if (meta.currentDraft > 0) {
-				parts.push(theme.fg("warning", `📋 DRAFT ${meta.currentDraft}`));
-			} else {
-				parts.push(theme.fg("warning", "📋 DRAFT"));
-			}
-
-			// Plan label (directory name)
-			parts.push(theme.fg("muted", planLabel()));
-
-			// Review count
-			if (meta.reviewCount > 0) {
-				parts.push(theme.fg("muted", `${meta.reviewCount} review${meta.reviewCount > 1 ? "s" : ""}`));
-			}
-
-			// Feedback items
-			if (feedbackCount > 0) {
-				parts.push(theme.fg("warning", `${feedbackCount} feedback`));
-			}
-
-			// Readiness score
-			const readinessColor = readiness.score === readiness.total ? "success"
-				: readiness.score >= readiness.total - 1 ? "warning"
-				: "muted";
-			parts.push(theme.fg(readinessColor as Parameters<typeof theme.fg>[0], `${readiness.score}/${readiness.total} ready`));
-
-			// Thinking level
-			parts.push(theme.fg("dim", `thinking: ${pi.getThinkingLevel()}`));
-
-			return new Text(parts.join(theme.fg("dim", " │ ")), 0, 0);
-		});
-	}
-
-	function availableToolSet(): Set<string> {
-		return new Set(pi.getAllTools().map((tool) => tool.name));
-	}
-
-	function computePlanTools(): string[] {
-		const available = availableToolSet();
-		return PLAN_TOOLS.filter((toolName) => available.has(toolName));
-	}
-
-	function computeFallbackTools(): string[] {
-		const available = availableToolSet();
-		return FALLBACK_TOOLS.filter((toolName) => available.has(toolName));
-	}
-
-	function setPlan(
-		enabled: boolean,
-		ctx: ExtensionContext,
-		options: { notify?: boolean; captureCurrentTools?: boolean } = {},
-	): void {
-		const { notify = true, captureCurrentTools = true } = options;
-
-		if (enabled) {
-			if (!planEnabled && captureCurrentTools) {
-				previousTools = pi.getActiveTools();
-			}
-			if (!planEnabled && previousThinkingLevel === null) {
-				previousThinkingLevel = pi.getThinkingLevel() as ThinkingLevel;
-			}
-			pi.setThinkingLevel(planThinkingLevel);
-
-			planEnabled = true;
-			const tools = computePlanTools();
-			if (tools.length > 0) pi.setActiveTools(tools);
-			if (notify) {
-				const detail = activePlanDir ? ` Active plan: ${toDisplayPath(activePlanDir, ctx.cwd)}.` : "";
-				ctx.ui.notify(`Plan mode enabled. Thinking: ${planThinkingLevel}.${detail}`, "info");
-			}
-		} else {
-			planEnabled = false;
-			const available = availableToolSet();
-			const restoreTools = (previousTools.length > 0 ? previousTools : computeFallbackTools()).filter((toolName) =>
-				available.has(toolName),
-			);
-			if (restoreTools.length > 0) pi.setActiveTools(restoreTools);
-			previousTools = [];
-			if (previousThinkingLevel !== null) {
-				pi.setThinkingLevel(previousThinkingLevel);
-				previousThinkingLevel = null;
-			}
-			if (notify) ctx.ui.notify("Plan mode disabled. Restored normal tool access and thinking level.", "info");
-		}
-
-		updateStatus(ctx);
-		persistState();
-	}
-
-	function formatStatusSummary(ctx: ExtensionContext): string {
-		const mode = planEnabled ? "ON" : "OFF";
-		const active = activePlanDir ? toDisplayPath(activePlanDir, ctx.cwd) : "(none)";
-		const tools = pi.getActiveTools().join(", ");
-		const activeThinking = pi.getThinkingLevel();
-		return `Plan mode: ${mode}\nActive plan: ${active}\nPlan thinking: ${planThinkingLevel}\nActive thinking: ${activeThinking}\nActive tools: ${tools}`;
+		ctx.ui.setStatus(STATUS_KEY, `📋 ${path.basename(activePlanDir)}`);
 	}
 
 	function setActivePlanDir(nextPlanDir: string | null, ctx: ExtensionContext): void {
 		activePlanDir = nextPlanDir ? path.resolve(nextPlanDir) : null;
-		updateStatus(ctx);
 		persistState();
+		updateStatus(ctx);
 	}
 
 	function usage(ctx: ExtensionContext): void {
@@ -704,32 +303,6 @@ export default function plan(pi: ExtensionAPI) {
 		};
 	}
 
-	pi.registerFlag("plan", {
-		description: "Start in plan mode",
-		type: "boolean",
-		default: false,
-	});
-
-	async function promptThinkingLevel(
-		label: string,
-		levels: ThinkingLevel[],
-		current: ThinkingLevel,
-		ctx: ExtensionContext,
-	): Promise<ThinkingLevel | null> {
-		if (!ctx.hasUI) return current;
-
-		const currentIndex = levels.indexOf(current);
-		const reordered = [
-			...levels.slice(currentIndex),
-			...levels.slice(0, currentIndex),
-		];
-		const choice = await ctx.ui.select(label, reordered as string[]);
-		if (!choice) return null;
-
-		const selected = choice as ThinkingLevel;
-		return levels.includes(selected) ? selected : null;
-	}
-
 	async function handlePlanNew(rest: string, ctx: ExtensionContext): Promise<void> {
 		let issue: GitHubIssue | null = null;
 		let userContext = rest;
@@ -755,9 +328,8 @@ export default function plan(pi: ExtensionAPI) {
 				`issue-${issue.number}`;
 		}
 
-		// If no context provided, ask the user what they want to build
 		if (!slugInput && ctx.hasUI) {
-			const description = (await ctx.ui.input("What do you want to build?", "describe the feature or task"))?.trim() ?? "";
+			const description = (await ctx.ui.input("What do you want to plan?", "describe the feature or task"))?.trim() ?? "";
 			if (!description) return;
 			userContext = description;
 			slugInput = description;
@@ -772,33 +344,16 @@ export default function plan(pi: ExtensionAPI) {
 			return;
 		}
 
-		// Prompt for thinking level before creating the plan
-		const level = await promptThinkingLevel(
-			"Thinking level for planning:",
-			PLAN_THINKING_LEVELS,
-			planThinkingLevel,
-			ctx,
-		);
-		if (level === null) return;
-		planThinkingLevel = level;
-		persistState();
-
 		const planDir = path.join(ctx.cwd, ".pi", "plans", `${localIsoDate()}-${slug}`);
 		const title = issue ? issue.title : toTitleCase(slug.replace(/-/g, " "));
 		const created = ensurePlanPackage(planDir, title);
 		setActivePlanDir(planDir, ctx);
-		if (!planEnabled) {
-			setPlan(true, ctx, { notify: false, captureCurrentTools: true });
-		}
 
 		const displayPlanDir = toDisplayPath(planDir, ctx.cwd);
 		if (created.length === 0) {
 			ctx.ui.notify(`Using existing plan package: ${displayPlanDir}.`, "info");
 		} else {
-			ctx.ui.notify(
-				`Created ${displayPlanDir} (${created.join(", ")}) and enabled plan mode.`,
-				"info",
-			);
+			ctx.ui.notify(`Created ${displayPlanDir} (${created.join(", ")}).`, "info");
 		}
 
 		if (issue) {
@@ -819,69 +374,111 @@ export default function plan(pi: ExtensionAPI) {
 		queueUserPrompt(kickoffPrompt, ctx);
 	}
 
+	async function choosePlanDirViaUI(ctx: ExtensionContext): Promise<string | null> {
+		if (!ctx.hasUI) return null;
+		const available = listAvailablePlanDirs(ctx.cwd);
+		if (available.length === 0) return null;
+
+		const labels = available.map((dir) => toDisplayPath(dir, ctx.cwd));
+		const choice = await ctx.ui.select("Use which plan?", labels);
+		if (!choice) return null;
+		const index = labels.indexOf(choice);
+		if (index < 0) return null;
+		return available[index] ?? null;
+	}
+
+	function resolvePlanDirFromArg(arg: string, ctx: ExtensionContext): string {
+		let planDir = normalizeInputPath(arg, ctx.cwd);
+		if (path.basename(planDir) === "plan.md") planDir = path.dirname(planDir);
+		return planDir;
+	}
+
+	async function handlePlanUse(rest: string, ctx: ExtensionContext): Promise<void> {
+		let planDir: string | null = null;
+		if (rest) {
+			planDir = resolvePlanDirFromArg(rest, ctx);
+		} else {
+			planDir = await choosePlanDirViaUI(ctx);
+			if (!planDir) {
+				ctx.ui.notify("No plan packages found. Create one with /plan new [context].", "warning");
+				return;
+			}
+		}
+
+		if (!fs.existsSync(planDir) || !fs.statSync(planDir).isDirectory()) {
+			ctx.ui.notify(`Not a directory: ${toDisplayPath(planDir, ctx.cwd)}`, "error");
+			return;
+		}
+
+		const missing = requiredFilesMissing(planDir);
+		if (missing.length > 0) {
+			ctx.ui.notify(
+				`Missing plan files in ${toDisplayPath(planDir, ctx.cwd)}: ${missing.join(", ")}`,
+				"warning",
+			);
+			return;
+		}
+
+		setActivePlanDir(planDir, ctx);
+		ctx.ui.notify(`Active plan set to ${toDisplayPath(planDir, ctx.cwd)}.`, "info");
+	}
+
+	function buildPlanStatus(ctx: ExtensionContext): string {
+		if (!activePlanDir) return "Active plan: (none)";
+		const missing = requiredFilesMissing(activePlanDir);
+		const lines = [
+			`Active plan: ${toDisplayPath(activePlanDir, ctx.cwd)}`,
+			`Missing required files: ${missing.length === 0 ? "none" : missing.join(", ")}`,
+		];
+
+		const optionalFiles = ["context.md", ISSUE_BRIEF_FILE];
+		for (const file of optionalFiles) {
+			const exists = fs.existsSync(path.join(activePlanDir, file));
+			lines.push(`${file}: ${exists ? "present" : "missing"}`);
+		}
+
+		return lines.join("\n");
+	}
+
+	function maybeResolveReviewModel(rest: string): string | null {
+		const trimmed = rest.trim();
+		if (!trimmed) return null;
+		return trimmed;
+	}
+
+	async function handlePlanReview(rest: string, ctx: ExtensionContext): Promise<void> {
+		if (!activePlanDir) {
+			ctx.ui.notify("No active plan package. Use /plan new [context] or /plan use <plan-dir> first.", "warning");
+			return;
+		}
+
+		const missing = requiredFilesMissing(activePlanDir);
+		if (missing.length > 0) {
+			ctx.ui.notify(
+				`Active plan is missing required files: ${missing.join(", ")} (${toDisplayPath(activePlanDir, ctx.cwd)}).`,
+				"warning",
+			);
+			return;
+		}
+
+		const modelOverride = maybeResolveReviewModel(rest);
+		const modelInstruction = modelOverride
+			? `\nUse this model for the plan-reviewer Agent call: ${modelOverride}.`
+			: "";
+
+		queueUserPrompt(`/skill:plan-methodology review ${activePlanDir}${modelInstruction}`, ctx);
+		ctx.ui.notify(`Queued plan review for ${toDisplayPath(activePlanDir, ctx.cwd)}.`, "info");
+	}
+
 	async function handlePlanCommand(args: string, ctx: ExtensionContext): Promise<void> {
 		const trimmed = args.trim();
 		if (!trimmed) {
-			if (planEnabled) {
-				// Already in plan mode — disable it
-				setPlan(false, ctx);
+			if (activePlanDir) {
+				queueUserPrompt(`/skill:plan-methodology Start planning using this existing plan package directory: ${activePlanDir}`, ctx);
+				ctx.ui.notify(`Queued planning flow for ${toDisplayPath(activePlanDir, ctx.cwd)}.`, "info");
 				return;
 			}
-
-			// Not in plan mode — activate existing plan or start a new one
-			const hasActivePlan = activePlanDir
-				&& fs.existsSync(activePlanDir)
-				&& fs.statSync(activePlanDir).isDirectory()
-				&& requiredFilesMissing(activePlanDir).length === 0;
-
-			if (hasActivePlan) {
-				// Re-activate existing plan with thinking level prompt
-				const level = await promptThinkingLevel(
-					"Thinking level for planning:",
-					PLAN_THINKING_LEVELS,
-					planThinkingLevel,
-					ctx,
-				);
-				if (level === null) return;
-				planThinkingLevel = level;
-				persistState();
-				setPlan(true, ctx);
-			} else {
-				// No active plan — offer to resume an existing one or start new
-				const available = listAvailablePlanDirs(ctx.cwd);
-				if (available.length > 0 && ctx.hasUI) {
-					const action = await ctx.ui.select("No active plan.", [
-						"Resume existing plan",
-						"Start new plan",
-					]);
-					if (!action) return;
-
-					if (action === "Resume existing plan") {
-						const labels = available.map((dir) => toDisplayPath(dir, ctx.cwd));
-						const choice = await ctx.ui.select("Resume which plan?", labels);
-						if (!choice) return;
-						const selectedIndex = labels.indexOf(choice);
-						if (selectedIndex < 0) return;
-						const planDir = available[selectedIndex];
-						if (!planDir) return;
-						setActivePlanDir(planDir, ctx);
-
-						const level = await promptThinkingLevel(
-							"Thinking level for planning:",
-							PLAN_THINKING_LEVELS,
-							planThinkingLevel,
-							ctx,
-						);
-						if (level === null) return;
-						planThinkingLevel = level;
-						persistState();
-						setPlan(true, ctx);
-						return;
-					}
-				}
-
-				await handlePlanNew("", ctx);
-			}
+			await handlePlanNew("", ctx);
 			return;
 		}
 
@@ -889,63 +486,23 @@ export default function plan(pi: ExtensionAPI) {
 		const verb = verbRaw.toLowerCase();
 		const rest = restParts.join(" ").trim();
 
-		if (verb === "on" || verb === "enable") {
-			setPlan(true, ctx);
+		if (verb === "new") {
+			await handlePlanNew(rest, ctx);
 			return;
 		}
 
-		if (verb === "off" || verb === "disable") {
-			setPlan(false, ctx);
+		if (verb === "use" || verb === "resume") {
+			await handlePlanUse(rest, ctx);
 			return;
 		}
 
-		if (verb === "toggle") {
-			setPlan(!planEnabled, ctx);
+		if (verb === "review") {
+			await handlePlanReview(rest, ctx);
 			return;
 		}
 
 		if (verb === "status") {
-			ctx.ui.notify(formatStatusSummary(ctx), "info");
-			return;
-		}
-
-		if (verb === "mode") {
-			if (rest) {
-				const requested = rest.toLowerCase() as ThinkingLevel;
-				if (!PLAN_THINKING_LEVELS.includes(requested)) {
-					ctx.ui.notify("Usage: /plan mode [medium|high|xhigh]", "warning");
-					return;
-				}
-				planThinkingLevel = requested;
-				if (planEnabled) pi.setThinkingLevel(planThinkingLevel);
-				persistState();
-				ctx.ui.notify(`Plan thinking set to ${planThinkingLevel}.`, "info");
-				return;
-			}
-
-			if (!ctx.hasUI) {
-				ctx.ui.notify(`Plan thinking: ${planThinkingLevel} (set with /plan mode [medium|high|xhigh])`, "info");
-				return;
-			}
-
-			const currentIndex = PLAN_THINKING_LEVELS.indexOf(planThinkingLevel);
-			const reordered = [
-				...PLAN_THINKING_LEVELS.slice(currentIndex),
-				...PLAN_THINKING_LEVELS.slice(0, currentIndex),
-			];
-			const choice = await ctx.ui.select(
-				"Choose thinking level for planning:",
-				reordered as string[],
-			);
-			if (!choice) return;
-
-			const selected = choice as ThinkingLevel;
-			if (!PLAN_THINKING_LEVELS.includes(selected)) return;
-
-			planThinkingLevel = selected;
-			if (planEnabled) pi.setThinkingLevel(planThinkingLevel);
-			persistState();
-			ctx.ui.notify(`Plan thinking set to ${planThinkingLevel}.`, "info");
+			ctx.ui.notify(buildPlanStatus(ctx), "info");
 			return;
 		}
 
@@ -955,258 +512,13 @@ export default function plan(pi: ExtensionAPI) {
 			return;
 		}
 
-		if (verb === "resume" || verb === "use") {
-			let planDir: string | null = null;
-
-			if (rest) {
-				let fromArg = normalizeInputPath(rest, ctx.cwd);
-				if (path.basename(fromArg) === "plan.md") fromArg = path.dirname(fromArg);
-				planDir = fromArg;
-			} else if (ctx.hasUI) {
-				const available = listAvailablePlanDirs(ctx.cwd);
-				if (available.length === 0) {
-					ctx.ui.notify("No plan packages found in ./.pi/plans. Create one with /plan new [context].", "warning");
-					return;
-				}
-
-				const labels = available.map((dir) => toDisplayPath(dir, ctx.cwd));
-				const choice = await ctx.ui.select("Resume which plan?", labels);
-				if (!choice) return;
-
-				const selectedIndex = labels.indexOf(choice);
-				if (selectedIndex < 0) return;
-				planDir = available[selectedIndex] ?? null;
-			} else {
-				ctx.ui.notify("Usage: /plan resume <plan-dir>", "warning");
-				return;
-			}
-
-			if (!planDir) return;
-
-			if (!fs.existsSync(planDir) || !fs.statSync(planDir).isDirectory()) {
-				ctx.ui.notify(`Not a directory: ${toDisplayPath(planDir, ctx.cwd)}`, "error");
-				return;
-			}
-
-			const missing = requiredFilesMissing(planDir);
-			if (missing.length > 0) {
-				ctx.ui.notify(
-					`Missing plan files in ${toDisplayPath(planDir, ctx.cwd)}: ${missing.join(", ")}`,
-					"warning",
-				);
-				return;
-			}
-
-			setActivePlanDir(planDir, ctx);
-
-			if (!planEnabled) {
-				const level = await promptThinkingLevel(
-					"Thinking level for planning:",
-					PLAN_THINKING_LEVELS,
-					planThinkingLevel,
-					ctx,
-				);
-				if (level === null) return;
-				planThinkingLevel = level;
-				persistState();
-				setPlan(true, ctx);
-			} else {
-				ctx.ui.notify(`Active plan set to ${toDisplayPath(planDir, ctx.cwd)}.`, "info");
-			}
-			return;
-		}
-
-		if (verb === "review") {
-			if (rest) {
-				ctx.ui.notify("Usage: /plan review", "warning");
-				return;
-			}
-
-			const planDir = activePlanDir;
-
-			if (!planDir) {
-				ctx.ui.notify("No active plan package. Use /plan new [context] or /plan resume <plan-dir> first.", "warning");
-				return;
-			}
-
-			const missing = requiredFilesMissing(planDir);
-			if (missing.length > 0) {
-				ctx.ui.notify(
-					`Active plan is missing required files: ${missing.join(", ")} (${toDisplayPath(planDir, ctx.cwd)}).`,
-					"warning",
-				);
-				return;
-			}
-
-			if (!planEnabled) {
-				setPlan(true, ctx, { notify: false, captureCurrentTools: true });
-				ctx.ui.notify("Plan mode enabled for safe plan review.", "info");
-			}
-
-			// Delegate review via the plan-methodology skill. When the Agent
-			// tool is available, the skill dispatches a plan-reviewer agent
-			// automatically. Otherwise it runs the review in-session.
-			const reviewPrompt = `/skill:plan-methodology review ${planDir}`;
-			queueUserPrompt(reviewPrompt, ctx);
-			ctx.ui.notify(`Queued plan review for ${toDisplayPath(planDir, ctx.cwd)}.`, "info");
-			return;
-		}
-
-		if (verb === "new") {
-			await handlePlanNew(rest, ctx);
-			return;
-		}
-
-		usage(ctx);
+		// Treat anything else as inline planning context for /plan
+		await handlePlanNew(trimmed, ctx);
 	}
 
 	pi.registerCommand("plan", {
-		description: "Plan mode: start new plan, activate existing, or toggle off. Subcommands: new/resume/review/clear/status/mode/on/off",
+		description: "Plan orchestration: new/use/resume/review/status/clear",
 		handler: async (args, ctx) => handlePlanCommand(args, ctx),
-	});
-
-	pi.registerShortcut(Key.ctrlAlt("p"), {
-		description: "Toggle plan mode",
-		handler: async (ctx) => setPlan(!planEnabled, ctx),
-	});
-
-	pi.registerShortcut(Key.ctrlShift("p"), {
-		description: "View plan.md in overlay",
-		handler: async (ctx) => {
-			if (!planEnabled || !activePlanDir) {
-				ctx.ui.notify("No active plan. Use /plan to start or resume one.", "info");
-				return;
-			}
-
-			const planFile = path.join(activePlanDir, "plan.md");
-			if (!fs.existsSync(planFile)) {
-				ctx.ui.notify(`plan.md not found in ${toDisplayPath(activePlanDir, ctx.cwd)}`, "warning");
-				return;
-			}
-
-			let content: string;
-			try {
-				content = fs.readFileSync(planFile, "utf8");
-			} catch {
-				ctx.ui.notify("Failed to read plan.md", "error");
-				return;
-			}
-
-			const title = path.basename(activePlanDir);
-			await ctx.ui.custom<void>(
-				(_tui, theme, _kb, done) => new PlanViewerComponent(theme, done, title, content),
-				{
-					overlay: true,
-					overlayOptions: {
-						width: "80%",
-						maxHeight: "80%",
-						anchor: "center",
-					},
-				},
-			);
-		},
-	});
-
-	// Write containment: restrict edit/write to the active plan package
-	pi.on("tool_call", async (event, ctx) => {
-		if (!planEnabled) return;
-
-		if (isToolCallEventType("edit", event) || isToolCallEventType("write", event)) {
-			const requestedPath = event.input.path;
-
-			if (!activePlanDir) {
-				return {
-					block: true,
-					reason: "Plan mode only allows edits in an active plan package. Set one with /plan new [context] or /plan resume <plan-dir>.",
-				};
-			}
-
-			const planRoot = resolvePathForContainment(activePlanDir, ctx.cwd);
-			const target = resolvePathForContainment(requestedPath, ctx.cwd);
-
-			if (!isWithinDirectory(target, planRoot)) {
-				return {
-					block: true,
-					reason: `Plan mode only allows edits inside the active plan package (${toDisplayPath(activePlanDir, ctx.cwd)}).\nBlocked path: ${toDisplayPath(normalizeInputPath(requestedPath, ctx.cwd), ctx.cwd)}`,
-				};
-			}
-		}
-	});
-
-	// Refresh widget when changelog.md is written (status may have changed)
-	pi.on("tool_result", async (event, ctx) => {
-		if (!planEnabled || !activePlanDir) return;
-		if (event.toolName !== "edit" && event.toolName !== "write") return;
-
-		const input = event.input as { path?: string } | undefined;
-		if (!input?.path) return;
-
-		const resolvedPath = resolvePathForContainment(input.path, activePlanDir);
-		if (path.basename(resolvedPath) !== "changelog.md") return;
-		if (!isWithinDirectory(resolvedPath, activePlanDir)) return;
-
-		updateStatus(ctx);
-	});
-
-	pi.on("context", async (event) => {
-		if (planEnabled) return;
-		return {
-			messages: event.messages.filter((message) => {
-				const maybeCustom = message as { customType?: string };
-				return maybeCustom.customType !== PLAN_CONTEXT_TYPE;
-			}),
-		};
-	});
-
-	pi.on("agent_start", async () => {
-		autoResume.reset();
-	});
-
-	pi.on("before_agent_start", async () => {
-		if (!planEnabled) return;
-
-		autoResume.tick();
-
-		const activePlanMessage = activePlanDir
-			? `Active plan package: ${activePlanDir}`
-			: "No active plan package selected yet. Ask the user to run /plan new [context] or /plan resume <dir>.";
-
-		return {
-			message: {
-				customType: PLAN_CONTEXT_TYPE,
-				content: `[PLAN MODE ACTIVE]\nTreat this turn as planning-only. Do not implement code changes.\nOnly edit files inside the active plan package (plan.md, feedback.md, changelog.md).\n${activePlanMessage}\n\nWhen planning, follow the plan-methodology skill workflow and keep plan state in plan.md, feedback.md, and changelog.md.`,
-				display: false,
-			},
-		};
-	});
-
-	// Auto-resume when the agent hits a context limit during active planning
-	pi.on("agent_end", async (_event, ctx) => {
-		if (!planEnabled || !activePlanDir) return;
-
-		const resume = autoResume.shouldResume();
-		if (!resume.ok) {
-			if (resume.reason === "exhausted") {
-				ctx.ui.notify("Plan auto-resume limit reached. Use /plan to re-activate.", "info");
-			}
-			return;
-		}
-
-		const meta = getPlanMeta(activePlanDir);
-		const planFile = path.join(activePlanDir, "plan.md");
-		const feedbackFile = path.join(activePlanDir, "feedback.md");
-
-		let resumeMsg = `Plan mode context limit reached. Resume planning for ${activePlanDir}.`;
-		resumeMsg += ` Re-read ${planFile} and ${feedbackFile} for current state.`;
-
-		if (meta.currentDraft > 0) {
-			resumeMsg += ` Currently on Draft ${meta.currentDraft}.`;
-		}
-		if (meta.lastEvent === "review") {
-			resumeMsg += ` Last action was a review — check feedback.md for findings to discuss with the user.`;
-		}
-
-		pi.sendUserMessage(resumeMsg);
 	});
 
 	pi.on("input", async (event, ctx) => {
@@ -1224,50 +536,21 @@ export default function plan(pi: ExtensionAPI) {
 
 	pi.on("session_start", async (_event, ctx) => {
 		let restoredState: PlanState | null = null;
+
 		for (const entry of ctx.sessionManager.getBranch()) {
 			if (entry.type !== "custom") continue;
-			// Support both new and legacy state entry names
 			if (entry.customType !== STATE_ENTRY && entry.customType !== LEGACY_STATE_ENTRY) continue;
-			const data = entry.data as Partial<PlanState> | undefined;
+			const data = entry.data as Partial<PlanState & { activePlanDir?: string | null }> | undefined;
 			if (!data) continue;
-
-			const restoredPlanThinking =
-				typeof data.planThinkingLevel === "string" &&
-				PLAN_THINKING_LEVELS.includes(data.planThinkingLevel as ThinkingLevel)
-					? (data.planThinkingLevel as ThinkingLevel)
-					: "high";
-			const restoredPreviousThinking =
-				typeof data.previousThinkingLevel === "string"
-					? (data.previousThinkingLevel as ThinkingLevel)
-					: null;
-
 			restoredState = {
-				enabled: Boolean(data.enabled),
 				activePlanDir: typeof data.activePlanDir === "string" ? data.activePlanDir : null,
-				previousTools: Array.isArray(data.previousTools)
-					? data.previousTools.filter((tool): tool is string => typeof tool === "string")
-					: [],
-				planThinkingLevel: restoredPlanThinking,
-				previousThinkingLevel: restoredPreviousThinking,
 			};
 		}
 
 		if (restoredState) {
-			planEnabled = restoredState.enabled;
 			activePlanDir = restoredState.activePlanDir ? path.resolve(restoredState.activePlanDir) : null;
-			previousTools = restoredState.previousTools;
-			planThinkingLevel = restoredState.planThinkingLevel;
-			previousThinkingLevel = restoredState.previousThinkingLevel;
 		}
 
-		if (pi.getFlag("plan") === true) planEnabled = true;
-
-		if (planEnabled) {
-			if (previousTools.length === 0) previousTools = pi.getActiveTools();
-			setPlan(true, ctx, { notify: false, captureCurrentTools: false });
-		} else {
-			updateStatus(ctx);
-		}
-
+		updateStatus(ctx);
 	});
 }
