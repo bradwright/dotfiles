@@ -2,7 +2,7 @@
 name: plan-methodology
 description: Iterative planning workflow for coding tasks. Creates an implementation plan package, then iterates through draft/review cycles with user feedback until the plan is approved.
 compatibility: pi with optional Agent tool (@tintinweb/pi-subagents; delegation preferred, in-session fallback supported).
-allowed-tools: Agent read write edit bash grep find ls
+allowed-tools: Agent read write edit grep find ls
 ---
 
 # Plan (Iterative Planning Loop)
@@ -10,6 +10,9 @@ allowed-tools: Agent read write edit bash grep find ls
 Use this skill when the user asks to plan work before implementing.
 
 Treat this as **planning-only**. Do not implement code changes yet.
+Do not edit repository code files during planning; limit writes to the active
+plan package (`plan.md`, `feedback.md`, `changelog.md`, `context.md`, optional
+`brief.md`).
 
 ## Core Concept
 
@@ -108,8 +111,13 @@ Agent({
   subagent_type: "plan-reviewer",
   prompt: "Review the plan package at <plan-dir>/. The repository root is <cwd>. <any user steering, e.g. 'focus on error handling'>",
   description: "Review plan for completeness and risks",
+  model: "<optional model override from user request>",
 })
 ```
+
+If the user or caller specifies a review model override (for example:
+"Use this model for the plan-reviewer Agent call: <model-id>"), you MUST pass
+that value via `Agent(..., model: <model-id>)` for the review run.
 
 The reviewer writes findings to `feedback.md` and a Review entry to
 `changelog.md`. It does NOT modify `plan.md`.
@@ -130,7 +138,7 @@ Fallback behavior:
 - Do review in-session by evaluating `plan.md` + `feedback.md` and appending
   findings to `feedback.md` plus a `Review` line in `changelog.md`.
 - Keep the same guardrails: planning-only, no implementation, no unsolicited
-  promotion of feedback into `plan.md`.
+  promotion of feedback into `plan.md`, and no edits outside the plan package.
 
 ## Primary Agent Responsibilities
 
@@ -147,7 +155,7 @@ The primary agent (you) handles ONLY:
    to answer user questions or present summaries.
 
 When `Agent` is available: **Do NOT** read large swathes of source code
-or write full drafts yourself — delegate to Explore/writer.
+or write full drafts yourself — delegate to Explore/writer/reviewer.
 
 When `Agent` is unavailable: perform those tasks in-session, but keep
 reads targeted and the output concise.
