@@ -19,7 +19,7 @@ const LEGACY_STATE_ENTRY = "plan-mode-state";
 const STATUS_KEY = "plan";
 
 const PLAN_USAGE =
-	"/plan [brief] | new [brief|github-url] | use <plan-dir> | resume [plan-dir] | review [--model <id>] | status | clear";
+	"/plan [brief] | new [brief|github-url] | use <plan-dir> | resume [plan-dir] | review [--model <id>] | status | clear/exit";
 
 const GITHUB_ISSUE_FETCH_TIMEOUT_MS = 15000;
 const GITHUB_ISSUE_BODY_MAX_CHARS = 12000;
@@ -525,7 +525,7 @@ export default function plan(pi: ExtensionAPI) {
 			return;
 		}
 
-		if (verb === "clear") {
+		if (verb === "clear" || verb === "exit") {
 			setActivePlanDir(null, ctx);
 			ctx.ui.notify("Cleared active plan package.", "info");
 			return;
@@ -536,7 +536,7 @@ export default function plan(pi: ExtensionAPI) {
 	}
 
 	pi.registerCommand("plan", {
-		description: "Plan orchestration: new/use/resume/review/status/clear",
+		description: "Plan orchestration: new/use/resume/review/status/clear/exit",
 		handler: async (args, ctx) => handlePlanCommand(args, ctx),
 	});
 
