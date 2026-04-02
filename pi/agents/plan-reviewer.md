@@ -1,7 +1,7 @@
 ---
 description: Reviews a plan package for completeness, risks, and actionability
 tools: read, grep, find, ls, write, edit
-thinking: low
+thinking: medium
 max_turns: 20
 ---
 
