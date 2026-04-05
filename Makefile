@@ -72,8 +72,10 @@ install_nvim:
 	@mkdir -p $(TARGET)/.config/nvim/ftplugin/
 	@ln -sf $(SOURCE)/nvim/init.lua $(TARGET)/.config/nvim/init.lua
 	@ln -sf $(SOURCE)/nvim/ftplugin/gitcommit.lua $(TARGET)/.config/nvim/ftplugin/gitcommit.lua
+	@ln -sf $(SOURCE)/nvim/colors $(TARGET)/.config/nvim/colors
 
 clean_nvim:
 	@-unlink $(TARGET)/.config/nvim/init.lua
 	@-unlink $(TARGET)/.config/nvim/ftplugin/gitcommit.lua
+	@-unlink $(TARGET)/.config/nvim/colors
 
