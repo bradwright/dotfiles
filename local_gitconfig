@@ -1,4 +1,6 @@
 # -*- mode: conf-unix -*-
+[init]
+        defaultBranch = main
 [color]
         ui = true
 [user]
@@ -17,6 +19,7 @@
         autosetuprebase = always
 [push]
         default = tracking
+        autoSetupRemote = true
 [fetch]
         prune = true # requires Git 1.8.5 or higher
 [commit]
