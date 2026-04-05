@@ -32,5 +32,15 @@
         navigate = true
         side-by-side = true
         line-numbers = true
+        syntax-theme = Solarized (dark)
+        minus-style = syntax "#3a1010"
+        minus-emph-style = syntax "#6b1515"
+        minus-empty-line-marker-style = normal "#3a1010"
+        plus-style = syntax "#0f3520"
+        plus-emph-style = syntax "#1a5c2a"
+        plus-empty-line-marker-style = normal "#0f3520"
+        line-numbers-minus-style = red black
+        line-numbers-plus-style = green black
+        line-numbers-zero-style = brightgreen black
 [merge]
         conflictstyle = zdiff3
