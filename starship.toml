@@ -22,7 +22,6 @@ vimcmd_symbol = "[❮](green)"
 
 [git_branch]
 format = "[$branch]($style)"
-# base01 (#586e75) — bright-black is invisible (same as background in solarized dark)
 style = "bright-green"
 
 [git_status]
