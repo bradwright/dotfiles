@@ -31,7 +31,7 @@ set -g fish_greeting
 set -gx EDITOR et
 set -gx VISUAL ec
 set -gx GIT_EDITOR 'nvim +star'
-set -gx BAT_THEME ansi
+set -gx BAT_THEME 'Catppuccin Mocha'
 set -gx GPG_TTY (tty)
 
 # ---------------------------------------------------------------------------

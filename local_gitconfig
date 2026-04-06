@@ -35,7 +35,7 @@
         navigate = true
         side-by-side = true
         line-numbers = true
-        syntax-theme = Solarized (dark)
+        syntax-theme = Catppuccin Mocha
         minus-style = syntax "#3a1010"
         minus-emph-style = syntax "#6b1515"
         minus-empty-line-marker-style = normal "#3a1010"
