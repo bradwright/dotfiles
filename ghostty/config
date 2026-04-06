@@ -55,21 +55,17 @@ font-family = Berkeley Mono Semicondensed
 font-size = 16
 font-thicken = true
 
-# Window & Appearance — dark chrome to match solarized dark
+# Window & Appearance — dark chrome to match Catppuccin Mocha
 window-padding-x = 12
 window-padding-y = 4
-window-theme = dark
+window-theme = ghostty
 macos-titlebar-style = tabs
 
 # Cursor
 cursor-style = block
 cursor-style-blink = true
 
-# Solarized palette — keep bold from remapping to bright, which would
-# break the carefully designed base tones
-bold-is-bright = false
-
-# Selection — invert for clear visibility against the muted solarized tones
+# Selection — invert for clear visibility against the muted Catppuccin tones
 selection-invert-fg-bg = true
 
 # Use fish as the default shell inside Ghostty without changing the
@@ -87,10 +83,10 @@ mouse-hide-while-typing = true
 scrollback-limit = 10000
 window-vsync = true
 
-# Splits — overlay unfocused splits with solarized base02 so the active
-# pane is clearly distinguishable
+# Splits — overlay unfocused splits with Catppuccin Mocha "Crust" so the
+# active pane is clearly distinguishable
 unfocused-split-opacity = 0.7
-unfocused-split-fill = #073642
+unfocused-split-fill = #11111b
 
 # Quality of Life
 confirm-close-surface = true
