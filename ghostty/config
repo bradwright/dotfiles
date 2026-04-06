@@ -50,7 +50,7 @@
 # resize-overlay-duration = 4s 200ms
 
 # Theme and Fonts
-theme = solarized-dark-custom
+theme = Catppuccin Mocha
 font-family = Berkeley Mono Semicondensed
 font-size = 16
 font-thicken = true
