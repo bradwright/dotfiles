@@ -1,42 +1,64 @@
 # Agent Guidelines for dotfiles
 
-This repository contains personal dotfiles for macOS. The following rules
-apply to any agent working in this repo.
+This repository contains personal macOS dotfiles plus a pi package. The
+following rules apply to any agent working in this repo.
 
 ## What this repo is
 
-A collection of configuration files and directories that are symlinked into
-`$HOME` by running `make install`. The `Makefile` is the single source of
-truth for which files get installed and where.
+The `Makefile` is the source of truth for what `make install` manages and where
+it gets installed.
 
-The repo contains:
+Today, `make install` manages:
 
-- **Shell dotfiles** (repo root) — symlinked as `~/.<name>` via the `FILES`
-  variable: `aliases`, `local_gitconfig`, `gitignore`, `zshrc`, `zshenv`.
-- **`ghostty/`** — Ghostty terminal config and themes → `~/.config/ghostty`
-  (symlinked as a directory).
-- **`starship.toml`** — Starship prompt config → `~/.config/starship.toml`.
-- **`fish/`** — Fish shell config (`config.fish`, `fish_plugins`) →
-  `~/.config/fish/`.
-- **`nvim/`** — Neovim config (`init.lua`, `ftplugin/gitcommit.lua`) →
-  `~/.config/nvim/`.
-- **`scripts/`** — Helper scripts (e.g. pi patch apply/rollback). Not
-  installed by `make install`; run directly from the repo.
-- **`patches/`** — Patch files for third-party tools. Applied via scripts in
-  `scripts/`.
-- **`pi/`** — A pi package (extensions, skills, themes, settings). Install
-  via `pi install pi/` (or `./pi/install.sh`), **not** via `make install`.
+- **Shell dotfiles** at the repo root — symlinked as `~/.<name>` via the
+  `FILES` variable:
+  - `aliases`
+  - `local_gitconfig`
+  - `gitignore`
+  - `zshrc`
+  - `zshenv`
+- **`ghostty/`** — symlinked to `~/.config/ghostty`
+- **`starship.toml`** — symlinked to `~/.config/starship.toml`
+- **`fish/config.fish`** and **`fish/fish_plugins`** — symlinked into
+  `~/.config/fish/`
+- **Fish Starship config** — generated at `~/.config/fish/starship.toml` from
+  the repo's `starship.toml`
+- **Neovim config**:
+  - `nvim/init.lua` → `~/.config/nvim/init.lua`
+  - `nvim/ftplugin/gitcommit.lua` → `~/.config/nvim/ftplugin/gitcommit.lua`
+  - `nvim/colors` → `~/.config/nvim/colors`
+- **Pi settings** — `pi/settings.json` is merged into
+  `~/.pi/agent/settings.json`, preserving locally managed pi keys
+
+The repo also contains:
+
+- **`Brewfile`** — Homebrew packages and casks
+- **`scripts/`** — helper scripts for applying and rolling back local pi
+  patches
+- **`patches/`** — patch files consumed by those scripts
+- **`pi/`** — a pi package containing extensions, skills, themes, install
+  script, and custom agent definitions
+- **`CLAUDE.md`** — Claude-specific repo instructions
+- **`.pi/`** — local planning/build artifacts; not part of dotfile install
 
 ## Adding a new dotfile
 
-1. Create the file at the **repo root** with no leading dot (e.g. `tmux.conf`,
-   not `.tmux.conf`).
-2. Add its name to the `FILES` variable in `Makefile` (space-separated list).
-3. Add a corresponding `unlink` line in the `clean_shell` target.
-4. If the install destination is non-standard (not `~/.<filename>`), add a
-   new Makefile target pair (`install_<name>` / `clean_<name>`) following the
-   pattern used by `install_ghostty`, `install_starship`, etc., and wire it
-   into the aggregate `install` and `clean` targets.
+If the new file should be installed by `make install`:
+
+1. Create the file in the repo.
+2. Update `Makefile` so installation behavior is explicit.
+3. Add matching cleanup logic to the corresponding `clean_*` target.
+4. Wire the target into the aggregate `install` / `clean` targets if needed.
+
+For root-level shell dotfiles that should install as `~/.<name>`:
+
+1. Create the file at the **repo root** with no leading dot.
+2. Add its name to `FILES` in `Makefile`.
+3. Ensure `clean_shell` will remove the installed symlink.
+
+For nonstandard destinations, follow the existing target pattern used by
+`install_ghostty`, `install_starship`, `install_fish`, `install_nvim`, and
+`install_pi`.
 
 ## Shell file conventions
 
@@ -45,91 +67,92 @@ The repo contains:
   # -*- mode: sh -*-
   ```
   For fish files use `# -*- mode: fish -*-`. For non-shell files use the
-  appropriate mode (e.g. `# -*- mode: ruby -*-` for `Brewfile`,
+  appropriate mode (for example `# -*- mode: ruby -*-` for `Brewfile` and
   `# -*- mode: conf-unix -*-` for git config files).
-- Shell functions and aliases in `aliases` must be compatible with **both
-  bash and zsh**. Zsh-specific code belongs in `zshrc` or `zshenv`.
-  Fish-specific code belongs in `fish/config.fish`.
-- Use guarded sourcing for optional files (e.g. `[[ -r file ]] && source file`
-  in zsh, `test -r file; and source file` in fish) to avoid hard failures
-  when local overrides are missing.
+- Shell functions and aliases in `aliases` must be compatible with **both bash
+  and zsh**. Zsh-specific code belongs in `zshrc` or `zshenv`. Fish-specific
+  code belongs in `fish/config.fish`.
+- Use guarded sourcing for optional files so missing local overrides do not
+  break startup.
 - In zsh files, prefer native `path` array manipulation (`typeset -U path`) to
   deduplicate entries cleanly.
-- Group related settings with a short comment explaining *why*, not just
-  *what*, mirroring the style already in the files.
+- Group related settings with short comments that explain *why*, not just
+  *what*.
 
 ## Platform assumptions
 
-- **Primary target is macOS (Darwin).** Linux compatibility is maintained
-  where practical but macOS takes priority.
-- Homebrew is always available. Use `brew --prefix` rather than hardcoding
-  `/usr/local` or `/opt/homebrew` — the prefix differs between Intel and
-  Apple Silicon Macs.
-- Guard Linux-specific code with `[ $UNAME = Linux ]` checks, following the
-  style used in existing shell files.
+- **Primary target is macOS (Darwin).** Linux compatibility is nice to have,
+  but macOS behavior wins when there is a tradeoff.
+- Homebrew is always available. Use `brew --prefix` instead of hardcoding
+  `/usr/local` or `/opt/homebrew`.
+- Guard Linux-specific code with checks that match the style already used in
+  the repo.
 
 ## Editor
 
 - The configured `$EDITOR` / `$VISUAL` is `nvim`.
 - `GIT_EDITOR` is set to `nvim +star` — do not change this.
-- Neovim config lives in `nvim/` and is symlinked to `~/.config/nvim/`.
+- Neovim config in this repo currently consists of `nvim/init.lua`,
+  `nvim/ftplugin/gitcommit.lua`, and `nvim/colors/`.
 - Do not introduce hard dependencies on VS Code, nano, or other editors.
 
 ## Package management
 
-- Homebrew packages are tracked in `Brewfile`. Add any new CLI tool or cask
-  there rather than installing ad-hoc.
+- Homebrew packages belong in `Brewfile`.
 - `brew install <package>` is pre-approved and may be run without asking.
-- Node is managed via **nvm** — lazy-loaded through the `zsh-nvm` antigen
-  plugin in zsh, and `nvm.fish` (via fisher) in fish. Do not add a hardcoded
-  Node path to `PATH`.
+- Node is managed via **nvm**; do not hardcode a Node install path into
+  `PATH`.
 - Fish plugins are managed via **fisher** and declared in
   `fish/fish_plugins`.
-- The **Starship** prompt is used in both zsh and fish. Its config is
-  `starship.toml` at the repo root.
+- Starship is used in both zsh and fish. Fish gets a generated variant of the
+  main config during `make install`.
+
+## Pi package and settings
+
+There are two separate pi-related flows in this repo:
+
+1. **`make install`** merges `pi/settings.json` into the user's global pi
+   settings file at `~/.pi/agent/settings.json`, preserving keys that pi
+   manages dynamically.
+2. **`./pi/install.sh`** installs the `pi/` package itself, copies custom
+   agent definitions from `pi/agents/` into `~/.pi/agent/agents/`, and installs
+   the companion package `npm:@tintinweb/pi-subagents`.
+
+When editing pi-related files:
+
+- Extensions live under `pi/extensions/`
+- Skills live under `pi/skills/`
+- Themes live under `pi/themes/`
+- Custom agents live under `pi/agents/`
+
+After editing the pi package, reinstall it with `./pi/install.sh` if needed and
+run `/reload` in pi to pick up changes.
 
 ## Git hygiene
 
-- `branch.autosetuprebase = always` is set globally — all local branches
-  rebase by default. Keep commits clean and rebased; avoid merge commits.
-- `push.default = tracking` — push only tracks the upstream branch.
-- Use `git commit --verbose` (already the default via `commit.verbose = true`)
-  so diffs are visible during commit message authoring.
+- Keep commits clean and rebased.
+- Avoid merge commits unless explicitly requested.
+- Preserve existing file names unless the user explicitly asks for a rename.
 
 ## Testing / verification
 
 There is no automated test suite. After making changes, verify correctness by:
 
-1. Running `make install` in a dry-run sense (review the Makefile targets
-   before executing on a live system).
-2. Sourcing the modified file in a subshell to check for syntax errors:
+1. Reviewing the relevant `Makefile` targets.
+2. Syntax-checking modified shell files:
    ```sh
-   zsh -n <file>   # syntax check for zsh files
-   bash -n <file>  # for bash-compatible files
-   fish -n <file>  # for fish files
+   zsh -n <file>
+   bash -n <file>
+   fish -n <file>
    ```
-3. For `Brewfile` changes, validate with `brew bundle check`.
-
-## Pi extensions and skills
-
-The `pi/` directory is a **pi package** (with `package.json` and `install.sh`).
-Install it via `pi install pi/` — this is separate from `make install`.
-
-- To edit an extension: modify `pi/extensions/<name>.ts` in this repo.
-- To edit a skill: modify files under `pi/skills/<name>/` in this repo.
-- To add a new extension or skill: create it under `pi/extensions/` or
-  `pi/skills/` respectively, then run `pi install pi/` to register it.
-- After editing, run `/reload` in pi to pick up changes.
+3. Running `brew bundle check` after `Brewfile` edits.
+4. For `Makefile` changes, sanity-checking the affected install/clean behavior.
 
 ## What not to do
 
-- Do **not** rename existing files — they are referenced by name in `Makefile`
-  and sourced directly from other dotfiles.
-- Do **not** add secrets, tokens, or credentials to any file in this repo.
-  Machine-local overrides belong in `~/.local_zshrc`, `~/.local_zshenv`,
-  etc., which are sourced by the main files but are intentionally absent from
-  the repo.
-- Do **not** install system-level packages (e.g. via `sudo apt-get`) — use
-  Homebrew and update `Brewfile`.
-- Do **not** modify `pi/settings.json` unless explicitly asked — it controls
-  the live AI coding agent configuration.
+- Do **not** rename existing files unless explicitly asked.
+- Do **not** add secrets, tokens, or credentials to the repo.
+- Do **not** install system packages with tools like `apt`; use Homebrew.
+- Do **not** overwrite user-specific pi state that is meant to stay local.
+- Do **not** modify `pi/settings.json` unless the task actually calls for a pi
+  configuration change.
