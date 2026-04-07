@@ -4,20 +4,43 @@ TARGET		:= $(HOME)
 # Shell dotfiles symlinked as ~/.<name>
 FILES		:= aliases local_gitconfig gitignore zshrc zshenv
 
+# Keys in the global pi settings that are managed dynamically by pi
+# itself and should not be overwritten by the versioned config.
+PI_LOCAL_KEYS := packages lastChangelogVersion defaultProvider defaultModel
+PI_GLOBAL   := $(HOME)/.pi/agent/settings.json
+PI_LOCAL    := $(SOURCE)/pi/settings.json
+
 .PHONY: install clean all \
 	install_shell clean_shell \
 	install_ghostty clean_ghostty \
 	install_starship clean_starship \
 	install_fish clean_fish \
-	install_nvim clean_nvim
+	install_nvim clean_nvim \
+	install_pi
 
 all: clean install
 
 # --- Aggregate targets ---
 
-install: install_shell install_ghostty install_starship install_fish install_nvim
+install: install_shell install_ghostty install_starship install_fish install_nvim install_pi
 
 clean: clean_shell clean_ghostty clean_starship clean_fish clean_nvim
+
+# --- Pi settings ---
+# Merge versioned settings into the global pi config, preserving
+# dynamic keys that pi manages itself.
+
+install_pi:
+	@mkdir -p $(dir $(PI_GLOBAL))
+	@if [ -f $(PI_GLOBAL) ]; then \
+		jq -s '(.[0] | {$(shell printf '"%s":.%s,' $(foreach k,$(PI_LOCAL_KEYS),$k $k) | sed 's/,$$//')}) as $$keep \
+		  | .[0] * .[1] * ($$keep | with_entries(select(.value != null)))' \
+		  $(PI_GLOBAL) $(PI_LOCAL) \
+		  > $(PI_GLOBAL).tmp \
+		&& mv $(PI_GLOBAL).tmp $(PI_GLOBAL); \
+	else \
+		cp $(PI_LOCAL) $(PI_GLOBAL); \
+	fi
 
 # --- Shell ---
 
