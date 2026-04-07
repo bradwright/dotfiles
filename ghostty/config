@@ -51,8 +51,8 @@
 
 # Theme and Fonts
 theme = solarized-dark-custom
-font-family = Inconsolata Nerd Font
-font-size = 18
+font-family = Berkeley Mono Semicondensed
+font-size = 16
 font-thicken = true
 
 # Window & Appearance — dark chrome to match solarized dark
