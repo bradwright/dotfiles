@@ -1,13 +1,14 @@
 # -*- mode: fish -*-
 
 # ---------------------------------------------------------------------------
-# PATH — set for all shells (interactive and non-interactive)
+# PATH and shared environment
 # ---------------------------------------------------------------------------
 
-# Homebrew (Apple Silicon first, then Intel fallback)
-fish_add_path --prepend /opt/homebrew/bin /opt/homebrew/sbin
-if command -q brew
-    fish_add_path --prepend (brew --prefix)/bin (brew --prefix)/sbin
+# Initialize Homebrew environment without requiring brew to already be on PATH.
+if test -x /opt/homebrew/bin/brew
+    /opt/homebrew/bin/brew shellenv fish | source
+else if test -x /usr/local/bin/brew
+    /usr/local/bin/brew shellenv fish | source
 end
 
 # Personal scripts
@@ -18,20 +19,19 @@ if test -d ~/.config/doom
     fish_add_path --prepend ~/.config/emacs/bin /Applications/Emacs.app/Contents/MacOS
 end
 
+# Shared editor settings — keep these aligned with zshenv.
+set -gx EDITOR nvim
+set -gx VISUAL nvim
+set -gx GIT_EDITOR 'nvim +star'
+set -gx BAT_THEME ansi
+
 # Bail out early for non-interactive shells (scripts, scp, etc.)
 status is-interactive; or return
 
 # Suppress fish's startup greeting for a cleaner prompt
 set -g fish_greeting
 
-# ---------------------------------------------------------------------------
-# Environment
-# ---------------------------------------------------------------------------
-
-set -gx EDITOR et
-set -gx VISUAL ec
-set -gx GIT_EDITOR 'nvim +star'
-set -gx BAT_THEME ansi
+# Keep gpg-agent attached to the current TTY for interactive use.
 set -gx GPG_TTY (tty)
 
 # ---------------------------------------------------------------------------
@@ -81,6 +81,11 @@ end
 
 # nvm.fish — lazy-loads nvm so there's no startup cost
 set -gx nvm_default_version lts
+
+# direnv (project-local environment)
+if command -q direnv
+    direnv hook fish | source
+end
 
 # zoxide (smarter cd)
 if command -q zoxide

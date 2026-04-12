@@ -5,6 +5,7 @@ tap 'homebrew/services'
 
 brew 'bat'
 brew 'bottom'
+brew 'direnv'
 brew 'dust'
 brew 'eza'
 brew 'fd'
