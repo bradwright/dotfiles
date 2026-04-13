@@ -49,6 +49,9 @@ abbr -a top btm
 
 abbr -a picodex 'pi "/codex" --provider openai-codex --model gpt-5.3-codex'
 
+# TTY Emacs is more reliable with a generic TERM than Ghostty's custom one.
+alias et 'env TERM=xterm-256color emacsclient -t'
+
 # ---------------------------------------------------------------------------
 # Tool integrations
 # ---------------------------------------------------------------------------
