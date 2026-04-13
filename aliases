@@ -9,3 +9,19 @@ alias cat="bat --plain"
 alias du="dust"
 alias top="btm"
 
+# Reopen a repo as a named zellij workspace so panes and tabs are easy to resume.
+zj() {
+  if ! command -v zellij >/dev/null 2>&1; then
+    printf 'zj: zellij not found\n' >&2
+    return 127
+  fi
+
+  local root name
+  root="$(git rev-parse --show-toplevel 2>/dev/null)" || root="$PWD"
+  name="${root##*/}"
+  [ -n "$name" ] || name="main"
+
+  cd "$root" || return
+  zellij attach -c "$name"
+}
+

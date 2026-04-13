@@ -13,6 +13,7 @@ PI_LOCAL    := $(SOURCE)/pi/settings.json
 .PHONY: install clean all \
 	install_shell clean_shell \
 	install_ghostty clean_ghostty \
+	install_zellij clean_zellij \
 	install_starship clean_starship \
 	install_fish clean_fish \
 	install_nvim clean_nvim \
@@ -22,9 +23,9 @@ all: clean install
 
 # --- Aggregate targets ---
 
-install: install_shell install_ghostty install_starship install_fish install_nvim install_pi
+install: install_shell install_ghostty install_zellij install_starship install_fish install_nvim install_pi
 
-clean: clean_shell clean_ghostty clean_starship clean_fish clean_nvim
+clean: clean_shell clean_ghostty clean_zellij clean_starship clean_fish clean_nvim
 
 # --- Pi settings ---
 # Merge versioned settings into the global pi config, preserving
@@ -64,6 +65,15 @@ install_ghostty:
 
 clean_ghostty:
 	@-unlink $(HOME)/.config/ghostty
+
+# --- Zellij ---
+
+install_zellij:
+	@mkdir -p $(HOME)/.config/
+	@ln -sf $(SOURCE)/zellij $(HOME)/.config/zellij
+
+clean_zellij:
+	@-unlink $(HOME)/.config/zellij
 
 # --- Starship ---
 

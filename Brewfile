@@ -23,6 +23,7 @@ brew 'zsh-completions'
 brew 'starship'
 brew 'tealdeer'
 brew 'zoxide'
+brew 'zellij'
 brew 'libvterm'
 
 # ZSH

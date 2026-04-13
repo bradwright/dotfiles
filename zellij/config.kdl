@@ -1,0 +1,14 @@
+// -*- mode: conf -*-
+
+// Keep the UI as quiet as possible and make the few local workflow tweaks
+// that matter on macOS.
+default_layout "bare"
+pane_frames false
+simplified_ui true
+mouse_hover_effects false
+advanced_mouse_actions false
+copy_command "pbcopy"
+scrollback_editor "nvim"
+serialize_pane_viewport true
+scrollback_lines_to_serialize 5000
+show_release_notes false

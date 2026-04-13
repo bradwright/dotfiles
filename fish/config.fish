@@ -53,6 +53,29 @@ abbr -a picodex 'pi "/codex" --provider openai-codex --model gpt-5.3-codex'
 alias et 'env TERM=xterm-256color emacsclient -t'
 
 # ---------------------------------------------------------------------------
+# Workspace helpers
+# ---------------------------------------------------------------------------
+
+# Reopen a repo as a named zellij workspace so panes and tabs are easy to resume.
+function zj --description 'Attach to a repo-scoped zellij session'
+    if not command -q zellij
+        printf 'zj: zellij not found\n' >&2
+        return 127
+    end
+
+    set -l root (git rev-parse --show-toplevel 2>/dev/null)
+    or set root $PWD
+
+    set -l name (basename "$root")
+    if test -z "$name"
+        set name main
+    end
+
+    cd "$root"; or return
+    zellij attach -c "$name"
+end
+
+# ---------------------------------------------------------------------------
 # Tool integrations
 # ---------------------------------------------------------------------------
 
