@@ -4,6 +4,9 @@ TARGET		:= $(HOME)
 # Shell dotfiles symlinked as ~/.<name>
 FILES		:= aliases local_gitconfig gitignore zshrc zshenv
 
+# Personal executables symlinked into ~/bin
+BIN_FILES	:= et
+
 # Keys in the global pi settings that are managed dynamically by pi
 # itself and should not be overwritten by the versioned config.
 PI_LOCAL_KEYS := packages lastChangelogVersion defaultProvider defaultModel
@@ -12,19 +15,36 @@ PI_LOCAL    := $(SOURCE)/pi/settings.json
 
 .PHONY: install clean all \
 	install_shell clean_shell \
+	install_bin clean_bin \
 	install_ghostty clean_ghostty \
 	install_starship clean_starship \
 	install_fish clean_fish \
 	install_nvim clean_nvim \
 	install_pi
 
+.PHONY: $(addprefix install_bin_,$(BIN_FILES)) $(addprefix clean_bin_,$(BIN_FILES))
+
+BIN_TARGETS := $(addprefix install_bin_,$(BIN_FILES))
+BIN_CLEAN_TARGETS := $(addprefix clean_bin_,$(BIN_FILES))
+
+$(BIN_TARGETS): install_bin_%:
+	@mkdir -p $(TARGET)/bin
+	@ln -sf $(SOURCE)/bin/$* $(TARGET)/bin/$*
+
+$(BIN_CLEAN_TARGETS): clean_bin_%:
+	@-unlink $(TARGET)/bin/$*
+
+install_bin: $(BIN_TARGETS)
+
+clean_bin: $(BIN_CLEAN_TARGETS)
+
 all: clean install
 
 # --- Aggregate targets ---
 
-install: install_shell install_ghostty install_starship install_fish install_nvim install_pi
+install: install_shell install_bin install_ghostty install_starship install_fish install_nvim install_pi
 
-clean: clean_shell clean_ghostty clean_starship clean_fish clean_nvim
+clean: clean_shell clean_bin clean_ghostty clean_starship clean_fish clean_nvim
 
 # --- Pi settings ---
 # Merge versioned settings into the global pi config, preserving

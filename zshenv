@@ -13,9 +13,9 @@ fi
 [[ -d "$HOME/bin" ]] && path=("$HOME/bin" $path)
 [[ -d "$HOME/.local/bin" ]] && path=("$HOME/.local/bin" $path)
 
-export EDITOR="nvim"
-export VISUAL="nvim"
-export GIT_EDITOR="nvim +star"
+export EDITOR="et"
+export VISUAL="et"
+export GIT_EDITOR="et"
 export BAT_THEME="ansi"
 
 if [[ -d "$HOME/.config/doom" ]]; then

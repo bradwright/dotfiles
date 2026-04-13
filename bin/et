@@ -1,0 +1,4 @@
+#!/bin/sh
+# -*- mode: sh -*-
+
+exec env TERM=xterm-256color emacsclient -t "$@"

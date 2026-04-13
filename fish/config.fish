@@ -20,9 +20,9 @@ if test -d ~/.config/doom
 end
 
 # Shared editor settings — keep these aligned with zshenv.
-set -gx EDITOR nvim
-set -gx VISUAL nvim
-set -gx GIT_EDITOR 'nvim +star'
+set -gx EDITOR et
+set -gx VISUAL et
+set -gx GIT_EDITOR et
 set -gx BAT_THEME ansi
 
 # Bail out early for non-interactive shells (scripts, scp, etc.)
@@ -48,9 +48,6 @@ abbr -a du  dust
 abbr -a top btm
 
 abbr -a picodex 'pi "/codex" --provider openai-codex --model gpt-5.3-codex'
-
-# TTY Emacs is more reliable with a generic TERM than Ghostty's custom one.
-alias et 'env TERM=xterm-256color emacsclient -t'
 
 # ---------------------------------------------------------------------------
 # Tool integrations
