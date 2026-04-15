@@ -121,6 +121,12 @@ fi
 # fzf shell integration (keybindings and completion)
 if command -v fzf > /dev/null; then
     eval "$(fzf --zsh)"
+    # Solarized Dark colors via ANSI names (let the terminal theme own hex)
+    export FZF_DEFAULT_OPTS=" \
+        --color=fg:-1,bg:-1,fg+:bright-cyan,bg+:black,hl:blue,hl+:blue \
+        --color=info:bright-green,prompt:yellow,pointer:cyan,marker:green \
+        --color=spinner:cyan,header:bright-green,border:bright-green \
+        --border=rounded --layout=reverse --height=~40%"
     # Use fd for fzf file search (respects .gitignore)
     export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
     export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"

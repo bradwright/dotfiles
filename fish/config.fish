@@ -72,6 +72,12 @@ end
 # fzf keybindings and completion
 if command -q fzf
     fzf --fish | source
+    # Solarized Dark colors via ANSI names (let the terminal theme own hex)
+    set -gx FZF_DEFAULT_OPTS " \
+        --color=fg:-1,bg:-1,fg+:bright-cyan,bg+:black,hl:blue,hl+:blue \
+        --color=info:bright-green,prompt:yellow,pointer:cyan,marker:green \
+        --color=spinner:cyan,header:bright-green,border:bright-green \
+        --border=rounded --layout=reverse --height=~40%"
     set -gx FZF_DEFAULT_COMMAND 'fd --type f --hidden --follow --exclude .git'
     set -gx FZF_CTRL_T_COMMAND $FZF_DEFAULT_COMMAND
     set -gx FZF_ALT_C_COMMAND 'fd --type d --hidden --follow --exclude .git'
