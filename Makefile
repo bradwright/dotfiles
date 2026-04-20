@@ -16,7 +16,7 @@ PI_LOCAL    := $(SOURCE)/pi/settings.json
 .PHONY: install clean all \
 	install_shell clean_shell \
 	install_bin clean_bin \
-	install_ghostty clean_ghostty \
+	install_ghostty install_ghostty_terminfo clean_ghostty \
 	install_starship clean_starship \
 	install_fish clean_fish \
 	install_nvim clean_nvim \
@@ -42,7 +42,7 @@ all: clean install
 
 # --- Aggregate targets ---
 
-install: install_shell install_bin install_ghostty install_starship install_fish install_nvim install_pi
+install: install_shell install_bin install_ghostty install_ghostty_terminfo install_starship install_fish install_nvim install_pi
 
 clean: clean_shell clean_bin clean_ghostty clean_starship clean_fish clean_nvim
 
@@ -82,8 +82,16 @@ install_ghostty:
 	@mkdir -p $(HOME)/.config/
 	@ln -sf $(SOURCE)/ghostty $(HOME)/.config/ghostty
 
+GHOSTTY_APP	:= /Applications/Ghostty.app
+
+install_ghostty_terminfo:
+	@if [ -d $(GHOSTTY_APP) ]; then \
+		infocmp -x xterm-ghostty | tic -x -o $(HOME)/.terminfo -; \
+	fi
+
 clean_ghostty:
 	@-unlink $(HOME)/.config/ghostty
+	@-rm -f $(HOME)/.terminfo/78/xterm-ghostty
 
 # --- Starship ---
 
