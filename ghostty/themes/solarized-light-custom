@@ -1,0 +1,59 @@
+# -*- mode: conf; -*-
+# ~/.config/ghostty/themes/solarized-light-custom
+# https://ethanschoonover.com/solarized/
+#
+# Solarized base tones (light mode mapping):
+#   base03  #002b36  background (dark mode)
+#   base02  #073642  background highlights (dark mode)
+#   base01  #586e75  optional emphasized content (light mode)
+#   base00  #657b83  primary content (light mode)
+#   base0   #839496  primary content (dark mode)
+#   base1   #93a1a1  optional emphasized content (dark mode)
+#   base2   #eee8d5  background highlights
+#   base3   #fdf6e3  background
+
+# base3
+background = #fdf6e3
+# base00
+foreground = #657b83
+# base00
+cursor-color = #657b83
+# base3
+cursor-text = #fdf6e3
+# base2
+selection-background = #eee8d5
+# base01
+selection-foreground = #586e75
+
+# black → base02
+palette = 0=#073642
+# red
+palette = 1=#dc322f
+# green
+palette = 2=#859900
+# yellow
+palette = 3=#b58900
+# blue
+palette = 4=#268bd2
+# magenta
+palette = 5=#d33682
+# cyan
+palette = 6=#2aa198
+# white → base2
+palette = 7=#eee8d5
+# br.black → base03
+palette = 8=#002b36
+# br.red → orange
+palette = 9=#cb4b16
+# br.green → base01
+palette = 10=#586e75
+# br.yellow → base00
+palette = 11=#657b83
+# br.blue → base0
+palette = 12=#839496
+# br.magenta → violet
+palette = 13=#6c71c4
+# br.cyan → base1
+palette = 14=#93a1a1
+# br.white → base3
+palette = 15=#fdf6e3
