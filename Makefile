@@ -13,6 +13,11 @@ PI_LOCAL_KEYS := packages lastChangelogVersion defaultProvider defaultModel
 PI_GLOBAL   := $(HOME)/.pi/agent/settings.json
 PI_LOCAL    := $(SOURCE)/pi/settings.json
 
+# Claude Code settings — merge versioned keys into the live config,
+# preserving any keys Claude Code manages dynamically.
+CLAUDE_GLOBAL := $(HOME)/.claude/settings.json
+CLAUDE_LOCAL  := $(SOURCE)/claude/settings.json
+
 .PHONY: install clean all \
 	install_shell clean_shell \
 	install_bin clean_bin \
@@ -20,7 +25,8 @@ PI_LOCAL    := $(SOURCE)/pi/settings.json
 	install_starship clean_starship \
 	install_fish clean_fish \
 	install_nvim clean_nvim \
-	install_pi
+	install_pi \
+	install_claude
 
 .PHONY: $(addprefix install_bin_,$(BIN_FILES)) $(addprefix clean_bin_,$(BIN_FILES))
 
@@ -42,7 +48,7 @@ all: clean install
 
 # --- Aggregate targets ---
 
-install: install_shell install_bin install_ghostty install_ghostty_terminfo install_starship install_fish install_nvim install_pi
+install: install_shell install_bin install_ghostty install_ghostty_terminfo install_starship install_fish install_nvim install_pi install_claude
 
 clean: clean_shell clean_bin clean_ghostty clean_starship clean_fish clean_nvim
 
@@ -60,6 +66,20 @@ install_pi:
 		&& mv $(PI_GLOBAL).tmp $(PI_GLOBAL); \
 	else \
 		cp $(PI_LOCAL) $(PI_GLOBAL); \
+	fi
+
+# --- Claude Code ---
+# Merge versioned settings on top of the live config so that keys
+# added dynamically by Claude Code are preserved.
+
+install_claude:
+	@mkdir -p $(dir $(CLAUDE_GLOBAL))
+	@if [ -f $(CLAUDE_GLOBAL) ]; then \
+		jq -s '.[0] * .[1]' $(CLAUDE_GLOBAL) $(CLAUDE_LOCAL) \
+		  > $(CLAUDE_GLOBAL).tmp \
+		&& mv $(CLAUDE_GLOBAL).tmp $(CLAUDE_GLOBAL); \
+	else \
+		cp $(CLAUDE_LOCAL) $(CLAUDE_GLOBAL); \
 	fi
 
 # --- Shell ---

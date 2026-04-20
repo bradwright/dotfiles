@@ -29,6 +29,9 @@ Today, `make install` manages:
   - `nvim/colors` → `~/.config/nvim/colors`
 - **Pi settings** — `pi/settings.json` is merged into
   `~/.pi/agent/settings.json`, preserving locally managed pi keys
+- **Claude Code settings** — `claude/settings.json` is merged into
+  `~/.claude/settings.json`, preserving any keys Claude Code manages
+  dynamically
 
 The repo also contains:
 
