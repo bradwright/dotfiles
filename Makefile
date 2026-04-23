@@ -25,6 +25,7 @@ CLAUDE_LOCAL  := $(SOURCE)/claude/settings.json
 	install_starship clean_starship \
 	install_fish clean_fish \
 	install_nvim clean_nvim \
+	install_hammerspoon clean_hammerspoon \
 	install_pi \
 	install_claude
 
@@ -48,9 +49,9 @@ all: clean install
 
 # --- Aggregate targets ---
 
-install: install_shell install_bin install_ghostty install_ghostty_terminfo install_starship install_fish install_nvim install_pi install_claude
+install: install_shell install_bin install_ghostty install_ghostty_terminfo install_starship install_fish install_nvim install_hammerspoon install_pi install_claude
 
-clean: clean_shell clean_bin clean_ghostty clean_starship clean_fish clean_nvim
+clean: clean_shell clean_bin clean_ghostty clean_starship clean_fish clean_nvim clean_hammerspoon
 
 # --- Pi settings ---
 # Merge versioned settings into the global pi config, preserving
@@ -149,4 +150,13 @@ clean_nvim:
 	@-unlink $(TARGET)/.config/nvim/init.lua
 	@-unlink $(TARGET)/.config/nvim/ftplugin/gitcommit.lua
 	@-unlink $(TARGET)/.config/nvim/colors
+
+# --- Hammerspoon ---
+
+install_hammerspoon:
+	@mkdir -p $(TARGET)/.hammerspoon/
+	@ln -sf $(SOURCE)/hammerspoon/init.lua $(TARGET)/.hammerspoon/init.lua
+
+clean_hammerspoon:
+	@-unlink $(TARGET)/.hammerspoon/init.lua
 

@@ -12,23 +12,27 @@ local deviceRules = {
   {
     vendorID = 4057,
     productID = 154,
-    app = "Elgato Stream Deck",
+    launchName = "Elgato Stream Deck",
+    runningName = "Stream Deck",
   },
   {
     vendorID = 4057,
     productID = 154,
-    app = "Elgato Control Center",
+    launchName = "Elgato Control Center",
+    runningName = "Elgato Control Center",
   },
   {
     vendorID = 11802,
     productID = 19457,
-    app = "Insta360 Link Controller",
+    launchName = "Insta360 Link Controller",
+    runningName = "Insta360 Link Controller",
   },
 }
 
 local lastLaunchAt = {}
 
-local function launchAppIfNeeded(appName, reason)
+local function launchAppIfNeeded(rule, reason)
+  local appName = rule.launchName
   local now = hs.timer.secondsSinceEpoch()
   local lastLaunch = lastLaunchAt[appName] or 0
 
@@ -42,7 +46,8 @@ local function launchAppIfNeeded(appName, reason)
   hs.application.launchOrFocus(appName)
 end
 
-local function quitAppIfRunning(appName, reason)
+local function quitAppIfRunning(rule, reason)
+  local appName = rule.runningName or rule.launchName
   local app = hs.application.get(appName)
   if not app then
     return
@@ -75,9 +80,13 @@ local function handleDeviceEvent(device, eventName)
       local reason = string.format("%s: %s / %s", eventName, vendorName, productName)
 
       if eventName == "initial-scan" or eventName == "usb-added" then
-        launchAppIfNeeded(rule.app, reason)
-      elseif eventName == "usb-removed" and not anyConnectedDeviceMatchesRule(rule) then
-        quitAppIfRunning(rule.app, reason)
+        launchAppIfNeeded(rule, reason)
+      elseif eventName == "usb-removed" then
+        hs.timer.doAfter(1, function()
+          if not anyConnectedDeviceMatchesRule(rule) then
+            quitAppIfRunning(rule, reason)
+          end
+        end)
       end
     end
   end
