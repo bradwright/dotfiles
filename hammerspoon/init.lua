@@ -26,11 +26,6 @@ local deviceRules = {
     productID = 19457,
     launchName = "Insta360 Link Controller",
     runningName = "Insta360 Link Controller",
-    postLaunchKeyStroke = {
-      delaySeconds = 3,
-      mods = {"ctrl", "alt", "cmd"},
-      key = "m",
-    },
   },
 }
 
@@ -49,14 +44,6 @@ local function launchAppIfNeeded(rule, reason)
   lastLaunchAt[appName] = now
   log.i(string.format("Launching %s (%s)", appName, reason))
   hs.application.launchOrFocus(appName)
-
-  if rule.postLaunchKeyStroke then
-    local k = rule.postLaunchKeyStroke
-    hs.timer.doAfter(k.delaySeconds, function()
-      log.i(string.format("Sending post-launch keystroke for %s", appName))
-      hs.eventtap.keyStroke(k.mods, k.key)
-    end)
-  end
 end
 
 local function quitAppIfRunning(rule, reason)
