@@ -98,6 +98,11 @@ if command -q zoxide
     zoxide init fish | source
 end
 
+# atuin (shell history search) — keep Ctrl-R replaced; leave up-arrow alone.
+if command -q atuin
+    atuin init fish --disable-up-arrow | source
+end
+
 # Emacs vterm shell integration (directory tracking, prompt marking, etc.)
 if test "$INSIDE_EMACS" = vterm; and set -q EMACS_VTERM_PATH; and test -f "$EMACS_VTERM_PATH/etc/emacs-vterm.fish"
     source "$EMACS_VTERM_PATH/etc/emacs-vterm.fish"

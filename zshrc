@@ -142,3 +142,8 @@ if command -v zoxide > /dev/null; then
     eval "$(zoxide init zsh)"
 fi
 
+# atuin (shell history search) — keep emacs Ctrl-R replaced; leave up-arrow alone.
+if command -v atuin > /dev/null; then
+    eval "$(atuin init zsh --disable-up-arrow)"
+fi
+

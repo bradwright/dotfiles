@@ -27,6 +27,7 @@ Today, `make install` manages:
   - `nvim/init.lua` → `~/.config/nvim/init.lua`
   - `nvim/ftplugin/gitcommit.lua` → `~/.config/nvim/ftplugin/gitcommit.lua`
   - `nvim/colors` → `~/.config/nvim/colors`
+- **`atuin/config.toml`** — symlinked to `~/.config/atuin/config.toml`
 - **Pi settings** — `pi/settings.json` is merged into
   `~/.pi/agent/settings.json`, preserving locally managed pi keys
 - **Claude Code settings** — `claude/settings.json` is merged into

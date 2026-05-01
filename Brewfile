@@ -3,6 +3,7 @@ cask_args appdir: '/Applications'
 
 tap 'homebrew/services'
 
+brew 'atuin'
 brew 'bat'
 brew 'bottom'
 brew 'direnv'

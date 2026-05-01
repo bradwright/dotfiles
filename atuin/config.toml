@@ -1,0 +1,14 @@
+# -*- mode: conf-toml -*-
+
+# Top-located search bar (renders above results instead of below).
+invert = true
+
+# Compact UI — drops the surrounding chrome so results fit a smaller window.
+style = "compact"
+
+# Emacs-style keybindings inside the search UI (Ctrl-A/E/W/etc.).
+keymap_mode = "emacs"
+
+# Inline height (lines) when not running fullscreen. Keeps the active
+# prompt visible above the search UI.
+inline_height = 20

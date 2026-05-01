@@ -26,6 +26,7 @@ CLAUDE_LOCAL  := $(SOURCE)/claude/settings.json
 	install_fish clean_fish \
 	install_nvim clean_nvim \
 	install_hammerspoon clean_hammerspoon \
+	install_atuin clean_atuin \
 	install_pi \
 	install_claude
 
@@ -49,9 +50,9 @@ all: clean install
 
 # --- Aggregate targets ---
 
-install: install_shell install_bin install_ghostty install_ghostty_terminfo install_starship install_fish install_nvim install_hammerspoon install_pi install_claude
+install: install_shell install_bin install_ghostty install_ghostty_terminfo install_starship install_fish install_nvim install_hammerspoon install_atuin install_pi install_claude
 
-clean: clean_shell clean_bin clean_ghostty clean_starship clean_fish clean_nvim clean_hammerspoon
+clean: clean_shell clean_bin clean_ghostty clean_starship clean_fish clean_nvim clean_hammerspoon clean_atuin
 
 # --- Pi settings ---
 # Merge versioned settings into the global pi config, preserving
@@ -159,4 +160,13 @@ install_hammerspoon:
 
 clean_hammerspoon:
 	@-unlink $(TARGET)/.hammerspoon/init.lua
+
+# --- Atuin ---
+
+install_atuin:
+	@mkdir -p $(TARGET)/.config/atuin/
+	@ln -sf $(SOURCE)/atuin/config.toml $(TARGET)/.config/atuin/config.toml
+
+clean_atuin:
+	@-unlink $(TARGET)/.config/atuin/config.toml
 
