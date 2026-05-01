@@ -9,6 +9,12 @@ style = "compact"
 # Emacs-style keybindings inside the search UI (Ctrl-A/E/W/etc.).
 keymap_mode = "emacs"
 
+# Filter history to the current Git repository when possible.
+workspaces = true
+
+# Show the selected command when it is longer than the results row.
+show_preview = true
+
 # Inline height (lines) when not running fullscreen. Keeps the active
 # prompt visible above the search UI.
 inline_height = 20

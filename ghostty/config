@@ -29,7 +29,7 @@ command = /opt/homebrew/bin/fish
 
 # Shell Integration
 shell-integration = detect
-shell-integration-features = cursor,sudo,title
+shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo
 
 # Mouse & Clipboard
 mouse-hide-while-typing = true
@@ -47,7 +47,10 @@ unfocused-split-fill = #073642
 confirm-close-surface = true
 window-save-state = always
 auto-update = check
+quick-terminal-position = top
+quick-terminal-size = 40%
 
 # Keybindings
 keybind = shift+enter=text:\x1b\r
 keybind = alt+backspace=text:\x17
+keybind = global:ctrl+backquote=toggle_quick_terminal
