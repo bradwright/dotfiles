@@ -101,6 +101,37 @@ end
 # atuin (shell history search) — keep Ctrl-R replaced; leave up-arrow alone.
 if command -q atuin
     atuin init fish --disable-up-arrow | source
+
+    # Atuin's compact interactive renderer clashes with the Solarized palette
+    # and currently ignores column config. Use Atuin as the history backend and
+    # fzf as the readable picker for Ctrl-R.
+    if command -q fzf
+        function __brad_atuin_fzf_search
+            set -l query (commandline -b)
+            set -l original_buffer (commandline -b)
+            set -l atuin_args search --cmd-only --limit 1000
+
+            if command -q git; and git rev-parse --show-toplevel >/dev/null 2>&1
+                set atuin_args $atuin_args --filter-mode workspace
+            end
+
+            set -l selected (
+                ATUIN_LOG=error atuin $atuin_args $query 2>/dev/null |
+                fzf --query "$query" --no-sort --height=~40% --layout=reverse --border=rounded
+            )
+
+            if test -n "$selected"
+                commandline -r "$selected"
+            else
+                commandline -r "$original_buffer"
+            end
+
+            commandline -f repaint
+        end
+
+        bind ctrl-r __brad_atuin_fzf_search
+        bind -M insert ctrl-r __brad_atuin_fzf_search
+    end
 end
 
 # Emacs vterm shell integration (directory tracking, prompt marking, etc.)

@@ -20,6 +20,7 @@ It currently manages:
 - `fish/config.fish` and `fish/fish_plugins` → `~/.config/fish/`
 - `nvim/init.lua`, `nvim/ftplugin/gitcommit.lua`, and `nvim/colors/` →
   `~/.config/nvim/`
+- `atuin/config.toml` → `~/.config/atuin/config.toml`
 - `pi/settings.json` merged into `~/.pi/agent/settings.json`
 
 The repo also contains:
