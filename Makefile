@@ -127,9 +127,10 @@ clean_starship:
 # --- Fish ---
 
 install_fish:
-	@mkdir -p $(TARGET)/.config/fish/
+	@mkdir -p $(TARGET)/.config/fish/conf.d/
 	@ln -sf $(SOURCE)/fish/config.fish $(TARGET)/.config/fish/config.fish
 	@ln -sf $(SOURCE)/fish/fish_plugins $(TARGET)/.config/fish/fish_plugins
+	@ln -sf $(SOURCE)/fish/conf.d/colors.fish $(TARGET)/.config/fish/conf.d/colors.fish
 	@# Generate fish-specific starship config — identical to the main one
 	@# except the prompt character is blue instead of purple.
 	@sed 's/\[❯\](purple)/[❯](blue)/' $(SOURCE)/starship.toml > $(TARGET)/.config/fish/starship.toml
@@ -137,6 +138,7 @@ install_fish:
 clean_fish:
 	@-unlink $(TARGET)/.config/fish/config.fish
 	@-unlink $(TARGET)/.config/fish/fish_plugins
+	@-unlink $(TARGET)/.config/fish/conf.d/colors.fish
 	@-rm -f $(TARGET)/.config/fish/starship.toml
 
 # --- Neovim ---

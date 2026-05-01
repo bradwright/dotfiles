@@ -21,6 +21,8 @@ Today, `make install` manages:
 - **`starship.toml`** — symlinked to `~/.config/starship.toml`
 - **`fish/config.fish`** and **`fish/fish_plugins`** — symlinked into
   `~/.config/fish/`
+- **`fish/conf.d/colors.fish`** — symlinked into `~/.config/fish/conf.d/`
+  (auto-sourced by fish on startup)
 - **Fish Starship config** — generated at `~/.config/fish/starship.toml` from
   the repo's `starship.toml`
 - **Neovim config**:
