@@ -15,6 +15,7 @@
         amend = commit --amend -C HEAD
         words = diff --word-diff
         prune-branches = !git branch -vv | grep ': gone]' | awk '{print $1}' | xargs git branch -d
+        dft = difftool --tool=difftastic
 [branch]
         autosetuprebase = always
 [push]
@@ -47,3 +48,10 @@
         line-numbers-zero-style = brightgreen black
 [merge]
         conflictstyle = zdiff3
+
+[difftool "difftastic"]
+        cmd = difft "$LOCAL" "$REMOTE"
+[difftool]
+        prompt = false
+[pager]
+        difftool = true
