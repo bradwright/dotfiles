@@ -129,8 +129,17 @@ if command -q atuin
             commandline -f repaint
         end
 
-        bind ctrl-r __brad_atuin_fzf_search
-        bind -M insert ctrl-r __brad_atuin_fzf_search
+        function __brad_bind_atuin_fzf_search
+            bind ctrl-r __brad_atuin_fzf_search
+            bind -M insert ctrl-r __brad_atuin_fzf_search
+        end
+
+        function fish_user_key_bindings
+            fzf --fish | source
+            __brad_bind_atuin_fzf_search
+        end
+
+        __brad_bind_atuin_fzf_search
     end
 end
 
