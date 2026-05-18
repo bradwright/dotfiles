@@ -18,6 +18,7 @@ Today, `make install` manages:
   - `zshrc`
   - `zshenv`
 - **`ghostty/`** — symlinked to `~/.config/ghostty`
+- **iTerm2 Solarized Dark color preset** — `iterm2/themes/solarized-dark-custom.itermcolors` is imported into iTerm2's `Custom Color Presets`; keep it in sync with `ghostty/themes/solarized-dark-custom`
 - **`starship.toml`** — symlinked to `~/.config/starship.toml`
 - **`fish/config.fish`** and **`fish/fish_plugins`** — symlinked into
   `~/.config/fish/`

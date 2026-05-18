@@ -18,10 +18,17 @@ PI_LOCAL    := $(SOURCE)/pi/settings.json
 CLAUDE_GLOBAL := $(HOME)/.claude/settings.json
 CLAUDE_LOCAL  := $(SOURCE)/claude/settings.json
 
+# iTerm2 color presets live in the app preferences under
+# "Custom Color Presets" after import.
+ITERM2_PREFS := $(HOME)/Library/Preferences/com.googlecode.iterm2.plist
+ITERM2_COLOR_PRESET := solarized-dark-custom
+ITERM2_COLOR_PRESET_FILE := $(SOURCE)/iterm2/themes/$(ITERM2_COLOR_PRESET).itermcolors
+
 .PHONY: install clean all \
 	install_shell clean_shell \
 	install_bin clean_bin \
 	install_ghostty install_ghostty_terminfo clean_ghostty \
+	install_iterm2 clean_iterm2 \
 	install_starship clean_starship \
 	install_fish clean_fish \
 	install_nvim clean_nvim \
@@ -50,9 +57,9 @@ all: clean install
 
 # --- Aggregate targets ---
 
-install: install_shell install_bin install_ghostty install_ghostty_terminfo install_starship install_fish install_nvim install_hammerspoon install_atuin install_pi install_claude
+install: install_shell install_bin install_ghostty install_ghostty_terminfo install_iterm2 install_starship install_fish install_nvim install_hammerspoon install_atuin install_pi install_claude
 
-clean: clean_shell clean_bin clean_ghostty clean_starship clean_fish clean_nvim clean_hammerspoon clean_atuin
+clean: clean_shell clean_bin clean_ghostty clean_iterm2 clean_starship clean_fish clean_nvim clean_hammerspoon clean_atuin
 
 # --- Pi settings ---
 # Merge versioned settings into the global pi config, preserving
@@ -114,6 +121,25 @@ install_ghostty_terminfo:
 clean_ghostty:
 	@-unlink $(HOME)/.config/ghostty
 	@-rm -f $(HOME)/.terminfo/78/xterm-ghostty
+
+# --- iTerm2 ---
+
+install_iterm2:
+	@mkdir -p "$(dir $(ITERM2_PREFS))"
+	@if [ ! -f "$(ITERM2_PREFS)" ]; then \
+		printf '%s\n' \
+		  '<?xml version="1.0" encoding="UTF-8"?>' \
+		  '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
+		  '<plist version="1.0"><dict/></plist>' \
+		  > "$(ITERM2_PREFS)"; \
+	fi
+	@plutil -insert "Custom Color Presets" -xml '<dict/>' "$(ITERM2_PREFS)" 2>/dev/null || true
+	@plutil -replace "Custom Color Presets.$(ITERM2_COLOR_PRESET)" -xml "$$(cat "$(ITERM2_COLOR_PRESET_FILE)")" "$(ITERM2_PREFS)"
+
+clean_iterm2:
+	@if [ -f "$(ITERM2_PREFS)" ]; then \
+		plutil -remove "Custom Color Presets.$(ITERM2_COLOR_PRESET)" "$(ITERM2_PREFS)" 2>/dev/null || true; \
+	fi
 
 # --- Starship ---
 

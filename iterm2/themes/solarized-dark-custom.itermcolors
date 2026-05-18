@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Keep in sync with ../../ghostty/themes/solarized-dark-custom.
+  This preset is a direct port of the Ghostty theme; update both together.
+-->
 <plist version="1.0">
 <dict>
   <key>Background Color</key>

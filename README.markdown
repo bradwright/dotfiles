@@ -16,6 +16,7 @@ It currently manages:
   - `zshrc` → `~/.zshrc`
   - `zshenv` → `~/.zshenv`
 - `ghostty/` → `~/.config/ghostty`
+- `iterm2/themes/solarized-dark-custom.itermcolors` → iTerm2's `Custom Color Presets`
 - `starship.toml` → `~/.config/starship.toml`
 - `fish/config.fish` and `fish/fish_plugins` → `~/.config/fish/`
 - `nvim/init.lua`, `nvim/ftplugin/gitcommit.lua`, and `nvim/colors/` →
@@ -43,6 +44,7 @@ That will:
 
 - create/update the symlinks listed above
 - create `~/.hushlogin`
+- import the Solarized Dark custom color preset into iTerm2
 - generate `~/.config/fish/starship.toml` from the main `starship.toml`
 - merge the versioned `pi/settings.json` into `~/.pi/agent/settings.json`
   while preserving keys that pi manages locally

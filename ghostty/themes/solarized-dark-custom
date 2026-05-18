@@ -2,6 +2,9 @@
 # ~/.config/ghostty/themes/solarized-dark-custom
 # https://ethanschoonover.com/solarized/
 #
+# Keep in sync with ../../iterm2/themes/solarized-dark-custom.itermcolors.
+# The iTerm2 preset is a direct port of these colors; update both together.
+#
 # Solarized base tones (dark mode mapping):
 #   base03  #002b36  background
 #   base02  #073642  background highlights
