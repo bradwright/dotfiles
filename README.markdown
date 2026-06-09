@@ -22,7 +22,10 @@ It currently manages:
 - `nvim/init.lua`, `nvim/ftplugin/gitcommit.lua`, and `nvim/colors/` →
   `~/.config/nvim/`
 - `atuin/config.toml` → `~/.config/atuin/config.toml`
-- `zed/settings.json` → `~/.config/zed/settings.json`
+- Zed config:
+  - `zed/settings.json` → `~/.config/zed/settings.json`
+  - `zed/themes/solarized-dark-custom.json` →
+    `~/.config/zed/themes/solarized-dark-custom.json`
 - `pi/settings.json` merged into `~/.pi/agent/settings.json`
 - `codex/themes/solarized-dark-custom.json` merged into
   `~/.codex/config.toml` as the Codex desktop dark theme
@@ -47,6 +50,8 @@ make install
 That will:
 
 - create/update the symlinks listed above
+- configure Zed to use `Solarized Dark Custom` for dark mode, backed by the
+  local theme in `zed/themes/solarized-dark-custom.json`
 - create `~/.hushlogin`
 - import the Solarized Dark custom color preset into iTerm2
 - generate `~/.config/fish/starship.toml` from the main `starship.toml`
