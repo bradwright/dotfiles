@@ -39,6 +39,7 @@ ITERM2_COLOR_PRESET_FILE := $(SOURCE)/iterm2/themes/$(ITERM2_COLOR_PRESET).iterm
 	install_nvim clean_nvim \
 	install_hammerspoon clean_hammerspoon \
 	install_atuin clean_atuin \
+	install_zed clean_zed \
 	install_pi \
 	install_claude \
 	install_codex clean_codex
@@ -63,9 +64,9 @@ all: clean install
 
 # --- Aggregate targets ---
 
-install: install_shell install_bin install_ghostty install_ghostty_terminfo install_iterm2 install_starship install_fish install_nvim install_hammerspoon install_atuin install_pi install_claude install_codex
+install: install_shell install_bin install_ghostty install_ghostty_terminfo install_iterm2 install_starship install_fish install_nvim install_hammerspoon install_atuin install_zed install_pi install_claude install_codex
 
-clean: clean_shell clean_bin clean_ghostty clean_iterm2 clean_starship clean_fish clean_nvim clean_hammerspoon clean_atuin clean_codex
+clean: clean_shell clean_bin clean_ghostty clean_iterm2 clean_starship clean_fish clean_nvim clean_hammerspoon clean_atuin clean_zed clean_codex
 
 # --- Pi settings ---
 # Merge versioned settings into the global pi config, preserving
@@ -213,3 +214,17 @@ install_atuin:
 
 clean_atuin:
 	@-unlink $(TARGET)/.config/atuin/config.toml
+<<<<<<< HEAD
+||||||| parent of 748c4b4 (Version control Zed settings)
+
+=======
+
+# --- Zed ---
+
+install_zed:
+	@mkdir -p $(TARGET)/.config/zed/
+	@ln -sf $(SOURCE)/zed/settings.json $(TARGET)/.config/zed/settings.json
+
+clean_zed:
+	@-unlink $(TARGET)/.config/zed/settings.json
+>>>>>>> 748c4b4 (Version control Zed settings)

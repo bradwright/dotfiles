@@ -22,6 +22,7 @@ It currently manages:
 - `nvim/init.lua`, `nvim/ftplugin/gitcommit.lua`, and `nvim/colors/` →
   `~/.config/nvim/`
 - `atuin/config.toml` → `~/.config/atuin/config.toml`
+- `zed/settings.json` → `~/.config/zed/settings.json`
 - `pi/settings.json` merged into `~/.pi/agent/settings.json`
 - `codex/themes/solarized-dark-custom.json` merged into
   `~/.codex/config.toml` as the Codex desktop dark theme
