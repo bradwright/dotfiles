@@ -18,6 +18,7 @@ PI_LOCAL    := $(SOURCE)/pi/settings.json
 CLAUDE_GLOBAL := $(HOME)/.claude/settings.json
 CLAUDE_LOCAL  := $(SOURCE)/claude/settings.json
 
+<<<<<<< HEAD
 # Codex desktop theme — merge versioned theme keys into the live config,
 # preserving providers, project trust, MCP servers, and other local state.
 CODEX_GLOBAL := $(HOME)/.codex/config.toml
@@ -28,6 +29,11 @@ CODEX_THEME  := $(SOURCE)/codex/themes/solarized-dark-custom.json
 ITERM2_PREFS := $(HOME)/Library/Preferences/com.googlecode.iterm2.plist
 ITERM2_COLOR_PRESET := solarized-dark-custom
 ITERM2_COLOR_PRESET_FILE := $(SOURCE)/iterm2/themes/$(ITERM2_COLOR_PRESET).itermcolors
+||||||| parent of e5962bc (Add Solarized Dark Zed theme)
+=======
+# Local Zed themes symlinked into ~/.config/zed/themes
+ZED_THEME_FILES := solarized-dark-custom.json
+>>>>>>> e5962bc (Add Solarized Dark Zed theme)
 
 .PHONY: install clean all \
 	install_shell clean_shell \
@@ -214,17 +220,18 @@ install_atuin:
 
 clean_atuin:
 	@-unlink $(TARGET)/.config/atuin/config.toml
-<<<<<<< HEAD
-||||||| parent of 748c4b4 (Version control Zed settings)
-
-=======
 
 # --- Zed ---
 
 install_zed:
-	@mkdir -p $(TARGET)/.config/zed/
+	@mkdir -p $(TARGET)/.config/zed/themes/
 	@ln -sf $(SOURCE)/zed/settings.json $(TARGET)/.config/zed/settings.json
+	@for f in $(ZED_THEME_FILES); do \
+		ln -sf $(SOURCE)/zed/themes/$$f $(TARGET)/.config/zed/themes/$$f; \
+	done
 
 clean_zed:
 	@-unlink $(TARGET)/.config/zed/settings.json
->>>>>>> 748c4b4 (Version control Zed settings)
+	@-for f in $(ZED_THEME_FILES); do \
+		unlink $(TARGET)/.config/zed/themes/$$f; \
+	done
