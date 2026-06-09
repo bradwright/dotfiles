@@ -18,6 +18,11 @@ PI_LOCAL    := $(SOURCE)/pi/settings.json
 CLAUDE_GLOBAL := $(HOME)/.claude/settings.json
 CLAUDE_LOCAL  := $(SOURCE)/claude/settings.json
 
+# Codex desktop theme — merge versioned theme keys into the live config,
+# preserving providers, project trust, MCP servers, and other local state.
+CODEX_GLOBAL := $(HOME)/.codex/config.toml
+CODEX_THEME  := $(SOURCE)/codex/themes/solarized-dark-custom.json
+
 # iTerm2 color presets live in the app preferences under
 # "Custom Color Presets" after import.
 ITERM2_PREFS := $(HOME)/Library/Preferences/com.googlecode.iterm2.plist
@@ -35,7 +40,8 @@ ITERM2_COLOR_PRESET_FILE := $(SOURCE)/iterm2/themes/$(ITERM2_COLOR_PRESET).iterm
 	install_hammerspoon clean_hammerspoon \
 	install_atuin clean_atuin \
 	install_pi \
-	install_claude
+	install_claude \
+	install_codex clean_codex
 
 .PHONY: $(addprefix install_bin_,$(BIN_FILES)) $(addprefix clean_bin_,$(BIN_FILES))
 
@@ -57,9 +63,9 @@ all: clean install
 
 # --- Aggregate targets ---
 
-install: install_shell install_bin install_ghostty install_ghostty_terminfo install_iterm2 install_starship install_fish install_nvim install_hammerspoon install_atuin install_pi install_claude
+install: install_shell install_bin install_ghostty install_ghostty_terminfo install_iterm2 install_starship install_fish install_nvim install_hammerspoon install_atuin install_pi install_claude install_codex
 
-clean: clean_shell clean_bin clean_ghostty clean_iterm2 clean_starship clean_fish clean_nvim clean_hammerspoon clean_atuin
+clean: clean_shell clean_bin clean_ghostty clean_iterm2 clean_starship clean_fish clean_nvim clean_hammerspoon clean_atuin clean_codex
 
 # --- Pi settings ---
 # Merge versioned settings into the global pi config, preserving
@@ -90,6 +96,16 @@ install_claude:
 	else \
 		cp $(CLAUDE_LOCAL) $(CLAUDE_GLOBAL); \
 	fi
+
+# --- Codex ---
+# Apply only the desktop dark theme fields. Everything else in
+# ~/.codex/config.toml remains locally managed by Codex.
+
+install_codex:
+	@sh $(SOURCE)/scripts/install-codex-theme.sh "$(CODEX_GLOBAL)" "$(CODEX_THEME)"
+
+clean_codex:
+	@sh $(SOURCE)/scripts/install-codex-theme.sh --clean "$(CODEX_GLOBAL)"
 
 # --- Shell ---
 
@@ -197,4 +213,3 @@ install_atuin:
 
 clean_atuin:
 	@-unlink $(TARGET)/.config/atuin/config.toml
-

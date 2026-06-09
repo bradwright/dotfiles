@@ -23,6 +23,8 @@ It currently manages:
   `~/.config/nvim/`
 - `atuin/config.toml` → `~/.config/atuin/config.toml`
 - `pi/settings.json` merged into `~/.pi/agent/settings.json`
+- `codex/themes/solarized-dark-custom.json` merged into
+  `~/.codex/config.toml` as the Codex desktop dark theme
 
 The repo also contains:
 
@@ -30,6 +32,7 @@ The repo also contains:
 - `scripts/` and `patches/` for applying and rolling back local pi patches
 - `pi/`, a separate pi package with extensions, skills, themes, and custom
   agents
+- `codex/`, Codex app theme assets
 
 Installation
 ------------
@@ -48,6 +51,9 @@ That will:
 - generate `~/.config/fish/starship.toml` from the main `starship.toml`
 - merge the versioned `pi/settings.json` into `~/.pi/agent/settings.json`
   while preserving keys that pi manages locally
+- merge the Solarized Dark custom Codex theme into `~/.codex/config.toml`
+  while preserving providers, project trust, MCP servers, and other local
+  Codex settings
 
 To remove the installed symlinks and generated files:
 

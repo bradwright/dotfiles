@@ -36,6 +36,9 @@ Today, `make install` manages:
 - **Claude Code settings** — `claude/settings.json` is merged into
   `~/.claude/settings.json`, preserving any keys Claude Code manages
   dynamically
+- **Codex desktop theme** — `codex/themes/solarized-dark-custom.json` is merged
+  into `~/.codex/config.toml`, preserving providers, project trust, MCP
+  servers, and other local Codex state
 
 The repo also contains:
 
@@ -43,6 +46,7 @@ The repo also contains:
 - **`scripts/`** — helper scripts for applying and rolling back local pi
   patches
 - **`patches/`** — patch files consumed by those scripts
+- **`codex/`** — Codex app theme assets
 - **`pi/`** — a pi package containing extensions, skills, themes, install
   script, and custom agent definitions
 - **`CLAUDE.md`** — Claude-specific repo instructions
@@ -153,7 +157,8 @@ There is no automated test suite. After making changes, verify correctness by:
    fish -n <file>
    ```
 3. Running `brew bundle check` after `Brewfile` edits.
-4. For `Makefile` changes, sanity-checking the affected install/clean behavior.
+4. Validating Codex theme JSON with `jq`.
+5. For `Makefile` changes, sanity-checking the affected install/clean behavior.
 
 ## What not to do
 
