@@ -43,12 +43,16 @@ if [ "$mode" = install ]; then
   jq -e '
     .variant == "dark"
     and (.codeThemeId | type == "string")
+    and (.codeFontSize | type == "number")
+    and (.sansFontSize | type == "number")
     and (.theme.surface | type == "string")
     and (.theme.ink | type == "string")
     and (.theme.accent | type == "string")
     and (.theme.contrast | type == "number")
     and (.theme.opaqueWindows | type == "boolean")
     and (.theme.fonts | type == "object")
+    and (.theme.fonts.code | type == "string")
+    and ((.theme.fonts.ui == null) or (.theme.fonts.ui | type == "string"))
     and (.theme.semanticColors | type == "object")
   ' "$theme" >/dev/null
 
@@ -60,8 +64,12 @@ theme_snippet=
 trap 'rm -f "$tmp" ${theme_snippet:+"$theme_snippet"}' EXIT HUP INT TERM
 
 code_theme_line=
+code_font_size_line=
+sans_font_size_line=
 if [ "$mode" = install ]; then
   code_theme_line="appearanceDarkCodeThemeId = $(jq -r '.codeThemeId | @json' "$theme")"
+  code_font_size_line="codeFontSize = $(jq -r '.codeFontSize' "$theme")"
+  sans_font_size_line="sansFontSize = $(jq -r '.sansFontSize' "$theme")"
   theme_snippet=$(mktemp "${TMPDIR:-/tmp}/codex-theme.XXXXXX")
 
   {
@@ -93,16 +101,26 @@ if [ -f "$target" ]; then
   input=$target
 fi
 
-awk -v mode="$mode" -v code_theme_line="$code_theme_line" '
+awk \
+  -v mode="$mode" \
+  -v code_theme_line="$code_theme_line" \
+  -v code_font_size_line="$code_font_size_line" \
+  -v sans_font_size_line="$sans_font_size_line" '
 function is_theme_section(header) {
   return header == "[desktop.appearanceDarkChromeTheme]" ||
     header == "[desktop.appearanceDarkChromeTheme.fonts]" ||
     header == "[desktop.appearanceDarkChromeTheme.semanticColors]"
 }
 
-function maybe_insert_code_theme() {
+function is_managed_desktop_key(line) {
+  return line ~ /^[[:space:]]*(appearanceDarkCodeThemeId|codeFontSize|sansFontSize)[[:space:]]*=/
+}
+
+function maybe_insert_desktop_snippet() {
   if (mode == "install" && in_desktop && !inserted) {
     print code_theme_line
+    print code_font_size_line
+    print sans_font_size_line
     inserted = 1
   }
 }
@@ -115,7 +133,7 @@ BEGIN {
 }
 
 $0 ~ /^[[:space:]]*\[[^]]+\][[:space:]]*(#.*)?$/ {
-  maybe_insert_code_theme()
+  maybe_insert_desktop_snippet()
 
   header = $0
   sub(/^[[:space:]]*/, "", header)
@@ -138,7 +156,7 @@ drop {
   next
 }
 
-in_desktop && $0 ~ /^[[:space:]]*appearanceDarkCodeThemeId[[:space:]]*=/ {
+in_desktop && is_managed_desktop_key($0) {
   next
 }
 
@@ -147,13 +165,15 @@ in_desktop && $0 ~ /^[[:space:]]*appearanceDarkCodeThemeId[[:space:]]*=/ {
 }
 
 END {
-  maybe_insert_code_theme()
+  maybe_insert_desktop_snippet()
   if (mode == "install" && !saw_desktop) {
     if (NR > 0) {
       print ""
     }
     print "[desktop]"
     print code_theme_line
+    print code_font_size_line
+    print sans_font_size_line
   }
 }
 ' "$input" > "$tmp"

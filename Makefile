@@ -18,8 +18,8 @@ PI_LOCAL    := $(SOURCE)/pi/settings.json
 CLAUDE_GLOBAL := $(HOME)/.claude/settings.json
 CLAUDE_LOCAL  := $(SOURCE)/claude/settings.json
 
-# Codex desktop theme — merge versioned theme keys into the live config,
-# preserving providers, project trust, MCP servers, and other local state.
+# Codex desktop appearance — merge versioned theme and font keys into the live
+# config, preserving providers, project trust, MCP servers, and other local state.
 CODEX_GLOBAL := $(HOME)/.codex/config.toml
 CODEX_THEME  := $(SOURCE)/codex/themes/solarized-dark-custom.json
 
@@ -101,7 +101,7 @@ install_claude:
 	fi
 
 # --- Codex ---
-# Apply only the desktop dark theme fields. Everything else in
+# Apply only the desktop appearance fields. Everything else in
 # ~/.codex/config.toml remains locally managed by Codex.
 
 install_codex:

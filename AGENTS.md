@@ -36,9 +36,9 @@ Today, `make install` manages:
 - **Claude Code settings** — `claude/settings.json` is merged into
   `~/.claude/settings.json`, preserving any keys Claude Code manages
   dynamically
-- **Codex desktop theme** — `codex/themes/solarized-dark-custom.json` is merged
-  into `~/.codex/config.toml`, preserving providers, project trust, MCP
-  servers, and other local Codex state
+- **Codex desktop appearance** — `codex/themes/solarized-dark-custom.json`
+  is merged into `~/.codex/config.toml`, preserving providers, project trust,
+  MCP servers, and other local Codex state
 
 The repo also contains:
 

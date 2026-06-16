@@ -1,5 +1,7 @@
 {
   "codeThemeId": "solarized",
+  "codeFontSize": 16,
+  "sansFontSize": 16,
   "theme": {
     "accent": "#268bd2",
     "contrast": 54,

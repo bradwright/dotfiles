@@ -28,7 +28,7 @@ It currently manages:
     `~/.config/zed/themes/solarized-dark-custom.json`
 - `pi/settings.json` merged into `~/.pi/agent/settings.json`
 - `codex/themes/solarized-dark-custom.json` merged into
-  `~/.codex/config.toml` as the Codex desktop dark theme
+  `~/.codex/config.toml` as the Codex desktop dark appearance
 
 The repo also contains:
 
@@ -57,7 +57,7 @@ That will:
 - generate `~/.config/fish/starship.toml` from the main `starship.toml`
 - merge the versioned `pi/settings.json` into `~/.pi/agent/settings.json`
   while preserving keys that pi manages locally
-- merge the Solarized Dark custom Codex theme into `~/.codex/config.toml`
+- merge the Solarized Dark custom Codex appearance into `~/.codex/config.toml`
   while preserving providers, project trust, MCP servers, and other local
   Codex settings
 
