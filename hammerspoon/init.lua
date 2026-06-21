@@ -8,6 +8,10 @@ local log = hs.logger.new("usb-launch", "info")
 
 local APP_LAUNCH_COOLDOWN_SECONDS = 5
 
+-- Delay after wake before reconciling app state, giving USB devices time to
+-- re-enumerate so we don't falsely quit an app whose device is still attaching.
+local WAKE_RECONCILE_DELAY_SECONDS = 3
+
 local deviceRules = {
   {
     vendorID = 4057,
@@ -98,6 +102,19 @@ local function scanConnectedDevices()
   end
 end
 
+-- Reconcile every rule against the currently attached USB devices: launch the
+-- app when its device is present, quit it when the device is absent. Used on
+-- wake so that waking without the USB devices attached closes the apps.
+local function reconcileDevices(reason)
+  for _, rule in ipairs(deviceRules) do
+    if anyConnectedDeviceMatchesRule(rule) then
+      launchAppIfNeeded(rule, reason)
+    else
+      quitAppIfRunning(rule, reason)
+    end
+  end
+end
+
 local usbWatcher = hs.usb.watcher.new(function(data)
   if data.eventType == "added" then
     handleDeviceEvent(data, "usb-added")
@@ -108,5 +125,15 @@ end)
 
 usbWatcher:start()
 scanConnectedDevices()
+
+local caffeinateWatcher = hs.caffeinate.watcher.new(function(eventType)
+  if eventType == hs.caffeinate.watcher.systemDidWake then
+    hs.timer.doAfter(WAKE_RECONCILE_DELAY_SECONDS, function()
+      reconcileDevices("system-wake")
+    end)
+  end
+end)
+
+caffeinateWatcher:start()
 
 log.i("USB app watcher started")
