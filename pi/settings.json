@@ -1,5 +1,5 @@
 {
-  "defaultThinkingLevel": "medium",
+  "defaultThinkingLevel": "xhigh",
   "theme": "solarized-dark",
   "showHardwareCursor": true,
   "editorPaddingX": 0,
@@ -12,7 +12,8 @@
   },
   "terminal": {
     "showImages": false,
-    "clearOnShrink": false
+    "clearOnShrink": false,
+    "showTerminalProgress": true
   },
   "images": {
     "blockImages": true
@@ -24,9 +25,10 @@
   },
   "enabledModels": [
     "gpt-5.5",
-    "claude-opus-4-7",
+    "claude-opus-4-8",
     "claude-sonnet-4-6",
     "gpt-5.3-codex"
   ],
+  "hideThinkingBlock": true,
   "packages": []
 }
