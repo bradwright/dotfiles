@@ -4,6 +4,16 @@ This directory contains project-local Pi extensions.
 
 ## Files
 
+- `auto-session-name.ts`
+  - Auto-renames the current Pi session using the cheapest available model, so the session selector reads like a to-do list instead of identical first lines.
+  - On by default for every session; names after the first exchange and proactively on resume/reload/fork when a session has content but no name yet.
+  - Re-evaluates every N user messages (`PI_AUTONAME_EVERY`, default 5) to track topic drift.
+  - Runs only in the interactive TUI (never subagents/headless). Backs off permanently once it detects a name the user set themselves (`/name`, `--name`).
+  - Picks the cheapest model with auth automatically; override via `/autoname model <id>`, `--autoname-model <id>`, or `$PI_AUTONAME_MODEL`.
+  - Persists state as custom session entries so it survives `/reload`, `/resume`, and `/fork`.
+  - `/autoname` command: `now` (force rename), `on` / `off`, `model <id>`, or no args for status.
+  - Env/flags: `PI_AUTONAME_MODEL`, `PI_AUTONAME_EVERY`, `PI_AUTONAME_DEFAULT=off`, `PI_AUTONAME_DEBUG=1`.
+
 - `github-statusline.ts`
   - Replaces the default Pi footer with a custom statusline.
   - Top line:

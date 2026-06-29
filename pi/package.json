@@ -8,6 +8,7 @@
   },
   "pi": {
     "extensions": [
+      "./extensions/auto-session-name.ts",
       "./extensions/github-statusline.ts",
       "./extensions/plan.ts",
       "./extensions/build/index.ts"
