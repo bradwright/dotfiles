@@ -11,6 +11,7 @@ local APP_LAUNCH_COOLDOWN_SECONDS = 5
 -- Delay after wake before reconciling app state, giving USB devices time to
 -- re-enumerate so we don't falsely quit an app whose device is still attaching.
 local WAKE_RECONCILE_DELAY_SECONDS = 3
+local USB_REMOVAL_RECHECK_DELAY_SECONDS = 1
 
 local deviceRules = {
   {
@@ -34,6 +35,12 @@ local deviceRules = {
 }
 
 local lastLaunchAt = {}
+
+-- Last stable attached/absent state for the USB devices we manage. Wake can
+-- trigger USB re-enumeration events, so use this to avoid re-launching apps
+-- unless the effective USB state changed while the machine was asleep.
+local lastKnownDeviceState = nil
+local wakeReconcilePending = false
 
 local function launchAppIfNeeded(rule, reason)
   local appName = rule.launchName
@@ -65,6 +72,63 @@ local function deviceMatchesRule(device, rule)
   return device.vendorID == rule.vendorID and device.productID == rule.productID
 end
 
+local function deviceKey(vendorID, productID)
+  return string.format("%s:%s", tostring(vendorID), tostring(productID))
+end
+
+local function deviceKeyForDevice(device)
+  return deviceKey(device.vendorID, device.productID)
+end
+
+local function deviceKeyForRule(rule)
+  return deviceKey(rule.vendorID, rule.productID)
+end
+
+local function matchingRulesForDevice(device)
+  local matchingRules = {}
+
+  for _, rule in ipairs(deviceRules) do
+    if deviceMatchesRule(device, rule) then
+      table.insert(matchingRules, rule)
+    end
+  end
+
+  return matchingRules
+end
+
+local function connectedDeviceState()
+  local state = {}
+
+  for _, rule in ipairs(deviceRules) do
+    state[deviceKeyForRule(rule)] = false
+  end
+
+  for _, device in ipairs(hs.usb.attachedDevices() or {}) do
+    for _, rule in ipairs(deviceRules) do
+      if deviceMatchesRule(device, rule) then
+        state[deviceKeyForRule(rule)] = true
+      end
+    end
+  end
+
+  return state
+end
+
+local function deviceStatesMatch(left, right)
+  if not left or not right then
+    return false
+  end
+
+  for _, rule in ipairs(deviceRules) do
+    local key = deviceKeyForRule(rule)
+    if left[key] ~= right[key] then
+      return false
+    end
+  end
+
+  return true
+end
+
 local function anyConnectedDeviceMatchesRule(rule)
   for _, device in ipairs(hs.usb.attachedDevices() or {}) do
     if deviceMatchesRule(device, rule) then
@@ -76,23 +140,55 @@ local function anyConnectedDeviceMatchesRule(rule)
 end
 
 local function handleDeviceEvent(device, eventName)
+  local matchingRules = matchingRulesForDevice(device)
+  if #matchingRules == 0 then
+    return
+  end
+
   local productName = device.productName or ""
   local vendorName = device.vendorName or ""
+  local reason = string.format("%s: %s / %s", eventName, vendorName, productName)
+  local key = deviceKeyForDevice(device)
 
-  for _, rule in ipairs(deviceRules) do
-    if deviceMatchesRule(device, rule) then
-      local reason = string.format("%s: %s / %s", eventName, vendorName, productName)
-
-      if eventName == "initial-scan" or eventName == "usb-added" then
-        launchAppIfNeeded(rule, reason)
-      elseif eventName == "usb-removed" then
-        hs.timer.doAfter(1, function()
-          if not anyConnectedDeviceMatchesRule(rule) then
-            quitAppIfRunning(rule, reason)
-          end
-        end)
-      end
+  if eventName == "initial-scan" then
+    for _, rule in ipairs(matchingRules) do
+      launchAppIfNeeded(rule, reason)
     end
+  elseif eventName == "usb-added" then
+    if lastKnownDeviceState and lastKnownDeviceState[key] then
+      log.i(string.format("Skipping app launch; USB state already connected (%s)", reason))
+      return
+    end
+
+    for _, rule in ipairs(matchingRules) do
+      launchAppIfNeeded(rule, reason)
+    end
+
+    if lastKnownDeviceState then
+      lastKnownDeviceState[key] = true
+    end
+  elseif eventName == "usb-removed" then
+    local recheckDelay = USB_REMOVAL_RECHECK_DELAY_SECONDS
+    if wakeReconcilePending then
+      recheckDelay = WAKE_RECONCILE_DELAY_SECONDS
+    end
+
+    hs.timer.doAfter(recheckDelay, function()
+      if anyConnectedDeviceMatchesRule(matchingRules[1]) then
+        if lastKnownDeviceState then
+          lastKnownDeviceState[key] = true
+        end
+        return
+      end
+
+      for _, rule in ipairs(matchingRules) do
+        quitAppIfRunning(rule, reason)
+      end
+
+      if lastKnownDeviceState then
+        lastKnownDeviceState[key] = false
+      end
+    end)
   end
 end
 
@@ -102,18 +198,23 @@ local function scanConnectedDevices()
   end
 end
 
--- Reconcile every rule against the currently attached USB devices: launch the
--- app when its device is present, quit it when the device is absent. Used on
--- wake so that waking without the USB devices attached closes the apps.
-local function reconcileDevices(reason)
+-- Reconcile only rules whose attached/absent state changed while asleep: launch
+-- the app when its device appeared, quit it when its device disappeared.
+local function reconcileChangedDevices(previousState, currentState, reason)
   for _, rule in ipairs(deviceRules) do
-    if anyConnectedDeviceMatchesRule(rule) then
-      launchAppIfNeeded(rule, reason)
-    else
-      quitAppIfRunning(rule, reason)
+    local key = deviceKeyForRule(rule)
+
+    if not previousState or previousState[key] ~= currentState[key] then
+      if currentState[key] then
+        launchAppIfNeeded(rule, reason)
+      else
+        quitAppIfRunning(rule, reason)
+      end
     end
   end
 end
+
+lastKnownDeviceState = connectedDeviceState()
 
 local usbWatcher = hs.usb.watcher.new(function(data)
   if data.eventType == "added" then
@@ -127,9 +228,28 @@ usbWatcher:start()
 scanConnectedDevices()
 
 local caffeinateWatcher = hs.caffeinate.watcher.new(function(eventType)
-  if eventType == hs.caffeinate.watcher.systemDidWake then
+  if eventType == hs.caffeinate.watcher.systemWillSleep then
+    lastKnownDeviceState = connectedDeviceState()
+    wakeReconcilePending = true
+  elseif eventType == hs.caffeinate.watcher.systemDidWake then
+    wakeReconcilePending = true
+
     hs.timer.doAfter(WAKE_RECONCILE_DELAY_SECONDS, function()
-      reconcileDevices("system-wake")
+      local currentDeviceState = connectedDeviceState()
+
+      if deviceStatesMatch(lastKnownDeviceState, currentDeviceState) then
+        log.i("Skipping wake reconcile; USB state unchanged")
+        wakeReconcilePending = false
+        return
+      end
+
+      reconcileChangedDevices(
+        lastKnownDeviceState,
+        currentDeviceState,
+        "system-wake USB state changed"
+      )
+      lastKnownDeviceState = currentDeviceState
+      wakeReconcilePending = false
     end)
   end
 end)
