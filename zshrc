@@ -147,3 +147,11 @@ if command -v atuin > /dev/null; then
     eval "$(atuin init zsh --disable-up-arrow)"
 fi
 
+
+# pnpm
+export PNPM_HOME="/Users/bradwright/Library/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+esac
+# pnpm end

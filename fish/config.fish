@@ -14,6 +14,10 @@ end
 # Personal scripts
 fish_add_path --prepend ~/bin ~/.local/bin
 
+# pnpm global binaries
+set -gx PNPM_HOME "$HOME/Library/pnpm"
+fish_add_path --prepend "$PNPM_HOME/bin"
+
 # Doom Emacs
 if test -d ~/.config/doom
     fish_add_path --prepend ~/.config/emacs/bin /Applications/Emacs.app/Contents/MacOS
