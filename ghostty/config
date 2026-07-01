@@ -27,6 +27,12 @@ selection-invert-fg-bg = true
 # system login shell (which stays zsh for compatibility).
 command = /opt/homebrew/bin/fish
 
+# Start fresh windows and tabs in $HOME instead of inheriting macOS' /
+# launch directory. Splits still inherit the active tab/pane's directory.
+working-directory = home
+tab-inherit-working-directory = false
+split-inherit-working-directory = true
+
 # Shell Integration
 shell-integration = detect
 shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo
