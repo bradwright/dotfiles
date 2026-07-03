@@ -110,11 +110,7 @@ if [[ -n "$brew_prefix" ]]; then
 fi
 
 if command -v antigen > /dev/null; then
-    # Lazy load NVM to avoid startup hit
-    export NVM_LAZY_LOAD=true
-
     antigen bundle brew
-    antigen bundle lukechilds/zsh-nvm
     antigen apply
 fi
 
@@ -147,11 +143,9 @@ if command -v atuin > /dev/null; then
     eval "$(atuin init zsh --disable-up-arrow)"
 fi
 
-
-# pnpm
-export PNPM_HOME="/Users/bradwright/Library/pnpm"
+# pnpm global binaries
+export PNPM_HOME="$HOME/Library/pnpm"
 case ":$PATH:" in
   *":$PNPM_HOME/bin:"*) ;;
   *) export PATH="$PNPM_HOME/bin:$PATH" ;;
 esac
-# pnpm end

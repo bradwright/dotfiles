@@ -89,9 +89,6 @@ if command -q fzf
     set -gx FZF_ALT_C_OPTS "--preview 'eza --tree --level=2 {}'"
 end
 
-# nvm.fish — lazy-loads nvm so there's no startup cost
-set -gx nvm_default_version lts
-
 # direnv (project-local environment)
 if command -q direnv
     direnv hook fish | source
