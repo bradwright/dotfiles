@@ -13,6 +13,12 @@ local APP_LAUNCH_COOLDOWN_SECONDS = 5
 local WAKE_RECONCILE_DELAY_SECONDS = 3
 local USB_REMOVAL_RECHECK_DELAY_SECONDS = 1
 
+-- Backstop heartbeat: periodically enforce the invariant that each managed app
+-- runs if and only if its USB device is attached. Covers state changes the
+-- event watchers cannot see, e.g. a device removed while Hammerspoon was not
+-- running (after a reload or relaunch), so no usb-removed event was delivered.
+local HEARTBEAT_INTERVAL_SECONDS = 15
+
 local deviceRules = {
   {
     vendorID = 4057,
@@ -150,11 +156,7 @@ local function handleDeviceEvent(device, eventName)
   local reason = string.format("%s: %s / %s", eventName, vendorName, productName)
   local key = deviceKeyForDevice(device)
 
-  if eventName == "initial-scan" then
-    for _, rule in ipairs(matchingRules) do
-      launchAppIfNeeded(rule, reason)
-    end
-  elseif eventName == "usb-added" then
+  if eventName == "usb-added" then
     if lastKnownDeviceState and lastKnownDeviceState[key] then
       log.i(string.format("Skipping app launch; USB state already connected (%s)", reason))
       return
@@ -192,9 +194,32 @@ local function handleDeviceEvent(device, eventName)
   end
 end
 
-local function scanConnectedDevices()
-  for _, device in ipairs(hs.usb.attachedDevices() or {}) do
-    handleDeviceEvent(device, "initial-scan")
+-- Enforce the invariant for a single rule: the app runs if and only if its USB
+-- device is currently attached.
+local function reconcileRule(rule, reason)
+  local key = deviceKeyForRule(rule)
+
+  if anyConnectedDeviceMatchesRule(rule) then
+    -- Only launch when the app is absent. launchOrFocus() would activate (and
+    -- steal focus to) an already-running app, which the heartbeat would
+    -- otherwise do on every tick.
+    if not hs.application.get(rule.runningName or rule.launchName) then
+      launchAppIfNeeded(rule, reason)
+    end
+    if lastKnownDeviceState then
+      lastKnownDeviceState[key] = true
+    end
+  else
+    quitAppIfRunning(rule, reason)
+    if lastKnownDeviceState then
+      lastKnownDeviceState[key] = false
+    end
+  end
+end
+
+local function reconcileAllRules(reason)
+  for _, rule in ipairs(deviceRules) do
+    reconcileRule(rule, reason)
   end
 end
 
@@ -225,7 +250,7 @@ local usbWatcher = hs.usb.watcher.new(function(data)
 end)
 
 usbWatcher:start()
-scanConnectedDevices()
+reconcileAllRules("startup")
 
 local caffeinateWatcher = hs.caffeinate.watcher.new(function(eventType)
   if eventType == hs.caffeinate.watcher.systemWillSleep then
@@ -255,5 +280,33 @@ local caffeinateWatcher = hs.caffeinate.watcher.new(function(eventType)
 end)
 
 caffeinateWatcher:start()
+
+-- Correctness backstop for transitions the watchers cannot observe (e.g. a
+-- device removed while Hammerspoon was not running). Skip while a wake
+-- reconcile is pending so we don't fight USB re-enumeration right after wake
+-- and cause a quit/relaunch flicker.
+local heartbeatTimer = hs.timer.doEvery(HEARTBEAT_INTERVAL_SECONDS, function()
+  if wakeReconcilePending then
+    return
+  end
+
+  reconcileAllRules("heartbeat")
+end)
+
+-- Auto-reload when the config changes so a long-running Hammerspoon never keeps
+-- executing stale logic. ~/.hammerspoon is a real directory whose init.lua is a
+-- symlink into the nix store; a rebuild recreates that symlink, which FSEvents
+-- reports as a change under hs.configdir.
+local configWatcher = hs.pathwatcher.new(hs.configdir, function(changedPaths)
+  for _, file in ipairs(changedPaths) do
+    if file:sub(-4) == ".lua" then
+      log.i("Config changed; reloading")
+      hs.reload()
+      return
+    end
+  end
+end)
+
+configWatcher:start()
 
 log.i("USB app watcher started")
