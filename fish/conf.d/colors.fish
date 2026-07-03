@@ -20,13 +20,16 @@ set -g fish_color_comment        brblack --italic
 set -g fish_color_autosuggestion brblack
 
 # Selection / search / matching
-set -g fish_color_search_match   --background=brblack
-set -g fish_color_selection      --background=brblack
+set -g fish_color_search_match   --background=black
+set -g fish_color_selection      brcyan --background=black
 set -g fish_color_match          --underline
 set -g fish_color_valid_path     --underline
 
 # Completion pager
 set -g fish_pager_color_prefix              brcyan --bold --underline
 set -g fish_pager_color_progress            brblack
-set -g fish_pager_color_description         brblack --italic
-set -g fish_pager_color_selected_background --background=brblack
+set -g fish_pager_color_description         brgreen --italic
+set -g fish_pager_color_selected_background --background=black
+set -g fish_pager_color_selected_prefix     brcyan --bold --underline
+set -g fish_pager_color_selected_completion brblue
+set -g fish_pager_color_selected_description brgreen --italic
