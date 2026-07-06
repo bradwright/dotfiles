@@ -35,6 +35,7 @@ OMP_AGENT_DIR ?= $(if $(PI_CODING_AGENT_DIR),$(PI_CODING_AGENT_DIR),$(TARGET)/.o
 OMP_THEME := solarized-dark-custom
 OMP_THEME_FILES := $(OMP_THEME).json
 OMP_THEMES_DIR := $(OMP_AGENT_DIR)/themes
+OMP_CONFIG := $(SOURCE)/omp/config.yml
 
 .PHONY: install clean all \
 	install_shell clean_shell \
@@ -245,10 +246,7 @@ install_omp:
 	@for f in $(OMP_THEME_FILES); do \
 		ln -sf $(SOURCE)/omp/themes/$$f $(OMP_THEMES_DIR)/$$f; \
 	done
-	@if command -v omp >/dev/null 2>&1; then \
-		PI_CODING_AGENT_DIR="$(OMP_AGENT_DIR)" omp config set theme.dark "$(OMP_THEME)" >/dev/null; \
-		PI_CODING_AGENT_DIR="$(OMP_AGENT_DIR)" omp config set statusLine.sessionAccent false >/dev/null; \
-	fi
+	@uv run $(SOURCE)/scripts/merge-yaml-config.py "$(OMP_AGENT_DIR)/config.yml" "$(OMP_CONFIG)"
 
 clean_omp:
 	@-for f in $(OMP_THEME_FILES); do \

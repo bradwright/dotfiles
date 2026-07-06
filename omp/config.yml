@@ -1,0 +1,24 @@
+# -*- mode: yaml -*-
+theme:
+  dark: solarized-dark-custom
+
+statusLine:
+  sessionAccent: false
+  preset: custom
+  separator: powerline-thin
+  leftSegments:
+    - model
+    - mode
+    - git
+    - pr
+  rightSegments:
+    - cost
+    - context_pct
+  segmentOptions:
+    model:
+      showThinkingLevel: false
+    git:
+      showBranch: true
+      showStaged: true
+      showUnstaged: true
+      showUntracked: false
