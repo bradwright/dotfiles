@@ -30,6 +30,11 @@ ITERM2_COLOR_PRESET := solarized-dark-custom
 ITERM2_COLOR_PRESET_FILE := $(SOURCE)/iterm2/themes/$(ITERM2_COLOR_PRESET).itermcolors
 # Local Zed themes symlinked into ~/.config/zed/themes
 ZED_THEME_FILES := solarized-dark-custom.json
+# OMP custom themes and appearance settings.
+OMP_AGENT_DIR ?= $(if $(PI_CODING_AGENT_DIR),$(PI_CODING_AGENT_DIR),$(TARGET)/.omp/agent)
+OMP_THEME := solarized-dark-custom
+OMP_THEME_FILES := $(OMP_THEME).json
+OMP_THEMES_DIR := $(OMP_AGENT_DIR)/themes
 
 .PHONY: install clean all \
 	install_shell clean_shell \
@@ -42,6 +47,7 @@ ZED_THEME_FILES := solarized-dark-custom.json
 	install_hammerspoon clean_hammerspoon \
 	install_atuin clean_atuin \
 	install_zed clean_zed \
+	install_omp clean_omp \
 	install_pi \
 	install_claude \
 	install_codex clean_codex
@@ -66,9 +72,9 @@ all: clean install
 
 # --- Aggregate targets ---
 
-install: install_shell install_bin install_ghostty install_ghostty_terminfo install_iterm2 install_starship install_fish install_nvim install_hammerspoon install_atuin install_zed install_pi install_claude install_codex
+install: install_shell install_bin install_ghostty install_ghostty_terminfo install_iterm2 install_starship install_fish install_nvim install_hammerspoon install_atuin install_zed install_omp install_pi install_claude install_codex
 
-clean: clean_shell clean_bin clean_ghostty clean_iterm2 clean_starship clean_fish clean_nvim clean_hammerspoon clean_atuin clean_zed clean_codex
+clean: clean_shell clean_bin clean_ghostty clean_iterm2 clean_starship clean_fish clean_nvim clean_hammerspoon clean_atuin clean_zed clean_omp clean_codex
 
 # --- Pi settings ---
 # Merge versioned settings into the global pi config, preserving
@@ -230,4 +236,21 @@ clean_zed:
 	@-unlink $(TARGET)/.config/zed/settings.json
 	@-for f in $(ZED_THEME_FILES); do \
 		unlink $(TARGET)/.config/zed/themes/$$f; \
+	done
+
+# --- OMP ---
+
+install_omp:
+	@mkdir -p $(OMP_THEMES_DIR)
+	@for f in $(OMP_THEME_FILES); do \
+		ln -sf $(SOURCE)/omp/themes/$$f $(OMP_THEMES_DIR)/$$f; \
+	done
+	@if command -v omp >/dev/null 2>&1; then \
+		PI_CODING_AGENT_DIR="$(OMP_AGENT_DIR)" omp config set theme.dark "$(OMP_THEME)" >/dev/null; \
+		PI_CODING_AGENT_DIR="$(OMP_AGENT_DIR)" omp config set statusLine.sessionAccent false >/dev/null; \
+	fi
+
+clean_omp:
+	@-for f in $(OMP_THEME_FILES); do \
+		unlink $(OMP_THEMES_DIR)/$$f; \
 	done
