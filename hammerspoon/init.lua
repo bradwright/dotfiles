@@ -42,6 +42,13 @@ local deviceRules = {
 
 local lastLaunchAt = {}
 
+-- Apps the user quit intentionally while their USB device stayed attached.
+-- Keyed by rule.launchName. While an app is suppressed we do not relaunch it,
+-- so a deliberate quit sticks instead of being undone by the heartbeat or a
+-- reconcile. Suppression is cleared when the device is removed or (re-)added,
+-- so unplugging/replugging the device brings the app back.
+local suppressedApps = {}
+
 -- Last stable attached/absent state for the USB devices we manage. Wake can
 -- trigger USB re-enumeration events, so use this to avoid re-launching apps
 -- unless the effective USB state changed while the machine was asleep.
@@ -50,6 +57,12 @@ local wakeReconcilePending = false
 
 local function launchAppIfNeeded(rule, reason)
   local appName = rule.launchName
+
+  if suppressedApps[appName] then
+    log.i(string.format("Skipping %s launch; suppressed after intentional quit (%s)", appName, reason))
+    return
+  end
+
   local now = hs.timer.secondsSinceEpoch()
   local lastLaunch = lastLaunchAt[appName] or 0
 
@@ -163,6 +176,9 @@ local function handleDeviceEvent(device, eventName)
     end
 
     for _, rule in ipairs(matchingRules) do
+      -- A fresh attach is an explicit signal the user wants the app; undo any
+      -- prior intentional-quit suppression before (re)launching.
+      suppressedApps[rule.launchName] = nil
       launchAppIfNeeded(rule, reason)
     end
 
@@ -184,6 +200,7 @@ local function handleDeviceEvent(device, eventName)
       end
 
       for _, rule in ipairs(matchingRules) do
+        suppressedApps[rule.launchName] = nil
         quitAppIfRunning(rule, reason)
       end
 
@@ -210,6 +227,7 @@ local function reconcileRule(rule, reason)
       lastKnownDeviceState[key] = true
     end
   else
+    suppressedApps[rule.launchName] = nil
     quitAppIfRunning(rule, reason)
     if lastKnownDeviceState then
       lastKnownDeviceState[key] = false
@@ -230,6 +248,9 @@ local function reconcileChangedDevices(previousState, currentState, reason)
     local key = deviceKeyForRule(rule)
 
     if not previousState or previousState[key] ~= currentState[key] then
+      -- The device attach/detach state changed across sleep; treat it as an
+      -- explicit signal and clear any intentional-quit suppression.
+      suppressedApps[rule.launchName] = nil
       if currentState[key] then
         launchAppIfNeeded(rule, reason)
       else
@@ -250,6 +271,29 @@ local usbWatcher = hs.usb.watcher.new(function(data)
 end)
 
 usbWatcher:start()
+
+-- Track intentional quits: when a managed app terminates while its USB device
+-- is still attached, treat it as a deliberate quit and suppress relaunch until
+-- the device is removed or re-added. Without this the heartbeat/reconcile would
+-- immediately relaunch an app the user closed on purpose.
+local appWatcher = hs.application.watcher.new(function(appName, eventType)
+  if eventType ~= hs.application.watcher.terminated then
+    return
+  end
+
+  for _, rule in ipairs(deviceRules) do
+    local ruleName = rule.runningName or rule.launchName
+    if appName == ruleName or appName == rule.launchName then
+      if anyConnectedDeviceMatchesRule(rule) then
+        suppressedApps[rule.launchName] = true
+        log.i(string.format("Suppressing relaunch of %s; quit while device attached", rule.launchName))
+      end
+    end
+  end
+end)
+
+appWatcher:start()
+
 reconcileAllRules("startup")
 
 local caffeinateWatcher = hs.caffeinate.watcher.new(function(eventType)
