@@ -47,10 +47,9 @@ The repo also contains:
   patches
 - **`patches/`** — patch files consumed by those scripts
 - **`codex/`** — Codex app theme assets
-- **`pi/`** — a pi package containing extensions, skills, themes, install
-  script, and custom agent definitions
+- **`pi/`** — a pi package containing extensions, skills, themes, and an
+  install script
 - **`CLAUDE.md`** — Claude-specific repo instructions
-- **`.pi/`** — local planning/build artifacts; not part of dotfile install
 
 ## Adding a new dotfile
 
@@ -125,16 +124,14 @@ There are two separate pi-related flows in this repo:
 1. **`make install`** merges `pi/settings.json` into the user's global pi
    settings file at `~/.pi/agent/settings.json`, preserving keys that pi
    manages dynamically.
-2. **`./pi/install.sh`** installs the `pi/` package itself, copies custom
-   agent definitions from `pi/agents/` into `~/.pi/agent/agents/`, and installs
-   the companion package `npm:@tintinweb/pi-subagents`.
+2. **`./pi/install.sh`** installs the `pi/` package itself and the companion
+   package `npm:@tintinweb/pi-subagents`.
 
 When editing pi-related files:
 
 - Extensions live under `pi/extensions/`
 - Skills live under `pi/skills/`
 - Themes live under `pi/themes/`
-- Custom agents live under `pi/agents/`
 
 After editing the pi package, reinstall it with `./pi/install.sh` if needed and
 run `/reload` in pi to pick up changes.

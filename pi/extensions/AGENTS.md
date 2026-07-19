@@ -42,36 +42,6 @@ This directory contains project-local Pi extensions.
     - Uses `gh pr list` by branch.
     - Includes a short in-memory cache (TTL 30s) to reduce repeated lookups.
 
-
-- `shared.ts`
-  - Utility module shared by `plan.ts` and `build-agents.ts`. Not an extension entry point — not listed in `pi/package.json`.
-  - Exports common helpers (e.g. path utilities, plan directory helpers, JSONL event log helpers).
-
-- `plan.ts`
-  - Adds a lightweight `/plan` orchestrator command:
-    - `/plan [brief]` (continue active plan flow or create/start one)
-    - `new [context|github-issue-url]`
-    - `use <plan-dir>` / `resume [plan-dir]`
-    - `review [--model <id>]` / `status` / `clear`
-  - Keeps extension logic intentionally thin: active plan selection, package creation, and routing to `/skill:plan-methodology`.
-  - Persists only active plan path in session state (`plan-state`).
-  - Shows active plan slug in footer status (`📋 <slug>`).
-  - `/plan new <github-issue-url>` fetches issue details via `gh issue view`, saves them to `brief.md`, and seeds `feedback.md`.
-  - `/plan review [--model <id>]` forwards optional model steering to the skill so review runs can target different models (e.g. Codex vs Opus). Legacy `/plan review <model>` is still accepted.
-  - Does **not** enforce a planning mode, tool restrictions, thinking-level toggles, or auto-resume loops.
-
-- `build-agents.ts`
-  - Adds `/build` command for implementation from a plan file.
-  - Supports single-agent (direct implementation) and multi-agent (parallel workers via `Agent` tool) modes.
-  - Accepts a plan file, plan directory, or inline description. Checks for approval in `changelog.md` (bypass with `--yolo`).
-  - Multi-agent run lifecycle tracked via `status.json`. Task-level state managed by the supervisor LLM.
-  - Artifacts (`RESULT.md`, `REVIEW.md`) live in worktrees; supervisor collects them via `get_subagent_result`.
-  - Subcommands: `status`, `cancel`, `cleanup`.
-
-## Agent files
-
-- `writer.md` — Agent definition for the writer agent, used for implementation/drafting tasks delegated from plan mode.
-
 ## Operational notes
 
 - After changes, run `/reload` in Pi to apply extension updates.
@@ -79,8 +49,6 @@ This directory contains project-local Pi extensions.
 - Keep footer rendering lightweight: avoid expensive per-render shell commands.
 - Prefer branch-change-triggered refresh + cached metadata for git/GitHub info.
 - Install the subagents package with: `pi install npm:@tintinweb/pi-subagents`
-
-> **Phase 2 note:** Phase 2 will replace the `build-agents-prompt.md` LLM-driven orchestration with an extension-driven state machine for more deterministic task lifecycle management.
 
 ## Package manifest (`pi/package.json`)
 

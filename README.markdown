@@ -34,8 +34,7 @@ The repo also contains:
 
 - `Brewfile` for Homebrew packages
 - `scripts/` and `patches/` for applying and rolling back local pi patches
-- `pi/`, a separate pi package with extensions, skills, themes, and custom
-  agents
+- `pi/`, a separate pi package with extensions, skills, and themes
 - `codex/`, Codex app theme assets
 
 Installation
@@ -80,8 +79,6 @@ install the package itself, run:
 That script:
 
 - runs `pi install pi/`
-- copies custom agent definitions from `pi/agents/` into
-  `~/.pi/agent/agents/`
 - installs the companion package `npm:@tintinweb/pi-subagents`
 
 Notes
