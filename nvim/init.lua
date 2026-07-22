@@ -17,3 +17,12 @@ vim.api.nvim_set_hl(0, "Normal", { ctermbg = "none" })
 vim.api.nvim_set_hl(0, "NormalNC", { ctermbg = "none" })
 vim.api.nvim_set_hl(0, "SignColumn", { ctermbg = "none" })
 vim.api.nvim_set_hl(0, "EndOfBuffer", { ctermbg = "none" })
+
+
+-- Easy write-and-quit: C-c C-c saves and closes, mirroring the gitcommit
+-- ftplugin's muscle memory so the harness "edit prompt in place" flow is one
+-- chord. Global is fine here — this config is a plugin-less quick editor
+-- (Doom Emacs is the main editor), and built-in ZZ / :x / :wq still work.
+-- The gitcommit ftplugin's buffer-local C-c C-c wins in commit buffers.
+vim.keymap.set("n", "<C-c><C-c>", "<cmd>wq<CR>", { silent = true, desc = "Write and quit" })
+vim.keymap.set("i", "<C-c><C-c>", "<Esc><cmd>wq<CR>", { silent = true, desc = "Write and quit" })
