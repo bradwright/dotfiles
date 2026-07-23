@@ -19,10 +19,22 @@ vim.api.nvim_set_hl(0, "SignColumn", { ctermbg = "none" })
 vim.api.nvim_set_hl(0, "EndOfBuffer", { ctermbg = "none" })
 
 
--- Easy write-and-quit: C-c C-c saves and closes, mirroring the gitcommit
--- ftplugin's muscle memory so the harness "edit prompt in place" flow is one
--- chord. Global is fine here — this config is a plugin-less quick editor
--- (Doom Emacs is the main editor), and built-in ZZ / :x / :wq still work.
--- The gitcommit ftplugin's buffer-local C-c C-c wins in commit buffers.
-vim.keymap.set("n", "<C-c><C-c>", "<cmd>wq<CR>", { silent = true, desc = "Write and quit" })
-vim.keymap.set("i", "<C-c><C-c>", "<Esc><cmd>wq<CR>", { silent = true, desc = "Write and quit" })
+-- omp's "edit prompt in place" opens $EDITOR on a temp file named *.omp.md.
+-- Drop straight into insert mode so you can type the prompt, then C-c C-c
+-- writes and quits to send it back to the harness (mirroring the gitcommit
+-- ftplugin). Scoped to *.omp.md so normal editing (incl. other markdown) is
+-- untouched. Built-in ZZ / :x / :wq still work; :q! cancels unchanged.
+vim.api.nvim_create_autocmd("BufEnter", {
+  pattern = "*.omp.md",
+  group = vim.api.nvim_create_augroup("OmpPrompt", { clear = true }),
+  callback = function(args)
+    vim.keymap.set("n", "<C-c><C-c>", "<cmd>wq<CR>", { buffer = args.buf, silent = true, desc = "Write and quit (send to harness)" })
+    vim.keymap.set("i", "<C-c><C-c>", "<Esc><cmd>wq<CR>", { buffer = args.buf, silent = true, desc = "Write and quit (send to harness)" })
+    -- Start in insert mode, but only on first entry to this buffer so
+    -- escaping to normal (to navigate) and re-entering isn't forced back.
+    if not vim.b[args.buf].omp_prompt_started then
+      vim.b[args.buf].omp_prompt_started = true
+      vim.schedule(vim.cmd.startinsert)
+    end
+  end,
+})
