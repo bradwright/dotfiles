@@ -100,8 +100,8 @@ For nonstandard destinations, follow the existing target pattern used by
 
 ## Editor
 
-- The configured `$EDITOR` / `$VISUAL` is `nvim`.
-- `GIT_EDITOR` is set to `nvim +star` — do not change this.
+- The configured `$EDITOR` / `$VISUAL` is `et` (emacsclient).
+- `GIT_EDITOR` is `et` (emacsclient) — git commits edit in Emacs, not nvim.
 - Neovim config in this repo currently consists of `nvim/init.lua`,
   `nvim/ftplugin/gitcommit.lua`, and `nvim/colors/`.
 - Do not introduce hard dependencies on VS Code, nano, or other editors.
