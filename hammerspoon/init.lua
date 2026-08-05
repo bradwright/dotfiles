@@ -6,6 +6,22 @@
 
 local log = hs.logger.new("usb-launch", "info")
 
+-- Kill stale Hammerspoon instances from previous nix store generations.
+-- home-manager rebuilds change the .app path (new nix store hash), so macOS
+-- treats the new bundle as a different app and launches a second instance
+-- alongside the orphaned one. Both would run this init.lua and fight over the
+-- same USB/app watchers. Kill any existing instance before setting up ours.
+local myBundleID = hs.processInfo.bundleID
+local myPID = hs.processInfo.processID
+if myBundleID and myPID then
+  for _, app in ipairs(hs.application.applicationsForBundleID(myBundleID)) do
+    if app:pid() ~= myPID then
+      log.w("Killing stale Hammerspoon instance (PID " .. app:pid() .. ")")
+      app:kill()
+    end
+  end
+end
+
 local APP_LAUNCH_COOLDOWN_SECONDS = 5
 
 -- Delay after wake before reconciling app state, giving USB devices time to
