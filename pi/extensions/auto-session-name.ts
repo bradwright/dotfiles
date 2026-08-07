@@ -3,9 +3,9 @@
  *
  * Why: the default session name (first user message) is useless when you have a
  * lot of sessions going at once, or when you want to `/resume` something by name.
- * This watches the conversation and sets a short, human-readable title using the
- * cheapest model you have auth for — so the session selector reads like a to-do
- * list instead of a wall of identical-looking first lines.
+ * This watches the conversation and sets a short, human-readable title using a
+ * low-cost model — so the session selector reads like a to-do list instead of a
+ * wall of identical-looking first lines.
  *
  * Behaviour:
  *   - On by default for every session. Names after the first exchange, and also
@@ -16,8 +16,10 @@
  *   - Runs only in the interactive TUI session (never subagents / headless runs).
  *   - Never overwrites a name you set yourself (`/name`, `--name`, or `/autoname`):
  *     the first time it sees a name it didn't write, it backs off for that session.
- *   - Picks the cheapest available model automatically; override with
- *     `/autoname model <id>`, `--autoname-model <id>`, or `$PI_AUTONAME_MODEL`.
+ *   - Uses `openai-codex/gpt-5.6-luna` by default. Override per machine with
+ *     `autoSessionName.model` in `~/.pi/agent/settings.json`, or per session /
+ *     process with `/autoname model <id>`, `--autoname-model <id>`, or
+ *     `$PI_AUTONAME_MODEL`.
  *   - Persists its state as custom session entries, so it survives `/reload`,
  *     `/resume`, and `/fork`.
  *
@@ -27,19 +29,22 @@
  *   /autoname off | on     disable / enable for this session
  *   /autoname model <id>   pin the model used for naming (provider/id or id)
  *
+ * Local config (`~/.pi/agent/settings.json`):
+ *   "autoSessionName": { "model": "provider/id" }
+ *
  * Env / flags:
- *   PI_AUTONAME_MODEL=provider/id   pin the naming model
+ *   PI_AUTONAME_MODEL=provider/id   override the naming model
  *   PI_AUTONAME_EVERY=5             re-evaluate every N user messages
  *   PI_AUTONAME_DEFAULT=off         opt new sessions out of auto-naming (default: on)
  *   PI_AUTONAME_DEBUG=1             append diagnostics to ~/.pi/agent/auto-session-name.log
  */
 
-import { appendFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { complete } from "@earendil-works/pi-ai/compat";
 import type { Api, Model } from "@earendil-works/pi-ai/compat";
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { getAgentDir, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 const STATE_TYPE = "auto-session-name";
 const TITLE_MAX_CHARS = 60;
@@ -47,11 +52,12 @@ const CONVO_MAX_CHARS = 4000;
 /** Hard ceiling on the naming model call so a slow/wedged request can never
  * leave the in-flight guard stuck (SDK clients otherwise default to ~10 min). */
 const NAMING_TIMEOUT_MS = 30_000;
+const DEFAULT_NAMING_MODEL = "openai-codex/gpt-5.6-luna";
 
 /**
  * Bias toward known-good cheap/fast models when several are available. Within a
  * single hint we still pick the lowest-cost match, and if none of these match we
- * fall back to the genuinely cheapest model you have auth for.
+ * fall back to the lowest-cost available model.
  */
 const PREFERRED_MODEL_HINTS = [
 	"haiku",
@@ -211,7 +217,20 @@ function resolveModelOverride(ctx: ExtensionContext, override: string): Model<Ap
 	return available.find((m) => m.id === override);
 }
 
-/** Pick the cheapest available model, honouring an explicit override and cheap hints. */
+function readLocalModelSetting(): string | undefined {
+	try {
+		const settings = JSON.parse(readFileSync(join(getAgentDir(), "settings.json"), "utf8")) as {
+			autoSessionName?: { model?: unknown };
+		};
+		const model = settings.autoSessionName?.model;
+		return typeof model === "string" && model.trim() ? model.trim() : undefined;
+	} catch (err) {
+		debug(`local model setting unavailable: ${String(err)}`);
+		return undefined;
+	}
+}
+
+/** Pick the configured model, falling back to known cheap models if unavailable. */
 function pickModel(ctx: ExtensionContext): Model<Api> | undefined {
 	const available = ctx.modelRegistry.getAvailable();
 	if (available.length === 0) return undefined;
@@ -221,12 +240,12 @@ function pickModel(ctx: ExtensionContext): Model<Api> | undefined {
 		(typeof pi.getFlag?.("autoname-model") === "string"
 			? (pi.getFlag("autoname-model") as string)
 			: undefined) ||
-		process.env.PI_AUTONAME_MODEL;
-	if (override) {
-		const m = resolveModelOverride(ctx, override);
-		if (m) return m;
-		debug(`override "${override}" not found among available models`);
-	}
+		process.env.PI_AUTONAME_MODEL ||
+		readLocalModelSetting() ||
+		DEFAULT_NAMING_MODEL;
+	const configured = resolveModelOverride(ctx, override);
+	if (configured) return configured;
+	debug(`configured model "${override}" not found among available models`);
 
 	const textCapable = available.filter((m) => m.input?.includes("text"));
 	const pool = textCapable.length ? textCapable : available;
@@ -483,7 +502,7 @@ export default function (api: ExtensionAPI) {
 						ctx.ui.notify(
 							state.modelOverride
 								? `Pinned naming model: ${state.modelOverride}`
-								: "No model pinned (using cheapest available)",
+								: "No session model pinned (using machine/default configuration)",
 							"info",
 						);
 						return;
