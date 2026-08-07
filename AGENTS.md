@@ -120,8 +120,9 @@ There are two separate pi-related flows in this repo:
 1. **`make install`** merges `pi/settings.json` into the user's global pi
    settings file at `~/.pi/agent/settings.json`, preserving keys that pi
    manages dynamically.
-2. **`./pi/install.sh`** installs the `pi/` package itself and the companion
-   package `npm:@tintinweb/pi-subagents`.
+2. **`./pi/install.sh`** installs the `pi/` package itself, cleans up the retired
+   plan/build custom agents during legacy migration, and installs the companion
+   package [`nicobailon/pi-subagents`](https://github.com/nicobailon/pi-subagents).
 
 When editing pi-related files:
 

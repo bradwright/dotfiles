@@ -45,10 +45,8 @@ This directory contains project-local Pi extensions.
 ## Operational notes
 
 - After changes, run `/reload` in Pi to apply extension updates.
-- Dotfiles install symlinks this directory into `~/.pi/agent/extensions/` via `make install_pi`.
 - Keep footer rendering lightweight: avoid expensive per-render shell commands.
 - Prefer branch-change-triggered refresh + cached metadata for git/GitHub info.
-- Install the subagents package with: `pi install npm:@tintinweb/pi-subagents`
 
 ## Package manifest (`pi/package.json`)
 

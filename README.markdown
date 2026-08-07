@@ -79,7 +79,10 @@ install the package itself, run:
 That script:
 
 - runs `pi install pi/`
-- installs the companion package `npm:@tintinweb/pi-subagents`
+- removes the retired plan/build custom agents when migrating from the legacy
+  package
+- installs
+  [`nicobailon/pi-subagents`](https://github.com/nicobailon/pi-subagents)
 
 Notes
 -----
