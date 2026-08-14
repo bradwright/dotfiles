@@ -6,6 +6,22 @@
 
 local log = hs.logger.new("usb-launch", "info")
 
+-- Hammerspoon stops watchers and timers when their Lua userdata is garbage
+-- collected. Keep every long-lived object reachable from a global table for
+-- the lifetime of this Lua environment. A config reload creates a fresh Lua
+-- environment and cleans up the old objects automatically.
+local runtime = { pendingTimers = {} }
+_G.usbAppAutomation = runtime
+
+local function doAfter(delay, callback)
+  local timer
+  timer = hs.timer.doAfter(delay, function()
+    runtime.pendingTimers[timer] = nil
+    callback()
+  end)
+  runtime.pendingTimers[timer] = true
+end
+
 -- Kill stale Hammerspoon instances from previous nix store generations.
 -- home-manager rebuilds change the .app path (new nix store hash), so macOS
 -- treats the new bundle as a different app and launches a second instance
@@ -207,7 +223,7 @@ local function handleDeviceEvent(device, eventName)
       recheckDelay = WAKE_RECONCILE_DELAY_SECONDS
     end
 
-    hs.timer.doAfter(recheckDelay, function()
+    doAfter(recheckDelay, function()
       if anyConnectedDeviceMatchesRule(matchingRules[1]) then
         if lastKnownDeviceState then
           lastKnownDeviceState[key] = true
@@ -278,7 +294,7 @@ end
 
 lastKnownDeviceState = connectedDeviceState()
 
-local usbWatcher = hs.usb.watcher.new(function(data)
+runtime.usbWatcher = hs.usb.watcher.new(function(data)
   if data.eventType == "added" then
     handleDeviceEvent(data, "usb-added")
   elseif data.eventType == "removed" then
@@ -286,13 +302,13 @@ local usbWatcher = hs.usb.watcher.new(function(data)
   end
 end)
 
-usbWatcher:start()
+runtime.usbWatcher:start()
 
 -- Track intentional quits: when a managed app terminates while its USB device
 -- is still attached, treat it as a deliberate quit and suppress relaunch until
 -- the device is removed or re-added. Without this the heartbeat/reconcile would
 -- immediately relaunch an app the user closed on purpose.
-local appWatcher = hs.application.watcher.new(function(appName, eventType)
+runtime.appWatcher = hs.application.watcher.new(function(appName, eventType)
   if eventType ~= hs.application.watcher.terminated then
     return
   end
@@ -308,18 +324,18 @@ local appWatcher = hs.application.watcher.new(function(appName, eventType)
   end
 end)
 
-appWatcher:start()
+runtime.appWatcher:start()
 
 reconcileAllRules("startup")
 
-local caffeinateWatcher = hs.caffeinate.watcher.new(function(eventType)
+runtime.caffeinateWatcher = hs.caffeinate.watcher.new(function(eventType)
   if eventType == hs.caffeinate.watcher.systemWillSleep then
     lastKnownDeviceState = connectedDeviceState()
     wakeReconcilePending = true
   elseif eventType == hs.caffeinate.watcher.systemDidWake then
     wakeReconcilePending = true
 
-    hs.timer.doAfter(WAKE_RECONCILE_DELAY_SECONDS, function()
+    doAfter(WAKE_RECONCILE_DELAY_SECONDS, function()
       local currentDeviceState = connectedDeviceState()
 
       if deviceStatesMatch(lastKnownDeviceState, currentDeviceState) then
@@ -339,13 +355,13 @@ local caffeinateWatcher = hs.caffeinate.watcher.new(function(eventType)
   end
 end)
 
-caffeinateWatcher:start()
+runtime.caffeinateWatcher:start()
 
 -- Correctness backstop for transitions the watchers cannot observe (e.g. a
 -- device removed while Hammerspoon was not running). Skip while a wake
 -- reconcile is pending so we don't fight USB re-enumeration right after wake
 -- and cause a quit/relaunch flicker.
-local heartbeatTimer = hs.timer.doEvery(HEARTBEAT_INTERVAL_SECONDS, function()
+runtime.heartbeatTimer = hs.timer.doEvery(HEARTBEAT_INTERVAL_SECONDS, function()
   if wakeReconcilePending then
     return
   end
@@ -357,7 +373,7 @@ end)
 -- executing stale logic. ~/.hammerspoon is a real directory whose init.lua is a
 -- symlink into the nix store; a rebuild recreates that symlink, which FSEvents
 -- reports as a change under hs.configdir.
-local configWatcher = hs.pathwatcher.new(hs.configdir, function(changedPaths)
+runtime.configWatcher = hs.pathwatcher.new(hs.configdir, function(changedPaths)
   for _, file in ipairs(changedPaths) do
     if file:sub(-4) == ".lua" then
       log.i("Config changed; reloading")
@@ -367,6 +383,6 @@ local configWatcher = hs.pathwatcher.new(hs.configdir, function(changedPaths)
   end
 end)
 
-configWatcher:start()
+runtime.configWatcher:start()
 
 log.i("USB app watcher started")
