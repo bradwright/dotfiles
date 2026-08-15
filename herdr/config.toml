@@ -1,0 +1,6 @@
+[ui.sound]
+enabled = false
+
+[theme]
+name = "solarized"
+auto_switch = false

@@ -37,6 +37,10 @@ OMP_THEME_FILES := $(OMP_THEME).json
 OMP_THEMES_DIR := $(OMP_AGENT_DIR)/themes
 OMP_CONFIG := $(SOURCE)/omp/config.yml
 
+# Herdr settings.
+HERDR_GLOBAL := $(TARGET)/.config/herdr/config.toml
+HERDR_LOCAL  := $(SOURCE)/herdr/config.toml
+
 .PHONY: install clean all \
 	install_shell clean_shell \
 	install_bin clean_bin \
@@ -47,6 +51,7 @@ OMP_CONFIG := $(SOURCE)/omp/config.yml
 	install_nvim clean_nvim \
 	install_hammerspoon clean_hammerspoon \
 	install_atuin clean_atuin \
+	install_herdr clean_herdr \
 	install_zed clean_zed \
 	install_omp clean_omp \
 	install_pi \
@@ -73,9 +78,9 @@ all: clean install
 
 # --- Aggregate targets ---
 
-install: install_shell install_bin install_ghostty install_ghostty_terminfo install_iterm2 install_starship install_fish install_nvim install_hammerspoon install_atuin install_zed install_omp install_pi install_claude install_codex
+install: install_shell install_bin install_ghostty install_ghostty_terminfo install_iterm2 install_starship install_fish install_nvim install_hammerspoon install_atuin install_herdr install_zed install_omp install_pi install_claude install_codex
 
-clean: clean_shell clean_bin clean_ghostty clean_iterm2 clean_starship clean_fish clean_nvim clean_hammerspoon clean_atuin clean_zed clean_omp clean_codex
+clean: clean_shell clean_bin clean_ghostty clean_iterm2 clean_starship clean_fish clean_nvim clean_hammerspoon clean_atuin clean_herdr clean_zed clean_omp clean_codex
 
 # --- Pi settings ---
 # Merge versioned settings into the global pi config, preserving
@@ -223,6 +228,15 @@ install_atuin:
 
 clean_atuin:
 	@-unlink $(TARGET)/.config/atuin/config.toml
+
+# --- Herdr ---
+
+install_herdr:
+	@mkdir -p $(dir $(HERDR_GLOBAL))
+	@ln -sf $(HERDR_LOCAL) $(HERDR_GLOBAL)
+
+clean_herdr:
+	@-unlink $(HERDR_GLOBAL)
 
 # --- Zed ---
 

@@ -22,6 +22,7 @@ It currently manages:
 - `nvim/init.lua`, `nvim/ftplugin/gitcommit.lua`, and `nvim/colors/` →
   `~/.config/nvim/`
 - `atuin/config.toml` → `~/.config/atuin/config.toml`
+- `herdr/config.toml` → `~/.config/herdr/config.toml`
 - Zed config:
   - `zed/settings.json` → `~/.config/zed/settings.json`
   - `zed/themes/solarized-dark-custom.json` →
@@ -53,6 +54,7 @@ That will:
   local theme in `zed/themes/solarized-dark-custom.json`
 - create `~/.hushlogin`
 - import the Solarized Dark custom color preset into iTerm2
+- configure Herdr to use its Solarized theme with notification sounds disabled
 - generate `~/.config/fish/starship.toml` from the main `starship.toml`
 - merge the versioned `pi/settings.json` into `~/.pi/agent/settings.json`
   while preserving keys that pi manages locally

@@ -31,6 +31,8 @@ Today, `make install` manages:
   - `nvim/ftplugin/gitcommit.lua` → `~/.config/nvim/ftplugin/gitcommit.lua`
   - `nvim/colors` → `~/.config/nvim/colors`
 - **`atuin/config.toml`** — symlinked to `~/.config/atuin/config.toml`
+- **Herdr settings** — `herdr/config.toml` is symlinked to
+  `~/.config/herdr/config.toml`
 - **Pi settings** — `pi/settings.json` is merged into
   `~/.pi/agent/settings.json`, preserving locally managed pi keys
 - **Claude Code settings** — `claude/settings.json` is merged into
@@ -67,8 +69,8 @@ For root-level shell dotfiles that should install as `~/.<name>`:
 3. Ensure `clean_shell` will remove the installed symlink.
 
 For nonstandard destinations, follow the existing target pattern used by
-`install_ghostty`, `install_starship`, `install_fish`, `install_nvim`, and
-`install_pi`.
+`install_ghostty`, `install_starship`, `install_fish`, `install_nvim`,
+`install_herdr`, and `install_pi`.
 
 ## Shell file conventions
 
