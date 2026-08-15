@@ -32,9 +32,11 @@ brew 'zstd'
 
 brew 'neovim'
 
+cask '1password-cli'
 cask 'claude-code@latest'
 cask 'codex'
 cask 'orbstack'
 cask 'superhuman'
 cask 'font-inconsolata'
 cask 'font-inconsolata-nerd-font'
+cask 'obsidian'
