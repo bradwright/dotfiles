@@ -19,21 +19,21 @@ vim.api.nvim_set_hl(0, "SignColumn", { ctermbg = "none" })
 vim.api.nvim_set_hl(0, "EndOfBuffer", { ctermbg = "none" })
 
 
--- omp's "edit prompt in place" opens $EDITOR on a temp file named *.omp.md.
+-- omp and Pi open $EDITOR on recognizably named Markdown temp files.
 -- Drop straight into insert mode so you can type the prompt, then C-c C-c
 -- writes and quits to send it back to the harness (mirroring the gitcommit
--- ftplugin). Scoped to *.omp.md so normal editing (incl. other markdown) is
--- untouched. Built-in ZZ / :x / :wq still work; :q! cancels unchanged.
+-- ftplugin). Keep this scoped so normal Markdown editing is untouched.
+-- Built-in ZZ / :x / :wq still work; :q! cancels unchanged.
 vim.api.nvim_create_autocmd("BufEnter", {
-  pattern = "*.omp.md",
-  group = vim.api.nvim_create_augroup("OmpPrompt", { clear = true }),
+  pattern = { "*.omp.md", "*/pi-editor-*/prompt.md" },
+  group = vim.api.nvim_create_augroup("HarnessPrompt", { clear = true }),
   callback = function(args)
     vim.keymap.set("n", "<C-c><C-c>", "<cmd>wq<CR>", { buffer = args.buf, silent = true, desc = "Write and quit (send to harness)" })
     vim.keymap.set("i", "<C-c><C-c>", "<Esc><cmd>wq<CR>", { buffer = args.buf, silent = true, desc = "Write and quit (send to harness)" })
     -- Start in insert mode, but only on first entry to this buffer so
     -- escaping to normal (to navigate) and re-entering isn't forced back.
-    if not vim.b[args.buf].omp_prompt_started then
-      vim.b[args.buf].omp_prompt_started = true
+    if not vim.b[args.buf].harness_prompt_started then
+      vim.b[args.buf].harness_prompt_started = true
       vim.schedule(vim.cmd.startinsert)
     end
   end,
