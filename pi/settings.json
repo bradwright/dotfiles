@@ -1,6 +1,7 @@
 {
   "defaultThinkingLevel": "xhigh",
   "theme": "solarized-dark",
+  "externalEditor": "nvim",
   "showHardwareCursor": true,
   "editorPaddingX": 0,
   "collapseChangelog": true,
