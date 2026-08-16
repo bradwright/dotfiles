@@ -47,6 +47,8 @@ description: Create a well-formed git commit from current changes using session 
 ## Output
 
 - A single commit created with `git commit` whose message reflects the session.
+- Add an optional section on tests if they're specifically relevant to this commit, 
+  but really they belong only on PRs, not individual commits.
 
 ## Template
 
@@ -62,7 +64,4 @@ Summary:
 Rationale:
 - <why>
 - <why>
-
-Tests:
-- <command or "not run (reason)">
 ```
