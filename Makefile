@@ -140,7 +140,7 @@ clean_shell:
 
 install_ghostty:
 	@mkdir -p $(HOME)/.config/
-	@ln -sf $(SOURCE)/ghostty $(HOME)/.config/ghostty
+	@ln -sfn $(SOURCE)/ghostty $(HOME)/.config/ghostty
 
 GHOSTTY_APP	:= /Applications/Ghostty.app
 
@@ -204,7 +204,7 @@ install_nvim:
 	@mkdir -p $(TARGET)/.config/nvim/ftplugin/
 	@ln -sf $(SOURCE)/nvim/init.lua $(TARGET)/.config/nvim/init.lua
 	@ln -sf $(SOURCE)/nvim/ftplugin/gitcommit.lua $(TARGET)/.config/nvim/ftplugin/gitcommit.lua
-	@ln -sf $(SOURCE)/nvim/colors $(TARGET)/.config/nvim/colors
+	@ln -sfn $(SOURCE)/nvim/colors $(TARGET)/.config/nvim/colors
 
 clean_nvim:
 	@-unlink $(TARGET)/.config/nvim/init.lua
