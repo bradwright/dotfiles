@@ -43,6 +43,18 @@ This directory contains project-local Pi extensions.
     - Uses `gh pr list` by branch.
     - Includes a short in-memory cache (TTL 30s) to reduce repeated lookups.
 
+## Shopify-managed override
+
+Brad's Shopify home-manager installation replaces the personal base
+`auto-session-name.ts` with
+`~/src/github.com/Shopify/dotfiles/personal/pi/extensions/auto-session-name.ts`.
+That override defaults to **`openai/gpt-6-luna`**, not the base default
+`openai-codex/gpt-6-luna`. It ignores the `autoSessionName.model` setting.
+Explicit command, flag and `PI_AUTONAME_MODEL` overrides remain
+supported; unavailable models are reported without an automatic fallback.
+The installed files are Nix-store symlinks: apply the Shopify dotfiles
+activation package before `/reload`. See `personal/pi/README.md` in that repo.
+
 ## Operational notes
 
 - After changes, run `/reload` in Pi to apply extension updates.
