@@ -16,7 +16,7 @@
  *   - Runs only in the interactive TUI session (never subagents / headless runs).
  *   - Never overwrites a name you set yourself (`/name`, `--name`, or `/autoname`):
  *     the first time it sees a name it didn't write, it backs off for that session.
- *   - Uses `openai-codex/gpt-5.6-luna` by default. Override per machine with
+ *   - Uses `openai-codex/gpt-6-luna` by default. Override per machine with
  *     `autoSessionName.model` in `~/.pi/agent/settings.json`, or per session /
  *     process with `/autoname model <id>`, `--autoname-model <id>`, or
  *     `$PI_AUTONAME_MODEL`.
@@ -52,7 +52,7 @@ const CONVO_MAX_CHARS = 4000;
 /** Hard ceiling on the naming model call so a slow/wedged request can never
  * leave the in-flight guard stuck (SDK clients otherwise default to ~10 min). */
 const NAMING_TIMEOUT_MS = 30_000;
-const DEFAULT_NAMING_MODEL = "openai-codex/gpt-5.6-luna";
+const DEFAULT_NAMING_MODEL = "openai-codex/gpt-6-luna";
 
 /**
  * Bias toward known-good cheap/fast models when several are available. Within a

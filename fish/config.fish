@@ -54,7 +54,7 @@ abbr -a cat 'bat --plain'
 abbr -a du  dust
 abbr -a top btm
 
-abbr -a picodex 'pi "/codex" --provider openai-codex --model gpt-5.3-codex'
+abbr -a picodex 'pi "/codex" --provider openai-codex --model gpt-6.1-sol'
 
 # ---------------------------------------------------------------------------
 # Tool integrations

@@ -9,7 +9,7 @@ This directory contains project-local Pi extensions.
   - On by default for every session; names after the first exchange and proactively on resume/reload/fork when a session has content but no name yet.
   - Re-evaluates every N user messages (`PI_AUTONAME_EVERY`, default 5) to track topic drift.
   - Runs only in the interactive TUI (never subagents/headless). Backs off permanently once it detects a name the user set themselves (`/name`, `--name`).
-  - Uses `openai-codex/gpt-5.6-luna` by default.
+  - Uses `openai-codex/gpt-6-luna` by default.
   - Override per machine with `autoSessionName.model` in `~/.pi/agent/settings.json`; `/autoname model <id>`, `--autoname-model <id>`, and `$PI_AUTONAME_MODEL` remain available for session/process overrides.
   - Persists state as custom session entries so it survives `/reload`, `/resume`, and `/fork`.
   - `/autoname` command: `now` (force rename), `on` / `off`, `model <id>`, or no args for status.
