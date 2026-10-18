@@ -11,6 +11,9 @@ else if test -x /usr/local/bin/brew
     /usr/local/bin/brew shellenv fish | source
 end
 
+# Hide Homebrew's "set HOMEBREW_NO_ENV_HINTS to hide this" tips — keep aligned with zshenv.
+set -gx HOMEBREW_NO_ENV_HINTS 1
+
 # Personal scripts
 fish_add_path --prepend ~/bin ~/.local/bin
 

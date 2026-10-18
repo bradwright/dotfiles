@@ -9,6 +9,9 @@ elif [[ -x /usr/local/bin/brew ]]; then
     eval "$(/usr/local/bin/brew shellenv zsh)"
 fi
 
+# Hide Homebrew's "set HOMEBREW_NO_ENV_HINTS to hide this" tips.
+export HOMEBREW_NO_ENV_HINTS=1
+
 # Personal scripts.
 [[ -d "$HOME/bin" ]] && path=("$HOME/bin" $path)
 [[ -d "$HOME/.local/bin" ]] && path=("$HOME/.local/bin" $path)
