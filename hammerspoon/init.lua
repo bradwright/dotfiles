@@ -56,19 +56,19 @@ local deviceRules = {
     vendorID = 4057,
     productID = 154,
     launchName = "Elgato Stream Deck",
-    runningName = "Stream Deck",
+    bundleID = "com.elgato.StreamDeck",
   },
   {
     vendorID = 4057,
     productID = 154,
     launchName = "Elgato Control Center",
-    runningName = "Elgato Control Center",
+    bundleID = "com.corsair.ControlCenter",
   },
   {
     vendorID = 11802,
     productID = 19457,
     launchName = "Insta360 Link Controller",
-    runningName = "Insta360 Link Controller",
+    bundleID = "com.insta360.linkcontroller",
   },
 }
 
@@ -87,7 +87,26 @@ local suppressedApps = {}
 local lastKnownDeviceState = nil
 local wakeReconcilePending = false
 
+-- Bundle IDs remain stable when an app's display/process name changes (e.g.
+-- Elgato Control Center now runs as "ControlCenter"). Cache PIDs while apps are
+-- alive: termination events provide no name and only the PID is usable.
+local managedAppsByPID = {}
+
+local function runningAppForRule(rule)
+  local app = hs.application.applicationsForBundleID(rule.bundleID)[1]
+  if app then
+    managedAppsByPID[app:pid()] = rule
+  end
+  return app
+end
+
 local function launchAppIfNeeded(rule, reason)
+  -- Guard every launch path, including USB attach and wake, not just heartbeat.
+  -- launchOrFocusByBundleID would otherwise steal focus from a running app.
+  if runningAppForRule(rule) then
+    return
+  end
+
   local appName = rule.launchName
 
   if suppressedApps[appName] then
@@ -105,12 +124,12 @@ local function launchAppIfNeeded(rule, reason)
 
   lastLaunchAt[appName] = now
   log.i(string.format("Launching %s (%s)", appName, reason))
-  hs.application.launchOrFocus(appName)
+  hs.application.launchOrFocusByBundleID(rule.bundleID)
 end
 
 local function quitAppIfRunning(rule, reason)
-  local appName = rule.runningName or rule.launchName
-  local app = hs.application.get(appName)
+  local appName = rule.launchName
+  local app = runningAppForRule(rule)
   if not app then
     return
   end
@@ -249,12 +268,7 @@ local function reconcileRule(rule, reason)
   local key = deviceKeyForRule(rule)
 
   if anyConnectedDeviceMatchesRule(rule) then
-    -- Only launch when the app is absent. launchOrFocus() would activate (and
-    -- steal focus to) an already-running app, which the heartbeat would
-    -- otherwise do on every tick.
-    if not hs.application.get(rule.runningName or rule.launchName) then
-      launchAppIfNeeded(rule, reason)
-    end
+    launchAppIfNeeded(rule, reason)
     if lastKnownDeviceState then
       lastKnownDeviceState[key] = true
     end
@@ -308,22 +322,33 @@ runtime.usbWatcher:start()
 -- is still attached, treat it as a deliberate quit and suppress relaunch until
 -- the device is removed or re-added. Without this the heartbeat/reconcile would
 -- immediately relaunch an app the user closed on purpose.
-runtime.appWatcher = hs.application.watcher.new(function(appName, eventType)
-  if eventType ~= hs.application.watcher.terminated then
+runtime.appWatcher = hs.application.watcher.new(function(_, eventType, app)
+  if not app then
     return
   end
 
-  for _, rule in ipairs(deviceRules) do
-    local ruleName = rule.runningName or rule.launchName
-    if appName == ruleName or appName == rule.launchName then
-      if anyConnectedDeviceMatchesRule(rule) then
-        suppressedApps[rule.launchName] = true
-        log.i(string.format("Suppressing relaunch of %s; quit while device attached", rule.launchName))
+  local pid = app:pid()
+  if eventType == hs.application.watcher.launched then
+    for _, rule in ipairs(deviceRules) do
+      if app:bundleID() == rule.bundleID then
+        managedAppsByPID[pid] = rule
+        break
       end
+    end
+  elseif eventType == hs.application.watcher.terminated then
+    local rule = managedAppsByPID[pid]
+    managedAppsByPID[pid] = nil
+    if rule and anyConnectedDeviceMatchesRule(rule) then
+      suppressedApps[rule.launchName] = true
+      log.i(string.format("Suppressing relaunch of %s; quit while device attached", rule.launchName))
     end
   end
 end)
 
+-- Seed the PID cache for apps already running when the config loads.
+for _, rule in ipairs(deviceRules) do
+  runningAppForRule(rule)
+end
 runtime.appWatcher:start()
 
 reconcileAllRules("startup")
