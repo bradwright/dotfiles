@@ -47,10 +47,7 @@ local function setup(attached, controlCenterRunning)
     table.insert(state.launches, bundleID)
     local name = bundleID == streamDeckID and "Stream Deck" or "ControlCenter"
     local pid = bundleID == streamDeckID and 10 or 11
-    local app = state.addApp(bundleID, name, pid)
-    if state.runtime then
-      state.runtime.appWatcher.callback(name, hs.application.watcher.launched, app)
-    end
+    state.addApp(bundleID, name, pid)
     return true
   end
   hs.application = {
@@ -96,12 +93,13 @@ local function setup(attached, controlCenterRunning)
       eventType = attachedNow and "added" or "removed",
     })
   end
+  -- Apps quit like Elgato's LSUIElement apps do: the process is gone and no
+  -- NSWorkspace notification is delivered, so there is no watcher callback.
+  function state.quit(bundleID)
+    state.apps[bundleID] = nil
+  end
   function state.terminateControlCenter()
-    state.apps[controlCenterID] = nil
-    -- Hammerspoon's terminated callback has no name; only the PID is usable.
-    state.runtime.appWatcher.callback(nil, hs.application.watcher.terminated, {
-      pid = function() return 11 end,
-    })
+    state.quit(controlCenterID)
   end
   return state
 end
@@ -161,6 +159,44 @@ test("apps launched after startup are tracked for intentional quits", function()
   local launchCount = #state.launches
   state.tick()
   assert(#state.launches == launchCount, "newly launched app was not tracked")
+end)
+
+test("an updater that quits the app to install does not start a relaunch loop", function()
+  local state = setup(true, true)
+  state.tick()
+  -- The app closes itself; the installer downloads and installs for a while.
+  state.quit(streamDeckID)
+  for _ = 1, 20 do state.tick() end
+  assert(#state.launches == 0, "app was relaunched while its updater ran")
+  -- The installer relaunches the new version: it is managed normally again.
+  state.addApp(streamDeckID, "Stream Deck", 20)
+  state.tick()
+  state.usbEvent(false)
+  state.flushTimers()
+  assert(state.kills[streamDeckID] == 1, "relaunched app was not closed on device removal")
+end)
+
+test("an app that quits right after we launched it is not launched again", function()
+  local state = setup(true, false)
+  state.tick()
+  assert(#state.launches == 1)
+  -- It quits before the next heartbeat, e.g. to install an update found on startup.
+  state.quit(controlCenterID)
+  for _ = 1, 5 do state.tick() end
+  assert(#state.launches == 1, "app quit after launch was launched again")
+end)
+
+test("an app opened by hand after a quit is managed normally again", function()
+  local state = setup(true, true)
+  state.tick()
+  state.quit(controlCenterID)
+  state.tick()
+  assert(#state.launches == 0)
+  state.addApp(controlCenterID, "ControlCenter", 11)
+  state.tick()
+  state.usbEvent(false)
+  state.flushTimers()
+  assert(state.kills[controlCenterID] == 1, "reopened app was not closed on device removal")
 end)
 
 test("device removal closes only the managed bundle", function()
