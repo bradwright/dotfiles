@@ -51,6 +51,9 @@ local USB_REMOVAL_RECHECK_DELAY_SECONDS = 1
 -- running (after a reload or relaunch), so no usb-removed event was delivered.
 local HEARTBEAT_INTERVAL_SECONDS = 15
 
+-- The Insta360 Link webcam has no rule. The Insta360 Webcam Stream Deck plugin
+-- controls it over USB, so Insta360 Link Controller is needed only for firmware
+-- updates. See elgato/README.md.
 local deviceRules = {
   {
     vendorID = 4057,
@@ -63,12 +66,6 @@ local deviceRules = {
     productID = 154,
     launchName = "Elgato Control Center",
     bundleID = "com.corsair.ControlCenter",
-  },
-  {
-    vendorID = 11802,
-    productID = 19457,
-    launchName = "Insta360 Link Controller",
-    bundleID = "com.insta360.linkcontroller",
   },
 }
 

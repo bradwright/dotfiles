@@ -171,3 +171,16 @@ test("device removal closes only the managed bundle", function()
   assert(state.kills[controlCenterID] == 1)
   assert(state.apps["com.apple.controlcenter"], "Apple Control Center was closed")
 end)
+
+test("the Insta360 Link launches no app", function()
+  local state = setup(false, false)
+  local camera = { vendorID = 11802, productID = 19457 }
+  state.devices = { camera }
+  state.runtime.usbWatcher.callback({
+    vendorID = camera.vendorID,
+    productID = camera.productID,
+    eventType = "added",
+  })
+  state.tick()
+  assert(#state.launches == 0, "attaching the camera launched " .. tostring(state.launches[1]))
+end)
