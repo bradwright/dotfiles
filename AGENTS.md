@@ -49,6 +49,8 @@ The repo also contains:
   patches
 - **`patches/`** — patch files consumed by those scripts
 - **`codex/`** — Codex app theme assets
+- **`elgato/`** — notes to rebuild the Stream Deck, Key Light and webcam
+  setup by hand; keep them in sync with the Stream Deck profile
 - **`pi/`** — a pi package containing extensions, skills, themes, and an
   install script
 - **`CLAUDE.md`** — Claude-specific repo instructions

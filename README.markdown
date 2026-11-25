@@ -37,6 +37,7 @@ The repo also contains:
 - `scripts/` and `patches/` for applying and rolling back local pi patches
 - `pi/`, a separate pi package with extensions, skills, and themes
 - `codex/`, Codex app theme assets
+- `elgato/`, notes to rebuild the Stream Deck, Key Light and webcam setup
 
 Installation
 ------------
