@@ -45,25 +45,40 @@ Each preset is a Multi Action with these steps, in this order:
 1. Control Center **On / Off**, set to the On state.
 2. **Set Brightness** and **Set Temperature** for `Accent - right`.
 3. **Set Brightness** and **Set Temperature** for `Fill - left`.
-4. Insta360 Webcam **Webcam Configuration**: camera `Insta360 Link`,
-   function Temperature, and the webcam value below.
+4. Three Insta360 Webcam **Webcam Configuration** steps, each with camera
+   `Insta360 Link`: Temperature, Saturation and Brightness, with the values
+   below.
 
-| Preset    | Accent - right | Fill - left    | Webcam |
-| --------- | -------------- | -------------- | ------ |
-| Sunny     | 5 %, 5587 K    | 50 %, 5587 K   | 5550 K |
-| Cloudy    | 10 %, 5587 K   | 20 %, 5618 K   | 5600 K |
-| Dark      | 10 %, 4525 K   | 20 %, 4525 K   | 4500 K |
-| Night     | 20 %, 3401 K   | 10 %, 3413 K   | 3400 K |
-| Low light | no step        | 3 %, 3215 K    | none   |
+| Preset    | Accent - right | Fill - left  | Webcam temperature | Saturation | Brightness |
+| --------- | -------------- | ------------ | ------------------ | ---------- | ---------- |
+| Sunny     | 5 %, 5587 K    | 50 %, 5587 K | 5550 K             | 50         | 51         |
+| Cloudy    | 10 %, 5587 K   | 20 %, 5618 K | 5600 K             | 50         | 51         |
+| Dark      | 10 %, 4525 K   | 20 %, 4525 K | 4500 K             | 50         | 51         |
+| Night     | 20 %, 3401 K   | 10 %, 3413 K | 4700 K             | 38         | 46         |
+| Low light | no step        | 3 %, 3215 K  | no step            | no step    | no step    |
 
 The Low light preset has steps for `Fill - left` only, with Accessory Link on.
 
+The webcam keeps saturation and brightness until a step changes them. Each
+preset with webcam steps sets all three values, so it does not keep the
+values of the preset before it.
+
 ## Webcam values
 
-- Set the webcam to the colour temperature of the light on your face. A
-  higher value makes the picture warmer.
-- After dark the Key Lights are the main light, so the webcam value is the
-  same as the light value.
+- Start with the webcam temperature at the light temperature. A higher
+  value makes the picture warmer.
+- Under the Key Lights, the webcam needs a higher value than the lights. At
+  Night, a webcam value of 3400 K made skin look pink: blue was higher than
+  green.
+- A warmer webcam value removes the pink, but it also makes skin more
+  saturated and red. Lower the saturation to balance it. Values between pink
+  and orange look red.
+- At Night, 4900 K with saturation 35 and brightness 40 looked like an amber
+  photo filter. 4700 K with saturation 38 and brightness 46 looked natural.
+- Brighter Key Lights made skin pinker. Warmer Key Lights made skin much more
+  orange. Change the webcam values, not the lights.
+- The Dark preset has not been checked after dark. It may need the same
+  change as Night.
 - In the day, light from the window changes the result. With each preset on
   at 13:20 on 25 November 2026, the webcam auto white balance chose
   4900–5500 K.
