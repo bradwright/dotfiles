@@ -53,7 +53,7 @@ Each preset is a Multi Action with these steps, in this order:
 | --------- | -------------- | ------------ | ------------------ | ---------- | ---------- |
 | Sunny     | 5 %, 5587 K    | 50 %, 5587 K | 5550 K             | 50         | 51         |
 | Cloudy    | 10 %, 5587 K   | 20 %, 5618 K | 5600 K             | 50         | 51         |
-| Dark      | 10 %, 4525 K   | 20 %, 4525 K | 4500 K             | 50         | 51         |
+| Dark      | 10 %, 4525 K   | 20 %, 4525 K | 5500 K             | 40         | 44         |
 | Night     | 20 %, 3401 K   | 10 %, 3413 K | 4700 K             | 38         | 46         |
 | Low light | no step        | 3 %, 3215 K  | no step            | no step    | no step    |
 
@@ -77,8 +77,10 @@ values of the preset before it.
   photo filter. 4700 K with saturation 38 and brightness 46 looked natural.
 - Brighter Key Lights made skin pinker. Warmer Key Lights made skin much more
   orange. Change the webcam values, not the lights.
-- The Dark preset has not been checked after dark. It may need the same
-  change as Night.
+- After dark, Dark had the same problem as Night. At 4500 K skin looked red
+  and up to 20 % of the skin clipped. 5500 K with saturation 40 and
+  brightness 44 gave skin close to the Night setting.
+- Sunny and Cloudy have only been checked in daylight.
 - In the day, light from the window changes the result. With each preset on
   at 13:20 on 25 November 2026, the webcam auto white balance chose
   4900–5500 K.
